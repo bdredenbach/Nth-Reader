@@ -19,14 +19,9 @@
     },
   });
 
-  window.DECOR_SVGS = typeof DECOR_SVGS !== "undefined" ? DECOR_SVGS : {};
-
   const menu = new Menu({
     onAdd: () => fileInput.click(),
     onRemoved: refresh,
-    onAddDecor: (type) => {
-      shelf.addDecor(type);
-    },
   });
 
   window.addEventListener("nth:reader-closed", refresh);
@@ -55,7 +50,7 @@
       if (content.coverUrl) {
         try {
           book.coverThumb = await makeThumb(await content.coverUrl());
-        } catch { /* cover is a nice-to-have */ }
+        } catch { /* cover is a nice-to-have; skip silently if it fails */ }
       }
       await NthDB.put(book);
       showStatus("");
