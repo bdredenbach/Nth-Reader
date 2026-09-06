@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Nth Reader</title>
+<meta name="theme-color" content="#1b120b" />
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // pdf.js needs its worker; point it at the same CDN build.
+  window.addEventListener("load", () => {
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+  });
+</script>
+</head>
+<body>
+
+<!-- ===================== SHELF (home) ===================== -->
+<main id="shelf-view" class="view active">
+  <header class="shelf-header">
+    <h1>Nth Reader</h1>
+    <button id="shelf-add-header-btn" class="ghost-btn" type="button">+ Add Books</button>
+  </header>
+  <div id="import-status" class="import-status"></div>
+  <div id="shelf-root" class="shelf-root"></div>
+</main>
+
+<input type="file" id="file-input" multiple hidden
+  accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
+
+<!-- ===================== READER ===================== -->
+<section id="reader-view" hidden>
+  <div id="page-viewport" class="page-viewport"></div>
+  <div id="flow-viewport" class="flow-viewport" hidden>
+    <div id="flow-inner" class="flow-inner"></div>
+  </div>
+  <div id="reader-chrome" class="reader-chrome visible">
+    <button id="reader-back-btn" class="reader-back-btn" type="button">‹ Shelf</button>
+    <div id="reader-title" class="reader-title"></div>
+    <div id="reader-page-label" class="reader-page-label"></div>
+  </div>
+</section>
+
+<script src="js/db.js"></script>
+<script src="js/formats.js"></script>
+<script src="js/page-turn.js"></script>
+<script src="js/reader.js"></script>
+<script src="js/shelf.js"></script>
+<script src="js/app.js"></script>
+<script>
+  document.getElementById("shelf-add-header-btn").addEventListener("click", () => {
+    document.getElementById("file-input").click();
+  });
+</script>
+</body>
+</html>
