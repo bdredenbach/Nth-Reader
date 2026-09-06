@@ -1,9 +1,17 @@
 /* Nth Reader — reader.js
- * Exposes the minimal interface LongboxNativePageTurn (page-turn.js) expects:
- *   comic.pageCount, index, mode, scale, els.viewport, getPageUrl(i),
- *   showChrome(), updateSliderLabel(), updateBookmarkFlag(), saveProgress(), render()
- * Flow (reflowable text) books use a simpler CSS-column paginator instead,
- * since the corner-flip animation needs a fixed-size page image to grab.
+ *
+ * Paged books (CBZ/PDF) use the SAME engine Nth Shelf actually uses day to
+ * day: Turn.js (js/turn.js) driven through js/page-mode.js, which is the
+ * realistic drag-a-corner flipbook. That file is reused byte-for-byte from
+ * the Nth Shelf project — it only needs getPageUrl/getIndex/setIndex hooks,
+ * which this class supplies.
+ *
+ * The custom canvas "corner-turn" (page-turn.js) is kept only as the
+ * fallback Nth Shelf itself falls back to if Turn.js can't initialize.
+ *
+ * Flow (reflowable text: EPUB/RTF/MOBI) books use a simple CSS-column
+ * paginator instead — there's no fixed-size page image for either engine
+ * above to grab.
  */
 window.Reader = class {
   constructor() {
@@ -16,19 +24,42 @@ window.Reader = class {
       pageLabel: document.getElementById("reader-page-label"),
       backBtn: document.getElementById("reader-back-btn"),
       chrome: document.getElementById("reader-chrome"),
+      prevBtn: document.getElementById("reader-prev-btn"),
+      nextBtn: document.getElementById("reader-next-btn"),
     };
-    this.nativePageTurn = new LongboxNativePageTurn(this);
+
     this.mode = "single";
     this.scale = 1;
+    this.useTurnJSPageMode = true; // same default as Nth Shelf
     this.book = null;      // db record
     this.content = null;   // normalized {kind, ...}
+    this.comic = null;     // {pageCount, id, title} — what page-turn engines read
     this.index = 0;
     this.flowPage = 0;
     this.flowPageCount = 1;
     this._chromeTimer = null;
 
+    this.nativePageTurn = new LongboxNativePageTurn(this);
+    this.turnPageMode = new LongboxPageMode({
+      getIssue: () => this.comic,
+      getPageUrl: (i) => this.getPageUrl(i),
+      getIndex: () => this.index,
+      setIndex: (i) => {
+        this.index = Math.max(0, Math.min(this.comic.pageCount - 1, i));
+        this.updateSliderLabel();
+        this.saveProgress();
+      },
+      onPageChanged: (i) => {
+        this.index = Math.max(0, Math.min(this.comic.pageCount - 1, i));
+        this.updateSliderLabel();
+        this.saveProgress();
+      },
+      onState: () => { /* console.debug("turnjs:", s) if you need to trace init */ },
+    });
+
     this.els.backBtn.addEventListener("click", () => this.close());
-    this.els.viewport.addEventListener("click", (e) => this.onTapPaged(e));
+    this.els.prevBtn.addEventListener("click", () => this.prev());
+    this.els.nextBtn.addEventListener("click", () => this.next());
     this.els.flow.addEventListener("click", (e) => this.onTapFlow(e));
     window.addEventListener("resize", () => { if (this.content?.kind === "flow") this.layoutFlow(); });
   }
@@ -41,11 +72,21 @@ window.Reader = class {
     this.showChrome();
 
     if (content.kind === "paged") {
-      this.comic = { pageCount: content.pageCount };
+      this.comic = { pageCount: content.pageCount, id: book.id, title: book.title };
       this.index = Math.min(book.progress || 0, content.pageCount - 1);
       this.els.viewport.hidden = false;
       this.els.flow.hidden = true;
-      await this.render();
+
+      const ok = this.useTurnJSPageMode && await this.turnPageMode.render(this.els.viewport);
+      if (!ok) {
+        // Same fallback path Nth Shelf takes if Turn.js can't initialize.
+        this._usingFallback = true;
+        this.els.viewport.addEventListener("click", (e) => this.onTapPagedFallback(e));
+        await this.renderFallback();
+      } else {
+        this._usingFallback = false;
+      }
+      this.updateSliderLabel();
     } else {
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
@@ -62,8 +103,34 @@ window.Reader = class {
     window.dispatchEvent(new CustomEvent("nth:reader-closed"));
   }
 
-  // ---------- paged (image) mode ----------
-  async render() {
+  next() {
+    if (this.content?.kind !== "paged") return;
+    this.showChrome();
+    if (!this._usingFallback && this.turnPageMode?.book) { this.turnPageMode.next(); return; }
+    if (this.mode === "single" && this.scale <= 1.02 && this.nativePageTurn) {
+      this.nativePageTurn.turn("next").then(handled => {
+        if (!handled && !this.nativePageTurn.running) this.goToFallback(this.index + 1);
+      });
+      return;
+    }
+    this.goToFallback(this.index + 1);
+  }
+
+  prev() {
+    if (this.content?.kind !== "paged") return;
+    this.showChrome();
+    if (!this._usingFallback && this.turnPageMode?.book) { this.turnPageMode.prev(); return; }
+    if (this.mode === "single" && this.scale <= 1.02 && this.nativePageTurn) {
+      this.nativePageTurn.turn("prev").then(handled => {
+        if (!handled && !this.nativePageTurn.running) this.goToFallback(this.index - 1);
+      });
+      return;
+    }
+    this.goToFallback(this.index - 1);
+  }
+
+  // ---------- fallback paged (plain image swap, only if Turn.js fails) ----------
+  async renderFallback() {
     const url = await this.getPageUrl(this.index);
     this.els.viewport.innerHTML = "";
     const img = new Image();
@@ -72,30 +139,24 @@ window.Reader = class {
     this.els.viewport.appendChild(img);
     this.updateSliderLabel();
   }
-
-  async getPageUrl(i) { return this.content.getPageUrl(i); }
-
-  async goTo(i) {
+  async goToFallback(i) {
     if (i < 0 || i >= this.comic.pageCount) return;
     this.index = i;
-    await this.render();
+    await this.renderFallback();
     this.saveProgress();
   }
-
-  async onTapPaged(e) {
-    if (this.nativePageTurn.running) return;
+  async onTapPagedFallback(e) {
     const rect = this.els.viewport.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    if (x > rect.width * 0.65) {
-      const handled = await this.nativePageTurn.turn("next");
-      if (!handled) await this.goTo(this.index + 1);
-    } else if (x < rect.width * 0.35) {
-      const handled = await this.nativePageTurn.turn("prev");
-      if (!handled) await this.goTo(this.index - 1);
-    } else {
-      this.toggleChrome();
-    }
+    if (x > rect.width * 0.65) this.next();
+    else if (x < rect.width * 0.35) this.prev();
+    else this.toggleChrome();
   }
+
+  // render()/getPageUrl() are the hooks both LongboxNativePageTurn and
+  // LongboxPageMode call into.
+  async render() { return this.renderFallback(); }
+  async getPageUrl(i) { return this.content.getPageUrl(i); }
 
   // ---------- flow (reflowable text) mode ----------
   layoutFlow() {
@@ -105,7 +166,6 @@ window.Reader = class {
     this.els.flowInner.style.columnGap = "0px";
     this.els.flowInner.style.height = h + "px";
     this.els.flowInner.style.width = w + "px";
-    // Force layout, then measure total scrollable width to get column count.
     const totalWidth = this.els.flowInner.scrollWidth;
     this.flowPageCount = Math.max(1, Math.round(totalWidth / w));
     this.flowPage = Math.min(this.flowPage, this.flowPageCount - 1);
