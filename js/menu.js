@@ -1,11 +1,11 @@
 /* Nth Reader — menu.js
- * The right-side slide-out panel: add books, and remove ones you don't
- * want (accidental duplicates, etc). Room for more actions later.
+ * Right-side panel: add books, add decor, remove books.
  */
 window.Menu = class {
-  constructor({ onAdd, onRemoved }) {
+  constructor({ onAdd, onRemoved, onAddDecor }) {
     this.onAdd = onAdd;
     this.onRemoved = onRemoved;
+    this.onAddDecor = onAddDecor;
     this.els = {
       openBtn: document.getElementById("menu-open-btn"),
       closeBtn: document.getElementById("menu-close-btn"),
@@ -46,6 +46,46 @@ window.Menu = class {
   async renderList() {
     const books = await NthDB.all();
     this.els.list.innerHTML = "";
+
+    // Decor section
+    const decorLabel = document.createElement("div");
+    decorLabel.className = "menu-section-label";
+    decorLabel.textContent = "Add Decor";
+    this.els.list.appendChild(decorLabel);
+
+    const grid = document.createElement("div");
+    grid.className = "decor-grid";
+    const types = [
+      { type: "bust", label: "Bust" },
+      { type: "globe", label: "Globe" },
+      { type: "plant", label: "Plant" },
+      { type: "candle", label: "Candle" },
+      { type: "frame", label: "Frame" },
+      { type: "clock", label: "Clock" },
+      { type: "vase", label: "Vase" },
+    ];
+    types.forEach(({ type, label }) => {
+      const btn = document.createElement("button");
+      btn.className = "decor-pick";
+      btn.type = "button";
+      btn.innerHTML = (window.DECOR_SVGS && DECOR_SVGS[type]) || "";
+      const span = document.createElement("span");
+      span.textContent = label;
+      btn.appendChild(span);
+      btn.addEventListener("click", () => {
+        this.onAddDecor(type);
+        this.close();
+      });
+      grid.appendChild(btn);
+    });
+    this.els.list.appendChild(grid);
+
+    // Books section
+    const booksLabel = document.createElement("div");
+    booksLabel.className = "menu-section-label";
+    booksLabel.textContent = "Your Books";
+    this.els.list.appendChild(booksLabel);
+
     if (!books.length) {
       const empty = document.createElement("div");
       empty.className = "menu-empty";
