@@ -25,11 +25,15 @@ html, body {
   position: relative; z-index: 2;
 }
 .shelf-header h1 { margin: 0; font-size: 20px; letter-spacing: .04em; font-weight: 700; }
-.ghost-btn {
+
+.icon-btn {
   background: rgba(255,255,255,.08); color: #f3ead9; border: 1px solid rgba(255,255,255,.18);
-  border-radius: 20px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+  border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; font-size: 16px;
 }
-.ghost-btn:active { background: rgba(255,255,255,.18); }
+.icon-btn:active { background: rgba(255,255,255,.18); }
+.hamburger-icon { display: flex; flex-direction: column; gap: 4px; width: 18px; }
+.hamburger-icon span { display: block; height: 2px; background: #f3ead9; border-radius: 1px; }
 
 .import-status {
   min-height: 18px; padding: 0 18px; font-size: 12px; color: #d9c9a8; opacity: .85;
@@ -72,15 +76,6 @@ html, body {
 }
 .shelf-row.drop-target .shelf-ledge {
   box-shadow: 0 0 0 2px var(--accent), 0 6px 10px rgba(0,0,0,.45);
-}
-
-.shelf-add-btn {
-  align-self: stretch;
-  width: 40px; min-width: 40px;
-  border: 1px dashed rgba(255,255,255,.3);
-  background: rgba(255,255,255,.04);
-  color: #f0e6d6; font-size: 20px; border-radius: 4px;
-  cursor: pointer;
 }
 
 .spine {
@@ -158,33 +153,82 @@ html, body {
 .flow-inner img { max-width: 100%; }
 
 .reader-chrome {
-  position: absolute; top: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 14px;
-  background: linear-gradient(180deg, rgba(0,0,0,.55), transparent);
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(0deg, rgba(0,0,0,.7), transparent);
   opacity: 0; pointer-events: none;
   transition: opacity .2s ease;
   z-index: 10;
 }
 .reader-chrome.visible { opacity: 1; pointer-events: auto; }
+.reader-chrome-center {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
 .reader-back-btn {
   background: rgba(255,255,255,.12); color: #fff; border: none; border-radius: 16px;
-  padding: 8px 12px; font-size: 13px; cursor: pointer;
+  padding: 8px 12px; font-size: 13px; cursor: pointer; flex-shrink: 0;
 }
-.reader-title { color: #fff; font-size: 13px; opacity: .9; max-width: 45%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-.reader-page-label { color: #fff; font-size: 12px; opacity: .8; }
+.reader-title { color: #fff; font-size: 13px; opacity: .9; max-width: 40vw; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.reader-page-label { color: #fff; font-size: 12px; opacity: .8; flex-shrink: 0; }
 
-/* Small edge nudge buttons — a convenience on top of Turn.js's real
-   drag-the-corner gesture, which remains the primary way to flip. */
-.reader-edge-btn {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  width: 34px; height: 56px; border-radius: 8px;
-  background: rgba(0,0,0,.18); color: rgba(255,255,255,.5);
-  border: none; font-size: 20px; z-index: 8; cursor: pointer;
+/* Prev/next — a convenience alongside Turn.js's real drag-the-corner
+   gesture, which remains the primary way to flip. Sits in the same bar
+   as the rest of the chrome so it shows/hides together. */
+.reader-nav-arrow {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,.12); color: #fff;
+  border: none; font-size: 20px; cursor: pointer;
 }
-.reader-edge-prev { left: 4px; }
-.reader-edge-next { right: 4px; }
 
 /* corner page-turn visuals, reused from the original page-turn.js */
 .native-corner-known59-11 { position:absolute; inset:0; z-index:4; overflow:hidden; pointer-events:none; background:transparent; perspective:1800px; }
 .native-corner-known59-11-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; user-select:none; }
+
+/* ===================== MENU PANEL ===================== */
+.menu-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0);
+  z-index: 200; transition: background .2s ease;
+}
+.menu-overlay.visible { background: rgba(0,0,0,.45); }
+
+.menu-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(84vw, 340px);
+  background: #241609; color: #f0e6d6;
+  z-index: 201; box-shadow: -8px 0 24px rgba(0,0,0,.5);
+  transform: translateX(100%); transition: transform .22s ease;
+  display: flex; flex-direction: column;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+.menu-panel.visible { transform: translateX(0); }
+
+.menu-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.menu-panel-header h2 { margin: 0; font-size: 17px; }
+
+.menu-action-btn {
+  background: var(--accent); color: #241609; border: none; border-radius: 10px;
+  padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 18px;
+}
+.menu-action-btn:active { filter: brightness(.92); }
+
+.menu-section-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  opacity: .6; margin-bottom: 8px;
+}
+.menu-book-list { overflow-y: auto; flex: 1; }
+.menu-book-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.menu-book-title {
+  font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.menu-remove-btn {
+  background: rgba(255,90,90,.15); color: #ff9d8a; border: 1px solid rgba(255,90,90,.35);
+  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0;
+}
+.menu-empty { opacity: .6; font-size: 13px; padding: 8px 0; }
