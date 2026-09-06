@@ -26,7 +26,9 @@
 <main id="shelf-view" class="view active">
   <header class="shelf-header">
     <h1>Nth Reader</h1>
-    <button id="shelf-add-header-btn" class="ghost-btn" type="button">+ Add Books</button>
+    <button id="menu-open-btn" class="icon-btn" type="button" aria-label="Menu">
+      <span class="hamburger-icon"><span></span><span></span><span></span></span>
+    </button>
   </header>
   <div id="import-status" class="import-status"></div>
   <div id="shelf-root" class="shelf-root"></div>
@@ -35,6 +37,18 @@
 <input type="file" id="file-input" multiple hidden
   accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
 
+<!-- ===================== MENU PANEL ===================== -->
+<div id="menu-overlay" class="menu-overlay" hidden></div>
+<aside id="menu-panel" class="menu-panel" hidden>
+  <div class="menu-panel-header">
+    <h2>Menu</h2>
+    <button id="menu-close-btn" class="icon-btn" type="button" aria-label="Close menu">✕</button>
+  </div>
+  <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
+  <div class="menu-section-label">Your Books</div>
+  <div id="menu-book-list" class="menu-book-list"></div>
+</aside>
+
 <!-- ===================== READER ===================== -->
 <section id="reader-view" hidden>
   <div id="page-viewport" class="page-viewport"></div>
@@ -42,12 +56,14 @@
     <div id="flow-inner" class="flow-inner"></div>
   </div>
   <div id="reader-chrome" class="reader-chrome visible">
-    <button id="reader-back-btn" class="reader-back-btn" type="button">‹ Shelf</button>
-    <div id="reader-title" class="reader-title"></div>
-    <div id="reader-page-label" class="reader-page-label"></div>
+    <button id="reader-prev-btn" class="reader-nav-arrow" type="button" aria-label="Previous page">‹</button>
+    <div class="reader-chrome-center">
+      <button id="reader-back-btn" class="reader-back-btn" type="button">‹ Shelf</button>
+      <div id="reader-title" class="reader-title"></div>
+      <div id="reader-page-label" class="reader-page-label"></div>
+    </div>
+    <button id="reader-next-btn" class="reader-nav-arrow" type="button" aria-label="Next page">›</button>
   </div>
-  <button id="reader-prev-btn" class="reader-edge-btn reader-edge-prev" type="button" aria-label="Previous page">‹</button>
-  <button id="reader-next-btn" class="reader-edge-btn reader-edge-next" type="button" aria-label="Next page">›</button>
 </section>
 
 <script src="js/db.js"></script>
@@ -56,12 +72,9 @@
 <script src="js/page-mode.js"></script>
 <script src="js/reader.js"></script>
 <script src="js/shelf.js"></script>
+<script src="js/menu.js"></script>
 <script src="js/app.js"></script>
 <script>
-  document.getElementById("shelf-add-header-btn").addEventListener("click", () => {
-    document.getElementById("file-input").click();
-  });
-
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch((err) => {
