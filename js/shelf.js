@@ -43,16 +43,6 @@ window.Shelf = class {
       plank.className = "shelf-books";
       books.forEach((b, slotPos) => plank.appendChild(this.spineEl(b, slotPos)));
 
-      if (i === this.shelfCount - 1) {
-        const addBtn = document.createElement("button");
-        addBtn.className = "shelf-add-btn";
-        addBtn.type = "button";
-        addBtn.title = "Add books";
-        addBtn.textContent = "+";
-        addBtn.addEventListener("click", () => this.onAdd());
-        plank.appendChild(addBtn);
-      }
-
       row.appendChild(plank);
       row.appendChild(this.woodLedge());
       this.root.appendChild(row);

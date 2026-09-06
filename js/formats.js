@@ -79,34 +79,74 @@ window.NthFormats = (function () {
   }
 
   // ---------- EPUB (flow) ----------
+  function parseXml(str, label) {
+    const doc = new DOMParser().parseFromString(str, "application/xml");
+    if (doc.querySelector("parsererror")) {
+      throw new Error(`This EPUB's ${label} is malformed XML and couldn't be parsed.`);
+    }
+    return doc;
+  }
+
   async function loadEpub(file) {
     const zip = await JSZip.loadAsync(file);
-    const containerXml = await zip.file("META-INF/container.xml").async("text");
-    const containerDoc = new DOMParser().parseFromString(containerXml, "application/xml");
-    const opfPath = containerDoc.querySelector("rootfile").getAttribute("full-path");
+    const containerEntry = zip.file("META-INF/container.xml");
+    if (!containerEntry) throw new Error("This doesn't look like a valid EPUB (missing META-INF/container.xml).");
+    const containerXml = await containerEntry.async("text");
+    const containerDoc = parseXml(containerXml, "container.xml");
+    const opfPath = containerDoc.querySelector("rootfile")?.getAttribute("full-path");
+    if (!opfPath || !zip.file(opfPath)) throw new Error("This EPUB's container.xml doesn't point to a readable content file.");
     const opfDir = opfPath.includes("/") ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1) : "";
     const opfXml = await zip.file(opfPath).async("text");
-    const opfDoc = new DOMParser().parseFromString(opfXml, "application/xml");
+    const opfDoc = parseXml(opfXml, "content.opf");
 
-    const manifest = {};
+    const manifest = {}; // id -> { href, mediaType, properties }
     opfDoc.querySelectorAll("manifest > item").forEach(item => {
-      manifest[item.getAttribute("id")] = opfDir + item.getAttribute("href");
+      manifest[item.getAttribute("id")] = {
+        href: opfDir + item.getAttribute("href"),
+        mediaType: item.getAttribute("media-type") || "",
+        properties: item.getAttribute("properties") || "",
+      };
     });
     const spineIds = Array.from(opfDoc.querySelectorAll("spine > itemref")).map(r => r.getAttribute("idref"));
-    const title = opfDoc.querySelector("metadata > title")?.textContent?.trim();
+    // <dc:title> — querySelector can't match the namespaced tag by local name
+    // reliably across browsers, so fall back to a plain tagName scan.
+    const titleEl = Array.from(opfDoc.getElementsByTagName("*")).find(el => el.localName === "title");
+    const title = titleEl?.textContent?.trim();
 
+    // Chapters are parsed as lenient HTML, not strict XML: real-world EPUB
+    // prose (curly quotes, em dashes, &nbsp; etc. as named HTML entities) is
+    // routinely NOT well-formed XML, and a strict application/xhtml+xml
+    // parse silently drops any paragraph that trips on it — the book "opens"
+    // but the page is blank. text/html handles named entities natively.
     let html = "";
+    let chapterFailures = 0;
     for (const id of spineIds) {
-      const path = manifest[id];
-      if (!path || !zip.file(path)) continue;
-      const chapterXml = await zip.file(path).async("text");
-      const doc = new DOMParser().parseFromString(chapterXml, "application/xhtml+xml");
-      const body = doc.querySelector("body");
-      if (body) html += `<section class="chapter">${body.innerHTML}</section>`;
+      const entryInfo = manifest[id];
+      const zEntry = entryInfo && zip.file(entryInfo.href);
+      if (!zEntry) continue;
+      try {
+        const chapterMarkup = await zEntry.async("text");
+        const doc = new DOMParser().parseFromString(chapterMarkup, "text/html");
+        const body = doc.body;
+        if (body && body.innerHTML.trim()) {
+          html += `<section class="chapter">${body.innerHTML}</section>`;
+        }
+      } catch (err) {
+        chapterFailures++;
+        console.warn("Nth Reader: skipped an unreadable EPUB chapter", entryInfo.href, err);
+      }
     }
+
+    if (!html.trim()) {
+      throw new Error(
+        chapterFailures > 0
+          ? "Couldn't read any chapters from this EPUB — every chapter file failed to parse."
+          : "This EPUB has no chapters listed in its spine."
+      );
+    }
+
     // Inline images so they survive outside the zip context.
-    const imgEls = Array.from(new DOMParser().parseFromString(html, "text/html").images);
-    let container = document.createElement("div");
+    const container = document.createElement("div");
     container.innerHTML = html;
     const imgs = container.querySelectorAll("img, image");
     for (const img of imgs) {
@@ -119,7 +159,28 @@ window.NthFormats = (function () {
         img.setAttribute("src", URL.createObjectURL(blob));
       }
     }
-    return { kind: "flow", html: container.innerHTML, title };
+
+    // Best-effort cover: EPUB3 manifest property, or the classic OPF
+    // <meta name="cover" content="ID"/> pointer, or just the first image.
+    let coverHref =
+      Object.values(manifest).find(m => m.properties.includes("cover-image"))?.href;
+    if (!coverHref) {
+      const coverId = opfDoc.querySelector('meta[name="cover"]')?.getAttribute("content");
+      coverHref = coverId && manifest[coverId]?.href;
+    }
+    if (!coverHref) {
+      coverHref = Object.values(manifest).find(m => m.mediaType.startsWith("image/"))?.href;
+    }
+    const coverEntry = coverHref && zip.file(coverHref);
+
+    return {
+      kind: "flow",
+      html: container.innerHTML,
+      title,
+      coverUrl: coverEntry
+        ? async () => URL.createObjectURL(await coverEntry.async("blob"))
+        : undefined,
+    };
   }
 
   // ---------- RTF (flow) ----------

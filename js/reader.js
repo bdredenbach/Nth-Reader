@@ -61,7 +61,9 @@ window.Reader = class {
     this.els.prevBtn.addEventListener("click", () => this.prev());
     this.els.nextBtn.addEventListener("click", () => this.next());
     this.els.flow.addEventListener("click", (e) => this.onTapFlow(e));
-    window.addEventListener("resize", () => { if (this.content?.kind === "flow") this.layoutFlow(); });
+    window.addEventListener("resize", () => {
+      if (this.content?.kind === "flow") this.layoutFlow().then(() => this.renderFlow());
+    });
   }
 
   async open(book, content) {
@@ -91,7 +93,7 @@ window.Reader = class {
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
       this.els.flowInner.innerHTML = content.html;
-      this.layoutFlow();
+      await this.layoutFlow();
       this.flowPage = Math.round((book.progress || 0) * (this.flowPageCount - 1)) || 0;
       this.renderFlow();
     }
@@ -159,16 +161,30 @@ window.Reader = class {
   async getPageUrl(i) { return this.content.getPageUrl(i); }
 
   // ---------- flow (reflowable text) mode ----------
-  layoutFlow() {
+  async layoutFlow() {
     const w = this.els.flow.clientWidth;
     const h = this.els.flow.clientHeight;
     this.els.flowInner.style.columnWidth = w + "px";
     this.els.flowInner.style.columnGap = "0px";
     this.els.flowInner.style.height = h + "px";
     this.els.flowInner.style.width = w + "px";
+
+    // Column count depends on total rendered content height/width, which
+    // shifts once images finish loading (they render at a fallback size
+    // until then). Measuring before they load undercounts pages and can
+    // leave later pages landing past the real content — i.e. blank.
+    const imgs = Array.from(this.els.flowInner.querySelectorAll("img"));
+    await Promise.all(imgs.map((img) => {
+      if (img.complete) return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      return new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+    }));
+
     const totalWidth = this.els.flowInner.scrollWidth;
     this.flowPageCount = Math.max(1, Math.round(totalWidth / w));
-    this.flowPage = Math.min(this.flowPage, this.flowPageCount - 1);
+    this.flowPage = Math.max(0, Math.min(this.flowPage, this.flowPageCount - 1));
   }
 
   renderFlow() {

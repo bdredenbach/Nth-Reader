@@ -6,7 +6,6 @@
   const reader = new Reader();
 
   const shelf = new Shelf(shelfRoot, {
-    onAdd: () => fileInput.click(),
     onOpen: async (id) => {
       const book = await NthDB.get(id);
       if (!book) return;
@@ -18,6 +17,11 @@
         showStatus(err.message || String(err), true);
       }
     },
+  });
+
+  const menu = new Menu({
+    onAdd: () => fileInput.click(),
+    onRemoved: refresh,
   });
 
   window.addEventListener("nth:reader-closed", refresh);
@@ -35,7 +39,7 @@
       const content = await NthFormats.load(file);
       const book = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: file.name.replace(/\.[^.]+$/, ""),
+        title: content.title || file.name.replace(/\.[^.]+$/, ""),
         format: NthFormats.extOf(file.name),
         file,
         addedAt: Date.now(),
@@ -43,8 +47,10 @@
         slot: Date.now(),
         progress: 0,
       };
-      if (content.kind === "paged" && content.coverUrl) {
-        book.coverThumb = await makeThumb(await content.coverUrl());
+      if (content.coverUrl) {
+        try {
+          book.coverThumb = await makeThumb(await content.coverUrl());
+        } catch { /* cover is a nice-to-have; skip silently if it fails */ }
       }
       await NthDB.put(book);
       showStatus("");
