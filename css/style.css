@@ -8,6 +8,7 @@
   --accent: #e8b34a;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body {
   margin: 0; height: 100%;
   background: var(--wood-dark);
@@ -48,6 +49,14 @@ html, body {
     repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 118px, rgba(0,0,0,.12) 118px 122px),
     linear-gradient(180deg, var(--wood-mid), var(--wood-dark) 70%);
 }
+/* Backdrop presets (behind the shelves) — set via data-backdrop from Customize > Backdrop */
+.shelf-root[data-backdrop="espresso"] { background-color: #1a1310; }
+.shelf-root[data-backdrop="midnight"] { background-color: #141824; }
+.shelf-root[data-backdrop="rose"] { background-color: #2a1620; }
+.shelf-root[data-backdrop="forest"] { background-color: #141f18; }
+
+body.customizing .shelf-root { padding-bottom: 190px; top: 58px; }
+body.customizing .shelf-header { display: none; }
 
 .shelf-row {
   position: relative;
@@ -74,6 +83,11 @@ html, body {
   box-shadow: 0 6px 10px rgba(0,0,0,.45);
   border-radius: 2px;
 }
+/* Shelf-wood presets — set via data-shelf-theme from Customize > Shelf */
+.shelf-root[data-shelf-theme="oak"] .shelf-ledge { background: linear-gradient(180deg,#c9a06a,#8a6238 90%); border-bottom-color: #5c3f21; }
+.shelf-root[data-shelf-theme="espresso"] .shelf-ledge { background: linear-gradient(180deg,#3a2a20,#171008 90%); border-bottom-color: #0a0603; }
+.shelf-root[data-shelf-theme="lacquer"] .shelf-ledge { background: linear-gradient(180deg,#3a3a3f,#0c0c0e 90%); border-bottom-color: #000; }
+.shelf-root[data-shelf-theme="cherry"] .shelf-ledge { background: linear-gradient(180deg,#7a2c22,#3a120d 90%); border-bottom-color: #250b08; }
 .shelf-row.drop-target .shelf-ledge {
   box-shadow: 0 0 0 2px var(--accent), 0 6px 10px rgba(0,0,0,.45);
 }
@@ -122,6 +136,27 @@ html, body {
   box-shadow: 0 18px 30px rgba(0,0,0,.55);
 }
 
+/* Decor items (bust/globe/plant/candle) sit on a non-scrolling overlay so
+   they stay put at their chosen spot regardless of the book row scrolling. */
+.shelf-decor-layer {
+  position: absolute; left: 14px; right: 14px; bottom: 18px; height: 130px;
+  pointer-events: none;
+}
+.decor-item {
+  position: absolute; bottom: 0;
+  transform-origin: bottom center;
+  font-size: 52px; line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.5));
+}
+body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
+.decor-item.selected {
+  outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: 8px;
+}
+.decor-item.has-glow .decor-glyph {
+  filter: drop-shadow(0 0 calc(6px + 14px * var(--glow, .6)) rgba(255,180,80,var(--glow, .6)));
+}
+
 /* ===================== READER ===================== */
 #reader-view {
   position: fixed; inset: 0; background: var(--ink); z-index: 100; overflow: hidden;
@@ -138,19 +173,20 @@ html, body {
 
 .flow-viewport {
   position: absolute; inset: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background: var(--paper);
   color: #1c150c;
 }
 .flow-inner {
-  padding: 64px 28px 40px;
+  margin: 0 auto;
+  padding: 64px 24px 100px;
   font-size: 18px;
   line-height: 1.6;
-  column-fill: auto;
-  overflow: hidden;
 }
-.flow-inner .chapter { break-after: column; }
-.flow-inner img { max-width: 100%; }
+.flow-inner .chapter + .chapter { margin-top: 2.5em; padding-top: 2em; border-top: 1px solid rgba(0,0,0,.12); }
+.flow-inner img { max-width: 100%; height: auto; }
 
 .reader-chrome {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -232,3 +268,118 @@ html, body {
   border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0;
 }
 .menu-empty { opacity: .6; font-size: 13px; padding: 8px 0; }
+
+/* Left panel (remove books) mirrors the right one */
+.menu-panel-left {
+  left: 0; right: auto;
+  box-shadow: 8px 0 24px rgba(0,0,0,.5);
+  transform: translateX(-100%);
+}
+.menu-panel-left.visible { transform: translateX(0); }
+
+.menu-action-btn-secondary {
+  background: rgba(255,255,255,.1); color: #f3ead9; border: 1px solid rgba(255,255,255,.2);
+}
+
+/* ===================== CUSTOMIZE MODE ===================== */
+.customize-topbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 16px 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,.55), transparent);
+}
+.customize-title { font-weight: 700; font-size: 15px; }
+.customize-done-btn {
+  background: var(--accent); color: #241609; border: none; border-radius: 16px;
+  padding: 8px 16px; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+
+.customize-tabbar {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 21;
+  display: flex;
+  background: #1c1108ee;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.customize-tab {
+  flex: 1; background: none; border: none; color: rgba(255,255,255,.55);
+  padding: 10px 4px 8px; font-size: 20px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.customize-tab span { font-size: 11px; }
+.customize-tab.active { color: var(--accent); }
+
+.customize-panel {
+  position: absolute; left: 0; right: 0; bottom: 68px; z-index: 20;
+  background: #1c1108ee;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 14px 16px;
+  max-height: 40vh; overflow-y: auto;
+}
+.customize-hint { font-size: 12px; opacity: .65; line-height: 1.4; margin-top: 8px; }
+.customize-add-decor-btn {
+  width: 100%; background: var(--accent); color: #241609; border: none; border-radius: 10px;
+  padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+
+.swatch-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatch-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2);
+  cursor: pointer;
+}
+
+.slider-row { margin-bottom: 14px; }
+.slider-row-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; opacity: .85; }
+.slider-value { color: var(--accent); font-weight: 700; }
+.slider-row input[type="range"] { width: 100%; }
+
+.decor-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.decor-action-btn {
+  flex: 1; min-width: 90px; background: rgba(255,255,255,.1); color: #f3ead9;
+  border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 10px 8px;
+  font-size: 12px; cursor: pointer;
+}
+.decor-action-danger { background: rgba(255,90,90,.15); color: #ff9d8a; border-color: rgba(255,90,90,.35); }
+.decor-action-done { background: var(--accent); color: #241609; border: none; font-weight: 700; }
+
+/* Decor picker (bottom sheet) */
+.decor-picker-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 300;
+  background: #241609; border-radius: 18px 18px 0 0;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%); transition: transform .22s ease;
+  box-shadow: 0 -10px 30px rgba(0,0,0,.5);
+}
+.decor-picker-sheet.visible { transform: translateY(0); }
+.decor-picker-handle {
+  width: 36px; height: 4px; background: rgba(255,255,255,.25); border-radius: 2px;
+  margin: 6px auto 14px;
+}
+.decor-picker-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.decor-picker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.decor-pick-btn {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 12px;
+  color: #f3ead9; padding: 14px 4px; font-size: 12px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.decor-pick-btn span { font-size: 28px; }
+.decor-picker-cancel {
+  width: 100%; background: rgba(255,255,255,.08); color: #f3ead9; border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px; padding: 11px; font-size: 13px; cursor: pointer;
+}
+
+/* Toast (book moved + undo) */
+.nth-toast {
+  position: absolute; left: 50%; bottom: 78px; z-index: 22;
+  transform: translate(-50%, 10px); opacity: 0; transition: transform .2s ease, opacity .2s ease;
+  background: #241609; color: #f3ead9; border: 1px solid rgba(255,255,255,.15);
+  border-radius: 24px; padding: 10px 10px 10px 16px;
+  display: flex; align-items: center; gap: 12px; font-size: 13px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.4);
+  white-space: nowrap;
+}
+.nth-toast.visible { transform: translate(-50%, 0); opacity: 1; }
+.toast-undo-btn {
+  background: var(--accent); color: #241609; border: none; border-radius: 16px;
+  padding: 7px 14px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
