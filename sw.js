@@ -1,6 +1,6 @@
-// NTH READER — V-0.00.02
+// NTH READER — V-0.00.04
 
-const SW_VERSION = "Nth-Reader-V-0.00.02";
+const SW_VERSION = "Nth-Reader-V-0.00.04";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -13,7 +13,9 @@ const SHELL_FILES = [
   "./js/page-mode.js",
   "./js/reader.js",
   "./js/shelf.js",
+  "./js/customize.js",
   "./js/menu.js",
+  "./js/remove-panel.js",
   "./js/app.js",
   "./js/turn.js",
   "https://code.jquery.com/jquery-3.6.0.min.js",
