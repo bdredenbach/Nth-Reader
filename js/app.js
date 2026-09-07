@@ -19,8 +19,20 @@
     },
   });
 
+  const customize = new Customize(shelf, {
+    onExit: refresh,
+  });
+
+  shelf.onBookMoved = (book, previous) => {
+    if (customize.active) customize.showMoveToast(book, previous);
+  };
+
   const menu = new Menu({
     onAdd: () => fileInput.click(),
+    onCustomize: () => customize.enter(),
+  });
+
+  const removePanel = new RemovePanel({
     onRemoved: refresh,
   });
 
@@ -81,8 +93,10 @@
 
   async function refresh() {
     const books = await NthDB.all();
-    shelf.setBooks(books);
+    const decorItems = await NthDB.decor.all();
+    shelf.setAll(books, decorItems);
   }
 
+  await customize.applyStoredStyle();
   refresh();
 })();

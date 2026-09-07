@@ -9,9 +9,13 @@
  * The custom canvas "corner-turn" (page-turn.js) is kept only as the
  * fallback Nth Shelf itself falls back to if Turn.js can't initialize.
  *
- * Flow (reflowable text: EPUB/RTF/MOBI) books use a simple CSS-column
- * paginator instead — there's no fixed-size page image for either engine
- * above to grab.
+ * Flow (reflowable text: EPUB/RTF/MOBI) books are a plain scrollable
+ * document, not CSS-column pages. An earlier version paginated the whole
+ * book into fixed-width columns in one go, which silently broke on long
+ * books — a big omnibus needed 3000+ columns, and browsers cap how many
+ * columns a multi-column layout will actually render, so the page came up
+ * blank past a certain length. Native scrolling has no such ceiling and
+ * is simpler and more robust for arbitrary-length text.
  */
 window.Reader = class {
   constructor() {
@@ -35,9 +39,8 @@ window.Reader = class {
     this.content = null;   // normalized {kind, ...}
     this.comic = null;     // {pageCount, id, title} — what page-turn engines read
     this.index = 0;
-    this.flowPage = 0;
-    this.flowPageCount = 1;
     this._chromeTimer = null;
+    this._scrollSaveTimer = null;
 
     this.nativePageTurn = new LongboxNativePageTurn(this);
     this.turnPageMode = new LongboxPageMode({
@@ -58,11 +61,17 @@ window.Reader = class {
     });
 
     this.els.backBtn.addEventListener("click", () => this.close());
-    this.els.prevBtn.addEventListener("click", () => this.prev());
-    this.els.nextBtn.addEventListener("click", () => this.next());
-    this.els.flow.addEventListener("click", (e) => this.onTapFlow(e));
+    this.els.prevBtn.addEventListener("click", () => this.onPrevBtn());
+    this.els.nextBtn.addEventListener("click", () => this.onNextBtn());
+    // A plain tap anywhere on the page toggles the nav bar. This has to be
+    // bound unconditionally (not just for the fallback engine) — Turn.js's
+    // own gestures handle page-turning via drag, so nothing else was ever
+    // wired to bring the auto-hidden chrome back once it hid itself.
+    this.els.viewport.addEventListener("click", (e) => this.onViewportTap(e));
+    this.els.flow.addEventListener("scroll", () => this.onFlowScroll());
+    this.els.flow.addEventListener("click", () => this.toggleChrome());
     window.addEventListener("resize", () => {
-      if (this.content?.kind === "flow") this.layoutFlow().then(() => this.renderFlow());
+      if (this.content?.kind === "flow") this.applyFlowWidth();
     });
   }
 
@@ -80,22 +89,22 @@ window.Reader = class {
       this.els.flow.hidden = true;
 
       const ok = this.useTurnJSPageMode && await this.turnPageMode.render(this.els.viewport);
-      if (!ok) {
-        // Same fallback path Nth Shelf takes if Turn.js can't initialize.
-        this._usingFallback = true;
-        this.els.viewport.addEventListener("click", (e) => this.onTapPagedFallback(e));
-        await this.renderFallback();
-      } else {
-        this._usingFallback = false;
-      }
+      this._usingFallback = !ok;
+      if (!ok) await this.renderFallback();
       this.updateSliderLabel();
     } else {
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
+      this.els.pageLabel.textContent = "";
       this.els.flowInner.innerHTML = content.html;
-      await this.layoutFlow();
-      this.flowPage = Math.round((book.progress || 0) * (this.flowPageCount - 1)) || 0;
-      this.renderFlow();
+      this.applyFlowWidth();
+      const progress = book.progress || 0;
+      // Restore scroll position once real layout (incl. any images) has settled.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
+        this.els.flow.scrollTop = Math.max(0, max * progress);
+        this.updateSliderLabel();
+      }));
     }
   }
 
@@ -103,6 +112,25 @@ window.Reader = class {
     this.saveProgress();
     this.els.root.hidden = true;
     window.dispatchEvent(new CustomEvent("nth:reader-closed"));
+  }
+
+  onPrevBtn() {
+    if (this.content?.kind === "paged") this.prev();
+    else this.flowPrev();
+  }
+  onNextBtn() {
+    if (this.content?.kind === "paged") this.next();
+    else this.flowNext();
+  }
+
+  onViewportTap(e) {
+    if (this._usingFallback) {
+      const rect = this.els.viewport.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      if (x > rect.width * 0.65) { this.next(); return; }
+      if (x < rect.width * 0.35) { this.prev(); return; }
+    }
+    this.toggleChrome();
   }
 
   next() {
@@ -147,66 +175,32 @@ window.Reader = class {
     await this.renderFallback();
     this.saveProgress();
   }
-  async onTapPagedFallback(e) {
-    const rect = this.els.viewport.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.65) this.next();
-    else if (x < rect.width * 0.35) this.prev();
-    else this.toggleChrome();
-  }
 
   // render()/getPageUrl() are the hooks both LongboxNativePageTurn and
   // LongboxPageMode call into.
   async render() { return this.renderFallback(); }
   async getPageUrl(i) { return this.content.getPageUrl(i); }
 
-  // ---------- flow (reflowable text) mode ----------
-  async layoutFlow() {
+  // ---------- flow (reflowable text) mode — plain vertical scroll ----------
+  applyFlowWidth() {
     const w = this.els.flow.clientWidth;
-    const h = this.els.flow.clientHeight;
-    this.els.flowInner.style.columnWidth = w + "px";
-    this.els.flowInner.style.columnGap = "0px";
-    this.els.flowInner.style.height = h + "px";
-    this.els.flowInner.style.width = w + "px";
-
-    // Column count depends on total rendered content height/width, which
-    // shifts once images finish loading (they render at a fallback size
-    // until then). Measuring before they load undercounts pages and can
-    // leave later pages landing past the real content — i.e. blank.
-    const imgs = Array.from(this.els.flowInner.querySelectorAll("img"));
-    await Promise.all(imgs.map((img) => {
-      if (img.complete) return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
-      return new Promise((resolve) => {
-        img.addEventListener("load", resolve, { once: true });
-        img.addEventListener("error", resolve, { once: true });
-      });
-    }));
-
-    const totalWidth = this.els.flowInner.scrollWidth;
-    this.flowPageCount = Math.max(1, Math.round(totalWidth / w));
-    this.flowPage = Math.max(0, Math.min(this.flowPage, this.flowPageCount - 1));
+    // A centered readable column on wide screens; full-width on phones.
+    this.els.flowInner.style.maxWidth = Math.min(w, 720) + "px";
   }
 
-  renderFlow() {
-    const w = this.els.flow.clientWidth;
-    this.els.flowInner.style.transition = "transform .28s ease";
-    this.els.flowInner.style.transform = `translateX(${-this.flowPage * w}px)`;
-    this.updateSliderLabel();
-  }
-
-  onTapFlow(e) {
-    const rect = this.els.flow.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.65) this.flowNext();
-    else if (x < rect.width * 0.35) this.flowPrev();
-    else this.toggleChrome();
+  onFlowScroll() {
+    this.showChrome();
+    clearTimeout(this._scrollSaveTimer);
+    this._scrollSaveTimer = setTimeout(() => this.saveProgress(), 400);
   }
 
   flowNext() {
-    if (this.flowPage < this.flowPageCount - 1) { this.flowPage++; this.renderFlow(); this.saveProgress(); }
+    this.showChrome();
+    this.els.flow.scrollBy({ top: this.els.flow.clientHeight * 0.9, behavior: "smooth" });
   }
   flowPrev() {
-    if (this.flowPage > 0) { this.flowPage--; this.renderFlow(); this.saveProgress(); }
+    this.showChrome();
+    this.els.flow.scrollBy({ top: -this.els.flow.clientHeight * 0.9, behavior: "smooth" });
   }
 
   // ---------- shared chrome / progress ----------
@@ -215,23 +209,35 @@ window.Reader = class {
     clearTimeout(this._chromeTimer);
     this._chromeTimer = setTimeout(() => this.els.chrome.classList.remove("visible"), 2200);
   }
-  toggleChrome() { this.els.chrome.classList.toggle("visible"); }
+  toggleChrome() {
+    if (this.els.chrome.classList.contains("visible")) {
+      this.els.chrome.classList.remove("visible");
+      clearTimeout(this._chromeTimer);
+    } else {
+      this.showChrome();
+    }
+  }
 
   updateSliderLabel() {
     if (this.content?.kind === "paged") {
       this.els.pageLabel.textContent = `${this.index + 1} / ${this.comic.pageCount}`;
     } else {
-      this.els.pageLabel.textContent = `${this.flowPage + 1} / ${this.flowPageCount}`;
+      const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
+      const pct = max > 0 ? Math.round((this.els.flow.scrollTop / max) * 100) : 100;
+      this.els.pageLabel.textContent = `${pct}%`;
     }
   }
   updateBookmarkFlag() { /* reserved for a future bookmarks feature */ }
 
   saveProgress() {
     if (!this.book) return;
-    const progress = this.content.kind === "paged"
-      ? this.index
-      : (this.flowPage / Math.max(1, this.flowPageCount - 1));
-    this.book.progress = progress;
+    if (this.content.kind === "paged") {
+      this.book.progress = this.index;
+    } else {
+      const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
+      this.book.progress = max > 0 ? this.els.flow.scrollTop / max : 0;
+      this.updateSliderLabel();
+    }
     NthDB.put(this.book);
   }
 };

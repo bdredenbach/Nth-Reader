@@ -1,11 +1,16 @@
 /* Nth Reader — db.js
  * Minimal promise-based IndexedDB wrapper.
- * Stores: books (metadata + original file blob + reading progress + shelf position)
+ * Stores:
+ *   books    — metadata + original file blob + reading progress + shelf position
+ *   decor    — decorative items placed on shelves (bust, globe, plant, candle...)
+ *   settings — small global key/value bag (backdrop choice, shelf theme choice)
  */
 window.NthDB = (function () {
   const DB_NAME = "nth-reader-db";
-  const DB_VERSION = 1;
-  const STORE = "books";
+  const DB_VERSION = 2;
+  const BOOKS = "books";
+  const DECOR = "decor";
+  const SETTINGS = "settings";
 
   let dbPromise = null;
 
@@ -15,9 +20,16 @@ window.NthDB = (function () {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains(STORE)) {
-          const store = db.createObjectStore(STORE, { keyPath: "id" });
+        if (!db.objectStoreNames.contains(BOOKS)) {
+          const store = db.createObjectStore(BOOKS, { keyPath: "id" });
           store.createIndex("shelfIndex", "shelfIndex");
+        }
+        if (!db.objectStoreNames.contains(DECOR)) {
+          const store = db.createObjectStore(DECOR, { keyPath: "id" });
+          store.createIndex("shelfIndex", "shelfIndex");
+        }
+        if (!db.objectStoreNames.contains(SETTINGS)) {
+          db.createObjectStore(SETTINGS, { keyPath: "key" });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -26,43 +38,70 @@ window.NthDB = (function () {
     return dbPromise;
   }
 
-  async function tx(mode) {
+  async function tx(storeName, mode) {
     const db = await open();
-    return db.transaction(STORE, mode).objectStore(STORE);
+    return db.transaction(storeName, mode).objectStore(storeName);
   }
 
-  return {
-    async put(book) {
-      const store = await tx("readwrite");
+  function makeCrud(storeName) {
+    return {
+      async put(record) {
+        const store = await tx(storeName, "readwrite");
+        return new Promise((resolve, reject) => {
+          const r = store.put(record);
+          r.onsuccess = () => resolve(record);
+          r.onerror = () => reject(r.error);
+        });
+      },
+      async get(id) {
+        const store = await tx(storeName, "readonly");
+        return new Promise((resolve, reject) => {
+          const r = store.get(id);
+          r.onsuccess = () => resolve(r.result || null);
+          r.onerror = () => reject(r.error);
+        });
+      },
+      async all() {
+        const store = await tx(storeName, "readonly");
+        return new Promise((resolve, reject) => {
+          const r = store.getAll();
+          r.onsuccess = () => resolve(r.result || []);
+          r.onerror = () => reject(r.error);
+        });
+      },
+      async remove(id) {
+        const store = await tx(storeName, "readwrite");
+        return new Promise((resolve, reject) => {
+          const r = store.delete(id);
+          r.onsuccess = () => resolve();
+          r.onerror = () => reject(r.error);
+        });
+      },
+    };
+  }
+
+  const books = makeCrud(BOOKS);
+  const decor = makeCrud(DECOR);
+
+  const settings = {
+    async get(key, fallback) {
+      const store = await tx(SETTINGS, "readonly");
       return new Promise((resolve, reject) => {
-        const r = store.put(book);
-        r.onsuccess = () => resolve(book);
+        const r = store.get(key);
+        r.onsuccess = () => resolve(r.result ? r.result.value : fallback);
         r.onerror = () => reject(r.error);
       });
     },
-    async get(id) {
-      const store = await tx("readonly");
+    async set(key, value) {
+      const store = await tx(SETTINGS, "readwrite");
       return new Promise((resolve, reject) => {
-        const r = store.get(id);
-        r.onsuccess = () => resolve(r.result || null);
-        r.onerror = () => reject(r.error);
-      });
-    },
-    async all() {
-      const store = await tx("readonly");
-      return new Promise((resolve, reject) => {
-        const r = store.getAll();
-        r.onsuccess = () => resolve(r.result || []);
-        r.onerror = () => reject(r.error);
-      });
-    },
-    async remove(id) {
-      const store = await tx("readwrite");
-      return new Promise((resolve, reject) => {
-        const r = store.delete(id);
-        r.onsuccess = () => resolve();
+        const r = store.put({ key, value });
+        r.onsuccess = () => resolve(value);
         r.onerror = () => reject(r.error);
       });
     },
   };
+
+  // Top-level put/get/all/remove keep existing callers (books) working unchanged.
+  return { ...books, books, decor, settings };
 })();

@@ -1,18 +1,19 @@
 /* Nth Reader — menu.js
- * The right-side slide-out panel: add books, and remove ones you don't
- * want (accidental duplicates, etc). Room for more actions later.
+ * The right slide-out panel: add books, and jump into Customize mode
+ * (decorate the shelf, change backdrop/shelf style). Book removal lives
+ * in the separate left panel (remove-panel.js).
  */
 window.Menu = class {
-  constructor({ onAdd, onRemoved }) {
+  constructor({ onAdd, onCustomize }) {
     this.onAdd = onAdd;
-    this.onRemoved = onRemoved;
+    this.onCustomize = onCustomize;
     this.els = {
       openBtn: document.getElementById("menu-open-btn"),
       closeBtn: document.getElementById("menu-close-btn"),
       overlay: document.getElementById("menu-overlay"),
       panel: document.getElementById("menu-panel"),
       addBtn: document.getElementById("menu-add-btn"),
-      list: document.getElementById("menu-book-list"),
+      customizeBtn: document.getElementById("menu-customize-btn"),
     };
 
     this.els.openBtn.addEventListener("click", () => this.open());
@@ -22,10 +23,13 @@ window.Menu = class {
       this.close();
       this.onAdd();
     });
+    this.els.customizeBtn.addEventListener("click", () => {
+      this.close();
+      this.onCustomize();
+    });
   }
 
-  async open() {
-    await this.renderList();
+  open() {
     this.els.overlay.hidden = false;
     this.els.panel.hidden = false;
     requestAnimationFrame(() => {
@@ -41,46 +45,5 @@ window.Menu = class {
       this.els.overlay.hidden = true;
       this.els.panel.hidden = true;
     }, 220);
-  }
-
-  async renderList() {
-    const books = await NthDB.all();
-    this.els.list.innerHTML = "";
-    if (!books.length) {
-      const empty = document.createElement("div");
-      empty.className = "menu-empty";
-      empty.textContent = "No books yet.";
-      this.els.list.appendChild(empty);
-      return;
-    }
-    books
-      .sort((a, b) => a.title.localeCompare(b.title))
-      .forEach((book) => this.els.list.appendChild(this.rowEl(book)));
-  }
-
-  rowEl(book) {
-    const row = document.createElement("div");
-    row.className = "menu-book-row";
-
-    const title = document.createElement("span");
-    title.className = "menu-book-title";
-    title.textContent = book.title;
-    row.appendChild(title);
-
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "menu-remove-btn";
-    removeBtn.type = "button";
-    removeBtn.setAttribute("aria-label", `Remove ${book.title}`);
-    removeBtn.textContent = "Remove";
-    removeBtn.addEventListener("click", async () => {
-      const ok = confirm(`Remove "${book.title}"? This can't be undone.`);
-      if (!ok) return;
-      await NthDB.remove(book.id);
-      await this.renderList();
-      this.onRemoved();
-    });
-    row.appendChild(removeBtn);
-
-    return row;
   }
 };
