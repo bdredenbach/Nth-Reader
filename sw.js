@@ -1,6 +1,6 @@
-// NTH READER — V-0.00.05
+// NTH READER — V-0.01.00
 
-const SW_VERSION = "Nth-Reader-V-0.00.05";
+const SW_VERSION = "Nth-Reader-V-0.01.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -11,6 +11,7 @@ const SHELL_FILES = [
   "./js/formats.js",
   "./js/page-turn.js",
   "./js/page-mode.js",
+  "./js/epub-page-reader.js",
   "./js/reader.js",
   "./js/decor-art.js",
   "./js/shelf.js",
@@ -19,6 +20,14 @@ const SHELL_FILES = [
   "./js/remove-panel.js",
   "./js/app.js",
   "./js/turn.js",
+  "./assets/decor/bust.webp",
+  "./assets/decor/globe.webp",
+  "./assets/decor/plant.webp",
+  "./assets/decor/candle.webp",
+  "./assets/decor/vine.webp",
+  "./assets/decor/lamp.webp",
+  "./assets/decor/mug.webp",
+  "./assets/decor/frame.webp",
   "https://code.jquery.com/jquery-3.6.0.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
