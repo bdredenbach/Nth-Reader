@@ -13,20 +13,38 @@ A new home screen for your comic reader: a real wooden bookshelf.
 Tap the menu (top right) → **🎨 Customize Shelf** to enter Customize mode —
 a bottom tab bar like the reference videos: **Arrange / Decorate / Backdrop / Shelf**.
 
-- **Arrange** — same drag-and-drop as always; dragging a book to a new spot
-  now shows a "Book moved" toast with **Undo**.
-- **Decorate** — **+ Add Decor** opens a picker (bust, globe, plant, candle).
-  Tap a placed item to get Size / Position sliders (candles also get a Glow
-  slider), plus Duplicate and Remove.
-- **Backdrop** — a row of swatches to recolor the space behind the shelves.
-- **Shelf** — a row of swatches to change the shelf-wood color/material.
+- **Arrange** — drag-and-drop as always (shows a "Book moved" + **Undo** toast).
+  **📚 Stack Books** lets you tap 2+ books on one shelf and lay them flat as a
+  pile; tap an existing stack for Size/Padding sliders and **Unstack**.
+- **Decorate** — **+ Add Decor** opens a picker with 8 items: bust, globe,
+  plant, candle, hanging vine, lamp, mug, picture frame. Tap a placed item
+  for Size/Position sliders (candles and lamps get a Glow slider too), plus
+  Duplicate/Remove — and **long-press + drag any decor item to any shelf**,
+  same gesture as moving a book.
+- **Backdrop** — swatches to recolor the space behind the shelves.
+- **Shelf** — swatches to change the shelf-wood color/material.
 
-All of it (decor placement/size/position, backdrop, shelf theme) persists
-in IndexedDB and survives a reload. Note: the decor icons are emoji-based
-placeholders standing in for real art assets (bust/globe/plant/candle) —
-easy to swap for actual illustrations later; the interactions (add, select,
-resize, reposition, duplicate, delete, glow) are what's built to match the
-reference videos, not the specific art style of that app.
+All of it (decor placement/size/position/glow, stacks, backdrop, shelf
+theme) persists in IndexedDB and survives a reload.
+
+**On the decor art:** these are now hand-built shaded SVG illustrations
+(gradients, highlights, drop shadows) — a real step up from flat emoji, and
+each one is fully vector so it stays crisp at any size. I don't have an
+image-generation tool available in this environment, so these aren't
+photo-real renders like the reference app's assets; they're the most
+detailed version I could hand-craft in SVG. `js/decor-art.js` is the one
+file to touch if you get real illustrated assets later — swap any
+`DECOR_ART[type]` function body for an `<img>` tag and placement/dragging/
+sizing/glow all keep working unchanged.
+
+**On stacking:** a stack is built from an explicit multi-select ("Stack
+Books" → tap books → "Stack Selected"), not by dragging one book onto
+another. Books not in a stack are still individually draggable exactly as
+before. Pulling a single book back out of an *existing* stack isn't
+supported yet — Unstack dissolves the whole pile back to individual spines,
+which you can then re-arrange or re-stack. Flagging this now in case "move
+a single book up/down/left/right" meant something more specific than that —
+happy to adjust if so.
 
 Nth Shelf actually drives its page flip with **Turn.js** (`js/turn.js`, the
 realistic drag-a-corner flipbook library), wired through your
@@ -133,3 +151,33 @@ no readable content throws a clear error instead of opening blank.
     Fixed by updating the shelf's in-memory list directly instead of
     re-reading it from the database on every add/duplicate/delete.
   - Both confirmed via direct testing (not just code review) before shipping.
+
+## This round: realistic decor, drag-anywhere, book stacking, more decor types
+
+- **Decor redesigned as shaded SVG art** (`js/decor-art.js`) instead of flat
+  emoji — see the note above on the realism ceiling without an image-gen tool.
+- **Decor items are now draggable to any shelf** — same long-press gesture as
+  books, unified into one drag system in `shelf.js` (`kind: 'book'|'decor'|'stack'`).
+- **Book stacking**: `js/customize.js`'s Arrange tab gained "📚 Stack Books"
+  (multi-select → lay flat as a pile) with its own Size/Padding sliders and
+  Unstack. New `stacks` IndexedDB store (bumped to version 3).
+- **4 new decor types**: hanging vine (drapes from the shelf above — a real
+  `position` variant, not just a different icon), lamp, mug, picture frame —
+  8 total in the picker now.
+- **Spines redesigned**: covers now show as a defined inset "plate" near the
+  top of the spine instead of stretching across the whole thing, with a
+  proper inset bevel (light/dark edges) so the spine reads as a solid object
+  with material, not a flat rectangle.
+- Found and fixed two more real bugs before shipping, not just written blind:
+  - The hanging vine wasn't clickable at first — but the actual cause was a
+    test-script ambiguity (`text=Done` matched the topbar's Done button
+    before the item panel's), not an app bug; traced it via direct DOM
+    inspection (`elementFromPoint`, computed `pointer-events`) rather than
+    guessing, confirmed the real cause, and fixed the test rather than
+    "fixing" code that wasn't broken.
+  - Multi-select-drag test flakiness (stale element handles after each
+    selection re-renders the shelf) — same category, a test-harness issue
+    caught and fixed rather than papered over.
+- Regression-tested everything from prior rounds (Turn.js page-flip, EPUB
+  scrolling on a 50-chapter fixture, comic-reader nav tap-to-show, both side
+  panels, backdrop/shelf swatches, move-toast+undo) — still passing.
