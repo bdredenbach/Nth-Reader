@@ -108,8 +108,9 @@ window.Shelf = class {
     el.dataset.kind = "book";
     const hue = book.hue ?? (book.hue = hashHue(book.title));
     el.style.setProperty("--spine-hue", hue);
-    el.style.width = (book.spineWidth || 34) + "px";
-    el.style.height = (book.spineHeight || (150 + (hue % 40))) + "px";
+    // Real shelves read better when the spines are slim and subtly varied.
+    el.style.width = (book.spineWidth || (18 + (hue % 8))) + "px";
+    el.style.height = (book.spineHeight || (104 + (hue % 27))) + "px";
     if (this.stackSelectMode && this.selectedForStack.has(book.id)) el.classList.add("selected-for-stack");
 
     const label = document.createElement("span");
@@ -139,16 +140,19 @@ window.Shelf = class {
     el.dataset.kind = "stack";
     if (stack.id === this.selectedStackId) el.classList.add("selected");
     const size = stack.size || 1;
-    const padding = stack.padding ?? 3;
+    const offset = stack.offset ?? 0;
     el.style.setProperty("--stack-size", size);
-    el.style.setProperty("--stack-pad", padding + "px");
+    el.style.marginLeft = `${offset}px`;
 
     const books = this.booksInStack(stack);
-    books.forEach((book) => {
+    books.forEach((book, i) => {
       const bar = document.createElement("div");
       bar.className = "stack-book-bar";
+      bar.dataset.bookId = book.id;
       const hue = book.hue ?? (book.hue = hashHue(book.title));
       bar.style.setProperty("--spine-hue", hue);
+      bar.style.setProperty("--book-length", `${96 + ((hue + i * 17) % 25)}px`);
+      bar.style.setProperty("--book-shift", `${((hue + i * 11) % 9) - 4}px`);
       if (book.coverThumb) {
         bar.classList.add("has-cover");
         bar.style.backgroundImage = `url(${book.coverThumb})`;
@@ -170,10 +174,15 @@ window.Shelf = class {
     el.dataset.type = item.type;
     if (DECOR_HANGING[item.type]) el.classList.add("hanging");
     if (item.id === this.selectedDecorId) el.classList.add("selected");
-    const size = item.size || 1;
+    const defaults = DECOR_DEFAULTS[item.type] || { width: 72, height: 84 };
+    const legacySize = item.size || 1;
+    const width = item.width || Math.round(defaults.width * legacySize);
+    const height = item.height || Math.round(defaults.height * legacySize);
     el.style.left = (item.position ?? 50) + "%";
-    el.style.transform = `translateX(-50%) scale(${size})`;
-    if (item.type === "candle" && item.glow) {
+    el.style.width = `${width}px`;
+    el.style.height = `${height}px`;
+    el.style.transform = "translateX(-50%)";
+    if ((item.type === "candle" || item.type === "lamp") && item.glow) {
       el.style.setProperty("--glow", Math.min(1, item.glow / 100));
       el.classList.add("has-glow");
     }
@@ -214,13 +223,15 @@ window.Shelf = class {
   onPointerDown(e) {
     const spineEl = e.target.closest(".spine");
     const decorEl = !spineEl && this.decorateActive ? e.target.closest(".decor-item") : null;
-    const stackEl = !spineEl && !decorEl && this.decorateActive ? e.target.closest(".stack-pile") : null;
+    // Stacks remain interactive outside Customize mode so their books open.
+    const stackEl = !spineEl && !decorEl ? e.target.closest(".stack-pile") : null;
     const targetEl = spineEl || decorEl || stackEl;
     if (!targetEl) return;
 
     const kind = spineEl ? "book" : decorEl ? "decor" : "stack";
     const id = targetEl.dataset.id;
     const startX = e.clientX, startY = e.clientY;
+    const stackedBookId = kind === "stack" ? e.target.closest(".stack-book-bar")?.dataset.bookId : null;
 
     if (kind === "book" && this.stackSelectMode) {
       // In Stack Books mode, a tap toggles selection — no drag, no open.
@@ -243,7 +254,7 @@ window.Shelf = class {
     this._pending = {
       kind, id, targetEl, startX, startY, moved: false,
       timer: setTimeout(() => this.beginDrag(kind, id, targetEl, startX, startY), 350),
-      originalShelfIndex, originalSlot,
+      originalShelfIndex, originalSlot, stackedBookId,
     };
   }
 
@@ -269,14 +280,14 @@ window.Shelf = class {
       if (this._pending.isSelectTap && !this._pending.moved) {
         this.toggleStackSelection(this._pending.id);
       } else if (!this._drag && !this._pending.moved) {
-        this.handleTap(this._pending.kind, this._pending.id);
+        this.handleTap(this._pending.kind, this._pending.id, this._pending.stackedBookId);
       }
       this._pending = null;
     }
     if (this._drag) this.endDrag(e.clientX, e.clientY);
   }
 
-  handleTap(kind, id) {
+  handleTap(kind, id, stackedBookId) {
     if (kind === "book") {
       const now = Date.now();
       if (this._lastTap.id === id && now - this._lastTap.time < 320) {
@@ -288,6 +299,10 @@ window.Shelf = class {
     } else if (kind === "decor") {
       const item = this.decorItems.find(d => d.id === id);
       if (item) this.onDecorTap?.(item);
+    } else if (kind === "stack" && !this.decorateActive) {
+      const stack = this.stacks.find(s => s.id === id);
+      const fallbackId = this.booksInStack(stack || {}).at(-1)?.id;
+      this.onOpen(stackedBookId || fallbackId);
     } else if (kind === "stack") {
       const stack = this.stacks.find(s => s.id === id);
       if (stack) this.onStackTap?.(stack);

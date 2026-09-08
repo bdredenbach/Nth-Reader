@@ -1,8 +1,8 @@
 /* Nth Reader — customize.js
  * The "make it aesthetic" layer: enter Customize mode from the shelf's
  * menu to add decor, drag decor to any shelf, resize/reposition/duplicate/
- * delete it, group books into a flat-lying stack (with its own size and
- * padding controls), change backdrop/shelf-wood style, and get an
+ * delete it, group books into a flat-lying stack (with book-length and
+ * whole-stack position controls), change backdrop/shelf-wood style, and get an
  * undoable toast when a book gets dragged to a new spot.
  */
 window.Customize = class {
@@ -157,15 +157,15 @@ window.Customize = class {
     const wrap = document.createElement("div");
     wrap.className = "decor-controls";
 
-    const sizeRow = this.sliderRow("Size", 50, 160, Math.round((stack.size || 1) * 100), (v) => {
+    const sizeRow = this.sliderRow("Book length", 80, 180, Math.round((stack.size || 1.2) * 100), (v) => {
       stack.size = v / 100;
       this.shelf.render();
       NthDB.stacks.put(stack);
     });
     wrap.appendChild(sizeRow);
 
-    const padRow = this.sliderRow("Padding", 0, 14, stack.padding ?? 3, (v) => {
-      stack.padding = v;
+    const padRow = this.sliderRow("Stack position", -40, 180, stack.offset ?? 0, (v) => {
+      stack.offset = v;
       this.shelf.render();
       NthDB.stacks.put(stack);
     });
@@ -205,8 +205,8 @@ window.Customize = class {
       id: `stack-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       shelfIndex,
       slot: books[0].slot ?? Date.now(),
-      size: 1,
-      padding: 3,
+      size: 1.2,
+      offset: 0,
       bookIds: books.map((b) => b.id),
       createdAt: Date.now(),
     };
@@ -256,12 +256,24 @@ window.Customize = class {
     const wrap = document.createElement("div");
     wrap.className = "decor-controls";
 
-    const sizeRow = this.sliderRow("Size", 50, 160, Math.round((item.size || 1) * 100), (v) => {
-      item.size = v / 100;
+    const defaults = DECOR_DEFAULTS[item.type] || { width: 72, height: 84 };
+    if (!item.width) item.width = Math.round(defaults.width * (item.size || 1));
+    if (!item.height) item.height = Math.round(defaults.height * (item.size || 1));
+
+    const widthRow = this.sliderRow("Width", 36, 160, item.width, (v) => {
+      item.width = v;
       this.shelf.render();
       NthDB.decor.put(item);
     });
-    wrap.appendChild(sizeRow);
+    wrap.appendChild(widthRow);
+
+    const heightMax = item.type === "vine" ? 300 : 180;
+    const heightRow = this.sliderRow(item.type === "vine" ? "Vine length" : "Height", 40, heightMax, item.height, (v) => {
+      item.height = v;
+      this.shelf.render();
+      NthDB.decor.put(item);
+    });
+    wrap.appendChild(heightRow);
 
     const posRow = this.sliderRow("Position", 0, 100, Math.round(item.position ?? 50), (v) => {
       item.position = v;
@@ -300,11 +312,13 @@ window.Customize = class {
     delBtn.className = "decor-action-btn decor-action-danger";
     delBtn.type = "button";
     delBtn.textContent = "🗑 Remove";
-    delBtn.addEventListener("click", async () => {
+    delBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
       await NthDB.decor.remove(item.id);
+      const remaining = this.shelf.decorItems.filter((d) => d.id !== item.id);
       this.selectedDecor = null;
       this.shelf.selectDecor(null);
-      this.shelf.setDecor(this.shelf.decorItems.filter((d) => d.id !== item.id));
+      this.shelf.setDecor(remaining);
       this.renderPanel();
     });
     actions.appendChild(delBtn);
@@ -379,12 +393,14 @@ window.Customize = class {
 
   async addDecor(type) {
     this.closeDecorPicker();
+    const defaults = DECOR_DEFAULTS[type] || { width: 72, height: 84 };
     const item = {
       id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type,
       shelfIndex: 0,
       position: 50,
-      size: 1,
+      width: defaults.width,
+      height: defaults.height,
       glow: (type === "candle" || type === "lamp") ? 60 : undefined,
       createdAt: Date.now(),
     };
@@ -400,6 +416,8 @@ window.Customize = class {
     const shelfTheme = await NthDB.settings.get("shelfTheme", "walnut");
     document.getElementById("shelf-root").dataset.backdrop = backdrop;
     document.getElementById("shelf-root").dataset.shelfTheme = shelfTheme;
+    document.documentElement.dataset.backdrop = backdrop;
+    document.documentElement.dataset.shelfTheme = shelfTheme;
   }
 
   showMoveToast(book, previous) {

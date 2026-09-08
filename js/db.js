@@ -3,7 +3,7 @@
  * Stores:
  *   books    — metadata + original file blob + reading progress + shelf position
  *   decor    — decorative items placed on shelves (bust, globe, plant, candle...)
- *   stacks   — groups of books laid flat in a pile (shelfIndex, position, size, padding)
+ *   stacks   — groups of books laid flat in a pile (shelfIndex, slot, size, offset)
  *   settings — small global key/value bag (backdrop choice, shelf theme choice)
  */
 window.NthDB = (function () {

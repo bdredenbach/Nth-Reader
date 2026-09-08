@@ -9,13 +9,9 @@
  * The custom canvas "corner-turn" (page-turn.js) is kept only as the
  * fallback Nth Shelf itself falls back to if Turn.js can't initialize.
  *
- * Flow (reflowable text: EPUB/RTF/MOBI) books are a plain scrollable
- * document, not CSS-column pages. An earlier version paginated the whole
- * book into fixed-width columns in one go, which silently broke on long
- * books — a big omnibus needed 3000+ columns, and browsers cap how many
- * columns a multi-column layout will actually render, so the page came up
- * blank past a certain length. Native scrolling has no such ceiling and
- * is simpler and more robust for arbitrary-length text.
+ * Reflowable books use EpubPageReader: a right-hand paper page with a
+ * draggable turn, measured chapter-by-chapter so long books never hit the
+ * browser's global CSS-column ceiling.
  */
 window.Reader = class {
   constructor() {
@@ -43,6 +39,7 @@ window.Reader = class {
     this._scrollSaveTimer = null;
 
     this.nativePageTurn = new LongboxNativePageTurn(this);
+    this.epubPages = new EpubPageReader(this.els.flowInner, this);
     this.turnPageMode = new LongboxPageMode({
       getIssue: () => this.comic,
       getPageUrl: (i) => this.getPageUrl(i),
@@ -68,10 +65,11 @@ window.Reader = class {
     // own gestures handle page-turning via drag, so nothing else was ever
     // wired to bring the auto-hidden chrome back once it hid itself.
     this.els.viewport.addEventListener("click", (e) => this.onViewportTap(e));
-    this.els.flow.addEventListener("scroll", () => this.onFlowScroll());
-    this.els.flow.addEventListener("click", () => this.toggleChrome());
     window.addEventListener("resize", () => {
-      if (this.content?.kind === "flow") this.applyFlowWidth();
+      if (this.content?.kind === "flow") {
+        clearTimeout(this._flowResizeTimer);
+        this._flowResizeTimer = setTimeout(() => this.epubPages.open(this.content.html, this.book.progress || 0), 180);
+      }
     });
   }
 
@@ -95,16 +93,8 @@ window.Reader = class {
     } else {
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
-      this.els.pageLabel.textContent = "";
-      this.els.flowInner.innerHTML = content.html;
-      this.applyFlowWidth();
-      const progress = book.progress || 0;
-      // Restore scroll position once real layout (incl. any images) has settled.
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
-        this.els.flow.scrollTop = Math.max(0, max * progress);
-        this.updateSliderLabel();
-      }));
+      this.index = 0;
+      await this.epubPages.open(content.html, book.progress || 0);
     }
   }
 
@@ -181,26 +171,14 @@ window.Reader = class {
   async render() { return this.renderFallback(); }
   async getPageUrl(i) { return this.content.getPageUrl(i); }
 
-  // ---------- flow (reflowable text) mode — plain vertical scroll ----------
-  applyFlowWidth() {
-    const w = this.els.flow.clientWidth;
-    // A centered readable column on wide screens; full-width on phones.
-    this.els.flowInner.style.maxWidth = Math.min(w, 720) + "px";
-  }
-
-  onFlowScroll() {
-    this.showChrome();
-    clearTimeout(this._scrollSaveTimer);
-    this._scrollSaveTimer = setTimeout(() => this.saveProgress(), 400);
-  }
-
+  // ---------- reflowable page mode ----------
   flowNext() {
     this.showChrome();
-    this.els.flow.scrollBy({ top: this.els.flow.clientHeight * 0.9, behavior: "smooth" });
+    this.epubPages.next();
   }
   flowPrev() {
     this.showChrome();
-    this.els.flow.scrollBy({ top: -this.els.flow.clientHeight * 0.9, behavior: "smooth" });
+    this.epubPages.prev();
   }
 
   // ---------- shared chrome / progress ----------
@@ -222,9 +200,8 @@ window.Reader = class {
     if (this.content?.kind === "paged") {
       this.els.pageLabel.textContent = `${this.index + 1} / ${this.comic.pageCount}`;
     } else {
-      const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
-      const pct = max > 0 ? Math.round((this.els.flow.scrollTop / max) * 100) : 100;
-      this.els.pageLabel.textContent = `${pct}%`;
+      const total = this.epubPages?.pages?.length || 1;
+      this.els.pageLabel.textContent = `${this.index + 1} / ${total}`;
     }
   }
   updateBookmarkFlag() { /* reserved for a future bookmarks feature */ }
@@ -234,8 +211,8 @@ window.Reader = class {
     if (this.content.kind === "paged") {
       this.book.progress = this.index;
     } else {
-      const max = this.els.flow.scrollHeight - this.els.flow.clientHeight;
-      this.book.progress = max > 0 ? this.els.flow.scrollTop / max : 0;
+      const max = Math.max(1, (this.epubPages?.pages?.length || 1) - 1);
+      this.book.progress = this.index / max;
       this.updateSliderLabel();
     }
     NthDB.put(this.book);

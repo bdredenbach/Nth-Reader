@@ -71,6 +71,24 @@ window.RemovePanel = class {
       const ok = confirm(`Remove "${book.title}"? This can't be undone.`);
       if (!ok) return;
       await NthDB.remove(book.id);
+      // Keep stack records consistent when one of their books is deleted.
+      const stacks = await NthDB.stacks.all();
+      for (const stack of stacks.filter((s) => (s.bookIds || []).includes(book.id))) {
+        stack.bookIds = stack.bookIds.filter((id) => id !== book.id);
+        if (stack.bookIds.length < 2) {
+          for (const remainingId of stack.bookIds) {
+            const remaining = await NthDB.get(remainingId);
+            if (remaining) {
+              delete remaining.stackId;
+              delete remaining.stackOrder;
+              await NthDB.put(remaining);
+            }
+          }
+          await NthDB.stacks.remove(stack.id);
+        } else {
+          await NthDB.stacks.put(stack);
+        }
+      }
       await this.renderList();
       this.onRemoved();
     });
