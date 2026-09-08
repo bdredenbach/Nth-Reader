@@ -1,6 +1,14 @@
-# Nth Reader V-0.04.00
+# Nth Reader V-0.05.00
 
 This build turns the prototype shelf into a dimensional bookcase and adds a page-shaped reader for reflowable ebooks.
+
+## V-0.05: growing shelves, lazy comics, and leaning books
+
+- The bookcase starts with one shelf and always maintains one empty shelf at the bottom. Filling the trailing shelf creates the next shelf automatically.
+- Every newly imported book goes to the first shelf containing no book, stack, or decoration. Books expanded from a mixed archive are assigned successively, one book per empty shelf.
+- Large comics no longer decompress and decode every page before becoming usable. Turn.js receives lightweight placeholders for the complete page count while only the current page and a small nearby window are hydrated. Pages outside that window release their generated image URLs to keep memory bounded.
+- **Lean** sits between **Stack Books** and **Face-Out**. Select one or more books on the same shelf, apply the lean, then adjust **Angle**, **Position**, and **Lean Left / Lean Right**. **Stand Up** returns the selected group to upright spines.
+- Moving a leaning book to another shelf safely stands that individual book upright. Moving or unstacking a stack now keeps its contained books on the stack's actual shelf.
 
 ## V-0.04: face-out books and sturdier storage
 
@@ -97,4 +105,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.04.00`.
+The service-worker cache key is `Nth-Reader-V-0.05.00`.
