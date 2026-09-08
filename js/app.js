@@ -56,13 +56,17 @@
   });
 
   async function openBook(id, bookmark = null) {
-    const book = await NthDB.get(id);
+    const [book, sourceFile] = await Promise.all([NthDB.get(id), NthDB.getFile(id)]);
     if (!book) return;
     try {
+      if (!sourceFile) throw new Error("The saved source file for this book is missing. Remove it and add the original file again.");
       importStatus.textContent = "";
       book.lastReadAt = Date.now();
       await NthDB.put(book);
-      const content = await NthFormats.load(book.file);
+      const readableFile = sourceFile.name
+        ? sourceFile
+        : new File([sourceFile], book.fileName || `${book.title}.${book.format}`, { type: book.fileType || sourceFile.type });
+      const content = await NthFormats.load(readableFile);
       await reader.open(book, content, bookmark);
     } catch (err) {
       showStatus(err.message || String(err), true);
@@ -70,15 +74,19 @@
   }
 
   async function addBook(file) {
+    let content = null;
     try {
       showStatus(`Adding "${file.name}"…`);
-      const content = await NthFormats.load(file);
+      content = await NthFormats.load(file);
       const shelfIndex = await firstEmptyShelfIndex();
       const book = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         title: content.title || file.name.replace(/\.[^.]+$/, ""),
         format: NthFormats.extOf(file.name),
         file,
+        fileName: file.name,
+        fileType: file.type || "",
+        fileSize: file.size || 0,
         addedAt: Date.now(),
         shelfIndex,
         slot: Date.now(),
@@ -93,6 +101,10 @@
       showStatus("");
     } catch (err) {
       showStatus(`Couldn't add "${file.name}": ${err.message || err}`, true);
+    } finally {
+      // Import only needs metadata and a thumbnail. Do not leave JSZip/PDF
+      // holding the complete source archive in RAM while the shelf is open.
+      await content?.dispose?.();
     }
   }
 
@@ -129,6 +141,8 @@
 
   async function refresh() {
     const token = ++refreshToken;
+    await NthDB.flush();
+    if (token !== refreshToken) return;
     const [books, decorItems, stacks] = await Promise.all([
       NthDB.all(), NthDB.decor.all(), NthDB.stacks.all(),
     ]);

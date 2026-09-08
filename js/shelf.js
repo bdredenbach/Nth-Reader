@@ -373,7 +373,12 @@ window.Shelf = class {
       return;
     }
     if ((kind === "book" || kind === "faceout") && this.leanSelectMode) {
-      this._pending = { kind, id, targetEl, startX, startY, moved: false, isLeanTap: true };
+      const book = this.books.find((candidate) => candidate.id === id);
+      this._pending = {
+        kind, id, targetEl, startX, startY, moved: false,
+        isExistingLeanTap: !!book?.leaned,
+        isLeanTap: !book?.leaned,
+      };
       return;
     }
 
@@ -420,6 +425,9 @@ window.Shelf = class {
       } else if (this._pending.isFaceOutTap && !this._pending.moved) {
         const book = this.books.find((candidate) => candidate.id === this._pending.id);
         if (book) this.onFaceOutTap?.(book);
+      } else if (this._pending.isExistingLeanTap && !this._pending.moved) {
+        const book = this.books.find((candidate) => candidate.id === this._pending.id);
+        if (book) this.onLeanTap?.(book);
       } else if (this._pending.isLeanTap && !this._pending.moved) {
         this.toggleLeanSelection(this._pending.id);
       } else if (!this._drag && !this._pending.moved) {
@@ -483,8 +491,35 @@ window.Shelf = class {
 
   highlightDropTarget(x, y) {
     this.root.querySelectorAll(".shelf-row.drop-target").forEach(r => r.classList.remove("drop-target"));
-    const row = document.elementFromPoint(x, y)?.closest(".shelf-row");
+    const row = this.dropRowAt(x, y);
     if (row) row.classList.add("drop-target");
+  }
+
+  dropRowAt(x, y) {
+    const rows = Array.from(this.root.querySelectorAll(".shelf-row"));
+    if (!rows.length) return null;
+    const rootRect = this.root.getBoundingClientRect();
+    // Keep accidental releases outside the bookcase from moving anything,
+    // but forgive a small miss along the side rails and shelf boundaries.
+    if (x < rootRect.left - 18 || x > rootRect.right + 18 || y < rootRect.top - 12 || y > rootRect.bottom + 28) {
+      return null;
+    }
+
+    // Each shelf owns its whole open compartment, from the underside of the
+    // shelf above through its wooden ledge. This is independent of whatever
+    // element happens to be beneath the finger (book, decor, backdrop, etc.).
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) return row;
+      const distance = y < rect.top ? rect.top - y : y - rect.bottom;
+      if (distance < nearestDistance) {
+        nearest = row;
+        nearestDistance = distance;
+      }
+    }
+    return nearestDistance <= 30 ? nearest : null;
   }
 
   endDrag(x, y) {
@@ -493,7 +528,7 @@ window.Shelf = class {
     el.classList.remove("drag-lifted");
     this.root.querySelectorAll(".shelf-row.drop-target").forEach(r => r.classList.remove("drop-target"));
 
-    const row = document.elementFromPoint(x, y)?.closest(".shelf-row");
+    const row = this.dropRowAt(x, y);
     this._drag = null;
     if (!row) { this.render(); return; }
     const newShelf = Number(row.dataset.shelfIndex);
@@ -542,18 +577,22 @@ window.Shelf = class {
       delete record.leanDirection;
       delete record.leanOffset;
     }
+    const changedBooks = new Map();
+    const changedStacks = new Map();
     if (flowKind === "stack") {
       this.booksInStack(record).forEach((book) => {
         book.shelfIndex = newShelf;
-        NthDB.put(book);
+        changedBooks.set(book.id, book);
       });
     }
 
     flowItems.forEach((entry, i) => {
       const rec = entry.id === id ? record : entry.data;
       rec.slot = i;
-      if (entry.kind === "book") NthDB.put(rec); else NthDB.stacks.put(rec);
+      if (entry.kind === "book") changedBooks.set(rec.id, rec);
+      else changedStacks.set(rec.id, rec);
     });
+    NthDB.saveArrangement({ books: [...changedBooks.values()], stacksToPut: [...changedStacks.values()] });
 
     if (newShelf === this.shelfCount - 1) this.shelfCount++;
     this.render();

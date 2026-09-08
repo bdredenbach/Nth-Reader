@@ -130,8 +130,16 @@ window.Reader = class {
     this.updateSliderLabel();
   }
 
-  close() {
+  async close() {
     this.saveProgress();
+    await this.turnPageMode.destroy();
+    await this.content?.dispose?.();
+    this.els.viewport.innerHTML = "";
+    this.els.flowInner.innerHTML = "";
+    this.epubPages.pages = [];
+    this.comic = null;
+    this.content = null;
+    this.book = null;
     this.els.root.hidden = true;
     window.dispatchEvent(new CustomEvent("nth:reader-closed"));
   }

@@ -49,6 +49,17 @@ window.Customize = class {
       this.setTab("decorate");
     };
     this.shelf.onStackTap = (stack) => {
+      if (!this.active) return;
+      if (this.tab !== "arrange") this.setTab("arrange");
+      this.stackPickMode = false;
+      this.faceOutPickMode = false;
+      this.leanPickMode = false;
+      this.shelf.setStackSelectMode(false);
+      this.shelf.setFaceOutSelectMode(false);
+      this.shelf.setLeanSelectMode(false);
+      this.selectedFaceOut = null;
+      this.selectedLeanBooks = null;
+      this.shelf.selectFaceOut(null);
       this.selectedStack = stack;
       this.shelf.selectStack(stack.id);
       this.renderPanel();
@@ -272,7 +283,7 @@ window.Customize = class {
       book.leanDirection = "right";
       book.leanOffset = 0;
     });
-    await Promise.all(books.map((book) => NthDB.put(book)));
+    await NthDB.saveArrangement({ books });
     this.leanPickMode = false;
     this.shelf.setLeanSelectMode(false);
     this.selectedLeanBooks = books;
@@ -281,7 +292,18 @@ window.Customize = class {
   }
 
   openLeanGroup(book) {
-    if (!this.active || this.tab !== "arrange") return;
+    if (!this.active) return;
+    if (this.tab !== "arrange") this.setTab("arrange");
+    this.stackPickMode = false;
+    this.faceOutPickMode = false;
+    this.leanPickMode = false;
+    this.shelf.setStackSelectMode(false);
+    this.shelf.setFaceOutSelectMode(false);
+    this.shelf.setLeanSelectMode(false);
+    this.selectedStack = null;
+    this.selectedFaceOut = null;
+    this.shelf.selectStack(null);
+    this.shelf.selectFaceOut(null);
     this.selectedLeanBooks = this.shelf.books
       .filter((candidate) => candidate.leanGroupId === book.leanGroupId)
       .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
@@ -296,7 +318,7 @@ window.Customize = class {
     heading.textContent = `${books.length} Leaning selected`;
     wrap.appendChild(heading);
     const first = books[0];
-    const saveAll = () => Promise.all(books.map((book) => NthDB.put(book)));
+    const saveAll = () => NthDB.saveArrangement({ books });
     wrap.appendChild(this.sliderRow("Angle", 1, 18, first.leanAngle ?? 8, (value) => {
       books.forEach((book) => { book.leanAngle = value; }); this.shelf.render(); saveAll();
     }));
@@ -338,7 +360,23 @@ window.Customize = class {
   }
 
   async selectFaceOut(book) {
-    if (!this.active || this.tab !== "arrange") return;
+    if (!this.active) return;
+    if (this.tab !== "arrange") this.setTab("arrange");
+    this.stackPickMode = false;
+    this.faceOutPickMode = false;
+    this.leanPickMode = false;
+    this.shelf.setStackSelectMode(false);
+    this.shelf.setFaceOutSelectMode(false);
+    this.shelf.setLeanSelectMode(false);
+    this.selectedStack = null;
+    this.selectedLeanBooks = null;
+    this.shelf.selectStack(null);
+    if (book.facedOut) {
+      this.selectedFaceOut = book;
+      this.shelf.selectFaceOut(book.id);
+      this.renderPanel();
+      return;
+    }
     delete book.leaned;
     delete book.leanGroupId;
     delete book.leanAngle;
@@ -348,11 +386,18 @@ window.Customize = class {
     book.faceWidth ||= 88;
     book.faceHeight ||= 118;
     book.faceOffset ??= 0;
-    if (!book.faceCover && book.file) {
+    if (!book.faceCover) {
+      let content = null;
       try {
-        const content = await NthFormats.load(book.file);
+        const sourceFile = book.file || await NthDB.getFile(book.id);
+        if (!sourceFile) throw new Error("Saved source file is missing.");
+        const readableFile = sourceFile.name
+          ? sourceFile
+          : new File([sourceFile], book.fileName || `${book.title}.${book.format}`, { type: book.fileType || sourceFile.type });
+        content = await NthFormats.load(readableFile);
         if (content.coverUrl) book.faceCover = await this.makeFaceCover(await content.coverUrl());
       } catch (_) { /* the existing thumbnail/fallback title remains usable */ }
+      finally { await content?.dispose?.(); }
     }
     await NthDB.put(book);
     this.faceOutPickMode = false;
@@ -486,8 +531,7 @@ window.Customize = class {
       delete b.leaned; delete b.leanGroupId; delete b.leanAngle;
       delete b.leanDirection; delete b.leanOffset;
     });
-    await NthDB.stacks.put(stack);
-    await Promise.all(books.map((b) => NthDB.put(b)));
+    await NthDB.saveArrangement({ books, stacksToPut: [stack] });
 
     this.stackPickMode = false;
     this.shelf.setStackSelectMode(false);
@@ -503,8 +547,7 @@ window.Customize = class {
       delete b.stackId; delete b.stackOrder;
       b.shelfIndex = stack.shelfIndex ?? b.shelfIndex ?? 0;
     });
-    await Promise.all(books.map((b) => NthDB.put(b)));
-    await NthDB.stacks.remove(stack.id);
+    await NthDB.saveArrangement({ books, stackIdsToRemove: [stack.id] });
 
     this.selectedStack = null;
     this.shelf.selectStack(null);

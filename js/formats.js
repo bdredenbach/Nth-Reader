@@ -34,8 +34,8 @@ window.NthFormats = (function () {
 
   // ---------- CBZ / ZIP (image archive) ----------
   async function loadImageArchive(file) {
-    const zip = await JSZip.loadAsync(file);
-    const entries = Object.values(zip.files)
+    let zip = await JSZip.loadAsync(file);
+    let entries = Object.values(zip.files)
       .filter(f => !f.dir && IMAGE_RE.test(f.name))
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
     if (!entries.length) throw new Error("No images found in archive.");
@@ -53,11 +53,18 @@ window.NthFormats = (function () {
       URL.revokeObjectURL(urlCache[i]);
       urlCache[i] = null;
     }
+    function dispose() {
+      urlCache.forEach((url, index) => { if (url) releasePageUrl(index); });
+      entries.length = 0;
+      entries = [];
+      zip = null;
+    }
     return {
       kind: "paged",
       pageCount: entries.length,
       getPageUrl,
       releasePageUrl,
+      dispose,
       async coverUrl() { return getPageUrl(0); },
     };
   }
@@ -65,7 +72,7 @@ window.NthFormats = (function () {
   // Comic Book TAR. CBT is an uncompressed tar archive, so it does not need
   // a native/WASM codec like RAR or 7z.
   async function loadTarImageArchive(file) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bytes = new Uint8Array(await file.arrayBuffer());
     const decoder = new TextDecoder();
     const entries = [];
     for (let offset = 0; offset + 512 <= bytes.length;) {
@@ -92,7 +99,12 @@ window.NthFormats = (function () {
       URL.revokeObjectURL(cache[i]);
       cache[i] = null;
     };
-    return { kind: "paged", pageCount: entries.length, getPageUrl, releasePageUrl, async coverUrl() { return getPageUrl(0); } };
+    const dispose = () => {
+      cache.forEach((url, index) => { if (url) releasePageUrl(index); });
+      entries.length = 0;
+      bytes = null;
+    };
+    return { kind: "paged", pageCount: entries.length, getPageUrl, releasePageUrl, dispose, async coverUrl() { return getPageUrl(0); } };
   }
 
   // ---------- PDF (rasterized per page) ----------
@@ -122,11 +134,16 @@ window.NthFormats = (function () {
       URL.revokeObjectURL(urlCache[i]);
       urlCache[i] = null;
     }
+    async function dispose() {
+      urlCache.forEach((url, index) => { if (url) releasePageUrl(index); });
+      try { await pdf.destroy(); } catch (_) { /* already released */ }
+    }
     return {
       kind: "paged",
       pageCount: pdf.numPages,
       getPageUrl,
       releasePageUrl,
+      dispose,
       async coverUrl() { return getPageUrl(0); },
     };
   }
