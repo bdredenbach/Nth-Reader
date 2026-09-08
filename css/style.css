@@ -98,64 +98,111 @@ body.customizing .shelf-header { display: none; }
   flex: 0 0 auto;
   border-radius: 3px 5px 5px 3px;
   background:
-    linear-gradient(90deg, rgba(0,0,0,.35), transparent 8px, transparent 92%, rgba(255,255,255,.15)),
-    linear-gradient(180deg, hsl(var(--spine-hue) 62% 46%), hsl(var(--spine-hue) 55% 32%));
-  box-shadow: 1px 0 0 rgba(255,255,255,.08) inset, 0 3px 6px rgba(0,0,0,.4);
+    linear-gradient(90deg, rgba(0,0,0,.4), transparent 6px, transparent 94%, rgba(0,0,0,.3)),
+    linear-gradient(180deg, hsl(var(--spine-hue) 40% 30%), hsl(var(--spine-hue) 45% 18%));
+  box-shadow:
+    inset 2px 0 0 rgba(255,255,255,.1),
+    inset -2px 0 0 rgba(0,0,0,.35),
+    inset 0 2px 3px rgba(255,255,255,.12),
+    0 3px 6px rgba(0,0,0,.4);
   display: flex; align-items: flex-end; justify-content: center;
   padding-bottom: 8px;
   touch-action: none;
   user-select: none;
   transition: transform .15s ease, box-shadow .15s ease;
 }
-.spine.has-cover {
-  background-image: var(--spine-cover), linear-gradient(180deg, hsl(var(--spine-hue) 62% 46%), hsl(var(--spine-hue) 55% 32%));
-  background-size: cover;
-  background-position: center;
+/* A defined "cover plate" inset near the top — more like a real spine
+   (mostly solid material + text) with a hint of the actual cover art,
+   rather than stretching the whole cover across the spine. */
+.spine-cover-plate {
+  position: absolute; top: 8px; left: 3px; right: 3px; height: 38%;
+  background-size: cover; background-position: top center;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.25);
 }
+.spine.has-cover { padding-bottom: 8px; }
 .spine-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.15;
-  max-height: 92%;
+  max-height: 55%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(255,255,255,.92);
   text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  position: relative; z-index: 1;
 }
 .spine-progress {
   position: absolute; left: 3px; right: 3px; bottom: 3px; height: 3px;
   background: var(--accent); border-radius: 2px; opacity: .85;
 }
-.spine-lifted { opacity: .25; }
-.spine-ghost {
+.selected-for-stack { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.drag-lifted { opacity: .25; }
+.drag-ghost {
   position: fixed; z-index: 500; pointer-events: none;
-  transform: scale(1.08) rotate(-2deg);
+  transform: scale(1.06) rotate(-2deg);
   box-shadow: 0 18px 30px rgba(0,0,0,.55);
 }
 
-/* Decor items (bust/globe/plant/candle) sit on a non-scrolling overlay so
-   they stay put at their chosen spot regardless of the book row scrolling. */
+/* Book stacks — a pile of books lying flat, built from a multi-selection */
+.stack-pile {
+  display: flex; flex-direction: column-reverse; align-items: stretch;
+  flex: 0 0 auto;
+  width: calc(64px * var(--stack-size, 1));
+  gap: var(--stack-pad, 3px);
+  margin: 0 2px;
+  touch-action: none; user-select: none;
+}
+.stack-book-bar {
+  --spine-hue: 200;
+  height: calc(20px * var(--stack-size, 1));
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16), transparent 40%),
+    linear-gradient(90deg, hsl(var(--spine-hue) 45% 32%), hsl(var(--spine-hue) 40% 22%));
+  box-shadow: 0 2px 3px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.15);
+  display: flex; align-items: center; padding: 0 8px;
+  background-size: cover; background-position: center;
+}
+.stack-book-bar.has-cover { background-blend-mode: overlay; }
+.stack-book-label {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stack-pile.selected { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 4px; }
+
+/* Decor items sit on a non-scrolling overlay so they stay put at their
+   chosen spot regardless of the book row scrolling. */
 .shelf-decor-layer {
   position: absolute; left: 14px; right: 14px; bottom: 18px; height: 130px;
   pointer-events: none;
 }
 .decor-item {
   position: absolute; bottom: 0;
+  width: 64px; height: 84px;
   transform-origin: bottom center;
-  font-size: 52px; line-height: 1;
   pointer-events: none;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,.5));
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.5));
+  touch-action: none;
 }
+.decor-item.hanging { bottom: auto; top: -4px; width: 56px; height: 100px; }
+.decor-art { width: 100%; height: 100%; }
+.decor-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
 body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 .decor-item.selected {
-  outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: 8px;
+  outline: 2px dashed var(--accent); outline-offset: 8px; border-radius: 8px;
 }
-.decor-item.has-glow .decor-glyph {
-  filter: drop-shadow(0 0 calc(6px + 14px * var(--glow, .6)) rgba(255,180,80,var(--glow, .6)));
+.decor-item.has-glow .decor-flame {
+  filter: drop-shadow(0 0 calc(4px + 10px * var(--glow, .6)) rgba(255,180,80,var(--glow, .8)));
 }
+
+.decor-pick-preview { display: block; width: 34px; height: 34px; margin: 0 auto; }
+.decor-pick-preview svg { width: 100%; height: 100%; }
 
 /* ===================== READER ===================== */
 #reader-view {
