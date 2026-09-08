@@ -91,6 +91,30 @@ body.customizing .shelf-header { display: none; }
 .shelf-row.drop-target .shelf-ledge {
   box-shadow: 0 0 0 2px var(--accent), 0 6px 10px rgba(0,0,0,.45);
 }
+.shelf-row.drop-target::before {
+  background:
+    radial-gradient(ellipse at 50% 76%, rgba(240,181,74,.24), transparent 68%),
+    linear-gradient(90deg,rgba(0,0,0,.30),transparent 10%,transparent 90%,rgba(0,0,0,.30));
+  box-shadow: inset 0 0 0 2px rgba(240,181,74,.72), inset 0 12px 18px rgba(0,0,0,.22);
+}
+.shelf-row.drop-target::after {
+  content: "Drop on this shelf";
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 12;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border: 1px solid rgba(255,225,164,.7);
+  border-radius: 999px;
+  background: rgba(49,27,10,.84);
+  color: #ffe2a0;
+  font: 700 10px/1 system-ui, sans-serif;
+  letter-spacing: .03em;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 3px 9px rgba(0,0,0,.45);
+}
 
 .spine {
   --spine-hue: 200;
