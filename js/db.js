@@ -3,13 +3,15 @@
  * Stores:
  *   books    — metadata + original file blob + reading progress + shelf position
  *   decor    — decorative items placed on shelves (bust, globe, plant, candle...)
+ *   stacks   — groups of books laid flat in a pile (shelfIndex, position, size, padding)
  *   settings — small global key/value bag (backdrop choice, shelf theme choice)
  */
 window.NthDB = (function () {
   const DB_NAME = "nth-reader-db";
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   const BOOKS = "books";
   const DECOR = "decor";
+  const STACKS = "stacks";
   const SETTINGS = "settings";
 
   let dbPromise = null;
@@ -26,6 +28,10 @@ window.NthDB = (function () {
         }
         if (!db.objectStoreNames.contains(DECOR)) {
           const store = db.createObjectStore(DECOR, { keyPath: "id" });
+          store.createIndex("shelfIndex", "shelfIndex");
+        }
+        if (!db.objectStoreNames.contains(STACKS)) {
+          const store = db.createObjectStore(STACKS, { keyPath: "id" });
           store.createIndex("shelfIndex", "shelfIndex");
         }
         if (!db.objectStoreNames.contains(SETTINGS)) {
@@ -82,6 +88,7 @@ window.NthDB = (function () {
 
   const books = makeCrud(BOOKS);
   const decor = makeCrud(DECOR);
+  const stacks = makeCrud(STACKS);
 
   const settings = {
     async get(key, fallback) {
@@ -103,5 +110,5 @@ window.NthDB = (function () {
   };
 
   // Top-level put/get/all/remove keep existing callers (books) working unchanged.
-  return { ...books, books, decor, settings };
+  return { ...books, books, decor, stacks, settings };
 })();

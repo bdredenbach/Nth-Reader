@@ -1,7 +1,8 @@
 /* Nth Reader — customize.js
  * The "make it aesthetic" layer: enter Customize mode from the shelf's
- * menu to add decor (bust/globe/plant/candle), reposition/resize/duplicate/
- * delete them, change the backdrop and shelf-wood style, and get an
+ * menu to add decor, drag decor to any shelf, resize/reposition/duplicate/
+ * delete it, group books into a flat-lying stack (with its own size and
+ * padding controls), change backdrop/shelf-wood style, and get an
  * undoable toast when a book gets dragged to a new spot.
  */
 window.Customize = class {
@@ -11,6 +12,8 @@ window.Customize = class {
     this.active = false;
     this.tab = "arrange";
     this.selectedDecor = null;
+    this.selectedStack = null;
+    this.stackPickMode = false;
 
     this.els = {
       topbar: document.getElementById("customize-topbar"),
@@ -32,11 +35,21 @@ window.Customize = class {
       const btn = e.target.closest(".decor-pick-btn");
       if (btn) this.addDecor(btn.dataset.type);
     });
+    this.els.pickerSheet.querySelectorAll(".decor-pick-preview").forEach((el) => {
+      const type = el.dataset.type;
+      if (DECOR_ART[type]) el.innerHTML = DECOR_ART[type]();
+    });
 
     this.shelf.onDecorTap = (item) => {
       this.selectedDecor = item;
       this.setTab("decorate");
     };
+    this.shelf.onStackTap = (stack) => {
+      this.selectedStack = stack;
+      this.shelf.selectStack(stack.id);
+      this.renderPanel();
+    };
+    this.shelf.onStackSelectionChanged = () => this.renderPanel();
   }
 
   async enter() {
@@ -52,7 +65,11 @@ window.Customize = class {
     this.active = false;
     this.shelf.decorateActive = false;
     this.shelf.selectDecor(null);
+    this.shelf.selectStack(null);
+    this.shelf.setStackSelectMode(false);
     this.selectedDecor = null;
+    this.selectedStack = null;
+    this.stackPickMode = false;
     document.body.classList.remove("customizing");
     this.els.topbar.hidden = true;
     this.els.tabbar.hidden = true;
@@ -64,6 +81,10 @@ window.Customize = class {
   setTab(tab) {
     this.tab = tab;
     if (tab !== "decorate") { this.selectedDecor = null; this.shelf.selectDecor(null); }
+    if (tab !== "arrange") {
+      this.selectedStack = null; this.shelf.selectStack(null);
+      this.stackPickMode = false; this.shelf.setStackSelectMode(false);
+    }
     this.els.tabbar.querySelectorAll(".customize-tab").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
     });
@@ -79,13 +100,141 @@ window.Customize = class {
     else if (this.tab === "shelf") this.renderSwatchPanel("shelfTheme", SHELF_PRESETS);
   }
 
+  // ---------- Arrange tab: drag, Stack Books, stack controls ----------
   renderArrangePanel() {
+    if (this.selectedStack) { this.els.panel.appendChild(this.stackControlsEl(this.selectedStack)); return; }
+
+    if (this.stackPickMode) {
+      const count = this.shelf.selectedForStack.size;
+      const info = document.createElement("div");
+      info.className = "customize-hint";
+      info.textContent = count === 0
+        ? "Tap 2 or more books on one shelf to stack them flat."
+        : `${count} book${count === 1 ? "" : "s"} selected.`;
+      this.els.panel.appendChild(info);
+
+      const row = document.createElement("div");
+      row.className = "decor-actions";
+      const stackBtn = document.createElement("button");
+      stackBtn.className = "decor-action-btn decor-action-done";
+      stackBtn.type = "button";
+      stackBtn.textContent = `Stack Selected${count ? ` (${count})` : ""}`;
+      stackBtn.disabled = count < 2;
+      stackBtn.addEventListener("click", () => this.createStack());
+      row.appendChild(stackBtn);
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "decor-action-btn";
+      cancelBtn.type = "button";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        this.stackPickMode = false;
+        this.shelf.setStackSelectMode(false);
+        this.renderPanel();
+      });
+      row.appendChild(cancelBtn);
+      this.els.panel.appendChild(row);
+      return;
+    }
+
     const hint = document.createElement("div");
     hint.className = "customize-hint";
-    hint.textContent = "Long-press a book, then drag it to any shelf to move it.";
+    hint.textContent = "Long-press a book, then drag it to any shelf to move it. Tap an existing stack to edit it.";
     this.els.panel.appendChild(hint);
+
+    const stackBtn = document.createElement("button");
+    stackBtn.className = "customize-add-decor-btn";
+    stackBtn.type = "button";
+    stackBtn.textContent = "📚 Stack Books";
+    stackBtn.addEventListener("click", () => {
+      this.stackPickMode = true;
+      this.shelf.setStackSelectMode(true);
+      this.renderPanel();
+    });
+    this.els.panel.appendChild(stackBtn);
   }
 
+  stackControlsEl(stack) {
+    const wrap = document.createElement("div");
+    wrap.className = "decor-controls";
+
+    const sizeRow = this.sliderRow("Size", 50, 160, Math.round((stack.size || 1) * 100), (v) => {
+      stack.size = v / 100;
+      this.shelf.render();
+      NthDB.stacks.put(stack);
+    });
+    wrap.appendChild(sizeRow);
+
+    const padRow = this.sliderRow("Padding", 0, 14, stack.padding ?? 3, (v) => {
+      stack.padding = v;
+      this.shelf.render();
+      NthDB.stacks.put(stack);
+    });
+    wrap.appendChild(padRow);
+
+    const actions = document.createElement("div");
+    actions.className = "decor-actions";
+    const unstackBtn = document.createElement("button");
+    unstackBtn.className = "decor-action-btn decor-action-danger";
+    unstackBtn.type = "button";
+    unstackBtn.textContent = "Unstack";
+    unstackBtn.addEventListener("click", () => this.unstack(stack));
+    actions.appendChild(unstackBtn);
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "decor-action-btn decor-action-done";
+    doneBtn.type = "button";
+    doneBtn.textContent = "Done";
+    doneBtn.addEventListener("click", () => {
+      this.selectedStack = null;
+      this.shelf.selectStack(null);
+      this.renderPanel();
+    });
+    actions.appendChild(doneBtn);
+    wrap.appendChild(actions);
+    return wrap;
+  }
+
+  async createStack() {
+    const ids = Array.from(this.shelf.selectedForStack);
+    if (ids.length < 2) return;
+    const books = ids
+      .map((id) => this.shelf.books.find((b) => b.id === id))
+      .filter(Boolean)
+      .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    const shelfIndex = books[0].shelfIndex ?? 0;
+    const stack = {
+      id: `stack-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      shelfIndex,
+      slot: books[0].slot ?? Date.now(),
+      size: 1,
+      padding: 3,
+      bookIds: books.map((b) => b.id),
+      createdAt: Date.now(),
+    };
+    books.forEach((b, i) => { b.stackId = stack.id; b.stackOrder = i; });
+    await NthDB.stacks.put(stack);
+    await Promise.all(books.map((b) => NthDB.put(b)));
+
+    this.stackPickMode = false;
+    this.shelf.setStackSelectMode(false);
+    this.shelf.setAll(this.shelf.books, this.shelf.decorItems, [...this.shelf.stacks, stack]);
+    this.selectedStack = stack;
+    this.shelf.selectStack(stack.id);
+    this.renderPanel();
+  }
+
+  async unstack(stack) {
+    const books = this.shelf.booksInStack(stack);
+    books.forEach((b) => { delete b.stackId; delete b.stackOrder; });
+    await Promise.all(books.map((b) => NthDB.put(b)));
+    await NthDB.stacks.remove(stack.id);
+
+    this.selectedStack = null;
+    this.shelf.selectStack(null);
+    this.shelf.setAll(this.shelf.books, this.shelf.decorItems, this.shelf.stacks.filter((s) => s.id !== stack.id));
+    this.renderPanel();
+  }
+
+  // ---------- Decorate tab ----------
   renderDecoratePanel() {
     if (this.selectedDecor) {
       this.els.panel.appendChild(this.itemControlsEl(this.selectedDecor));
@@ -99,7 +248,7 @@ window.Customize = class {
     this.els.panel.appendChild(addBtn);
     const hint = document.createElement("div");
     hint.className = "customize-hint";
-    hint.textContent = "Tap a placed item to resize, reposition, duplicate, or remove it.";
+    hint.textContent = "Tap a placed item for controls, or long-press and drag it to any shelf.";
     this.els.panel.appendChild(hint);
   }
 
@@ -121,7 +270,7 @@ window.Customize = class {
     });
     wrap.appendChild(posRow);
 
-    if (item.type === "candle") {
+    if (item.type === "candle" || item.type === "lamp") {
       const glowRow = this.sliderRow("Glow", 0, 100, item.glow ?? 60, (v) => {
         item.glow = v;
         this.shelf.render();
@@ -160,16 +309,16 @@ window.Customize = class {
     });
     actions.appendChild(delBtn);
 
-    const doneRow = document.createElement("button");
-    doneRow.className = "decor-action-btn decor-action-done";
-    doneRow.type = "button";
-    doneRow.textContent = "Done";
-    doneRow.addEventListener("click", () => {
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "decor-action-btn decor-action-done";
+    doneBtn.type = "button";
+    doneBtn.textContent = "Done";
+    doneBtn.addEventListener("click", () => {
       this.selectedDecor = null;
       this.shelf.selectDecor(null);
       this.renderPanel();
     });
-    actions.appendChild(doneRow);
+    actions.appendChild(doneBtn);
 
     wrap.appendChild(actions);
     return wrap;
@@ -219,7 +368,7 @@ window.Customize = class {
     this.els.panel.appendChild(row);
   }
 
-  async openDecorPicker() {
+  openDecorPicker() {
     this.els.pickerSheet.hidden = false;
     requestAnimationFrame(() => this.els.pickerSheet.classList.add("visible"));
   }
@@ -236,7 +385,7 @@ window.Customize = class {
       shelfIndex: 0,
       position: 50,
       size: 1,
-      glow: type === "candle" ? 60 : undefined,
+      glow: (type === "candle" || type === "lamp") ? 60 : undefined,
       createdAt: Date.now(),
     };
     await NthDB.decor.put(item);
@@ -244,11 +393,6 @@ window.Customize = class {
     this.selectedDecor = item;
     this.shelf.selectDecor(item.id);
     this.renderPanel();
-  }
-
-  async reloadDecor() {
-    const items = await NthDB.decor.all();
-    this.shelf.setDecor(items);
   }
 
   async applyStoredStyle() {

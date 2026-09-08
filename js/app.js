@@ -94,7 +94,8 @@
   async function refresh() {
     const books = await NthDB.all();
     const decorItems = await NthDB.decor.all();
-    shelf.setAll(books, decorItems);
+    const stacks = await NthDB.stacks.all();
+    shelf.setAll(books, decorItems, stacks);
   }
 
   await customize.applyStoredStyle();
