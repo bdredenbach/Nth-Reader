@@ -1,6 +1,6 @@
-// NTH READER — V-0.03.00
+// NTH READER — V-0.04.00
 
-const SW_VERSION = "Nth-Reader-V-0.03.00";
+const SW_VERSION = "Nth-Reader-V-0.04.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -55,15 +55,9 @@ self.addEventListener("activate", (event) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
-      // A newly activated shell must not leave the already-open tab running a
-      // mixture of old HTML and new modules. Navigate it once into this build.
-      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
-      .then((clients) => Promise.all(clients.map((client) => {
-        try {
-          const navigation = client.navigate?.(client.url);
-          return navigation?.catch(() => null) || null;
-        } catch (_) { return null; }
-      })))
+      // Do not forcibly navigate an in-use reader. The previous behavior could
+      // interrupt an IndexedDB write or file import mid-action. Network-first
+      // shell requests load this version on the user's next normal refresh.
   );
 });
 

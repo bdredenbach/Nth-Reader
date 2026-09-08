@@ -1,6 +1,15 @@
-# Nth Reader V-0.03.00
+# Nth Reader V-0.04.00
 
 This build turns the prototype shelf into a dimensional bookcase and adds a page-shaped reader for reflowable ebooks.
+
+## V-0.04: face-out books and sturdier storage
+
+- **Face-Out** now sits beside **Stack Books** in Arrange. Select one book to show its full cover, then tune **Length**, **Height**, and **Position**. **Cancel Face-Out** returns it to a normal spine; tapping an existing face-out cover in Arrange reopens its controls.
+- Older low-resolution spine covers are upgraded to a larger face-out cover the first time they are selected. New imports retain a higher-resolution cover from the start.
+- The vine now has a **Shelf contact** slider.
+- **Space around object** now extends through zero to `-40`, allowing books to sit closer to or partially behind a decoration.
+- Decoration **Duplicate** is replaced by a persisted **Face Left / Face Right** toggle.
+- IndexedDB transactions recover automatically if another tab closes the active database connection. Service-worker activation no longer forcibly reloads an in-use reader, the Remove Books drawer offers Retry, and a failed import no longer requires refreshing before Add Books works again.
 
 ## V-0.03: broad imports, ZIP collections, and bookmarks
 
@@ -20,7 +29,7 @@ Eight generated, transparent WebP assets live in `assets/decor/`: literary bust,
 - Tap it in Decorate mode to change **Width**, **Height**, and horizontal **Position**.
 - The vine has a dedicated **Vine length** control, so it extends downward without becoming wider.
 - Lamp and candle retain glow controls.
-- Duplicate and Remove update both the live shelf and IndexedDB immediately.
+- Face direction and Remove update both the live shelf and IndexedDB immediately.
 
 ### Physical bookcase and slimmer books
 
@@ -88,4 +97,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.03.00`.
+The service-worker cache key is `Nth-Reader-V-0.04.00`.
