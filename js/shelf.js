@@ -19,19 +19,23 @@ window.Shelf = class {
     this.onDecorTap = null;    // (decorItem) => void — wired by customize.js
     this.onStackTap = null;    // (stack) => void — wired by customize.js
     this.onFaceOutTap = null;  // (book) => void — wired by customize.js
+    this.onLeanTap = null;     // (book) => void — wired by customize.js
     this.decorateActive = false; // Decorate tab open: decor items become tappable/selectable
     this.stackSelectMode = false; // Arrange tab "Stack Books" active: taps toggle selection, not open/drag
     this.faceOutSelectMode = false;
+    this.leanSelectMode = false;
     this.selectedDecorId = null;
     this.selectedStackId = null;
     this.selectedFaceOutId = null;
     this.selectedForStack = new Set();
+    this.selectedForLean = new Set();
     this.onStackSelectionChanged = null; // (Set) => void
+    this.onLeanSelectionChanged = null;
 
     this.books = [];
     this.decorItems = [];
     this.stacks = [];
-    this.shelfCount = 5;
+    this.shelfCount = 1;
     this._lastTap = { id: null, time: 0 };
     this._drag = null; // { kind: 'book'|'faceout'|'decor'|'stack', ... }
 
@@ -50,8 +54,11 @@ window.Shelf = class {
   }
 
   _recalcShelfCount() {
-    const max = (arr) => arr.reduce((m, x) => Math.max(m, x.shelfIndex ?? 0), 0);
-    this.shelfCount = Math.max(5, max(this.books) + 2, max(this.decorItems) + 2, max(this.stacks) + 2);
+    const occupied = [...this.books.filter((book) => !book.stackId), ...this.decorItems, ...this.stacks]
+      .map((item) => Math.max(0, Number(item.shelfIndex) || 0));
+    // Start with one shelf. Once it contains anything, keep exactly one new
+    // trailing shelf available; filling that shelf creates the next one.
+    this.shelfCount = occupied.length ? Math.max(...occupied) + 2 : 1;
   }
 
   // Unstacked books only — stacked books are rendered inside their stack pile.
@@ -158,6 +165,7 @@ window.Shelf = class {
     el.style.marginLeft = `${book.faceOffset ?? 0}px`;
     if (book.id === this.selectedFaceOutId) el.classList.add("selected");
     if (this.stackSelectMode && this.selectedForStack.has(book.id)) el.classList.add("selected-for-stack");
+    if (this.leanSelectMode && this.selectedForLean.has(book.id)) el.classList.add("selected-for-lean");
     const coverArt = book.faceCover || book.coverThumb;
     if (coverArt) {
       const cover = document.createElement("img");
@@ -192,6 +200,16 @@ window.Shelf = class {
     el.style.width = (book.spineWidth || (18 + (hue % 8))) + "px";
     el.style.height = (book.spineHeight || (104 + (hue % 27))) + "px";
     if (this.stackSelectMode && this.selectedForStack.has(book.id)) el.classList.add("selected-for-stack");
+    if (this.leanSelectMode && this.selectedForLean.has(book.id)) el.classList.add("selected-for-lean");
+    if (book.leaned) {
+      el.classList.add("leaned-book");
+      const direction = book.leanDirection === "left" ? -1 : 1;
+      el.style.setProperty("--lean-angle", `${direction * (book.leanAngle ?? 8)}deg`);
+      const group = this.books
+        .filter((candidate) => candidate.leanGroupId === book.leanGroupId && !candidate.stackId)
+        .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+      if (group[0]?.id === book.id) el.style.marginLeft = `${book.leanOffset ?? 0}px`;
+    }
 
     const label = document.createElement("span");
     label.className = "spine-label";
@@ -293,6 +311,11 @@ window.Shelf = class {
     this.faceOutSelectMode = active;
     this.render();
   }
+  setLeanSelectMode(active) {
+    this.leanSelectMode = active;
+    if (!active) this.selectedForLean.clear();
+    this.render();
+  }
   toggleStackSelection(bookId) {
     const book = this.books.find(b => b.id === bookId);
     if (!book) return;
@@ -307,6 +330,21 @@ window.Shelf = class {
       this.selectedForStack.add(bookId);
     }
     this.onStackSelectionChanged?.(this.selectedForStack);
+    this.render();
+  }
+  toggleLeanSelection(bookId) {
+    const book = this.books.find((candidate) => candidate.id === bookId);
+    if (!book || book.stackId) return;
+    if (this.selectedForLean.has(bookId)) {
+      this.selectedForLean.delete(bookId);
+    } else {
+      if (this.selectedForLean.size) {
+        const first = this.books.find((candidate) => candidate.id === this.selectedForLean.values().next().value);
+        if (first && first.shelfIndex !== book.shelfIndex) return;
+      }
+      this.selectedForLean.add(bookId);
+    }
+    this.onLeanSelectionChanged?.(this.selectedForLean);
     this.render();
   }
 
@@ -332,6 +370,10 @@ window.Shelf = class {
     }
     if ((kind === "book" || kind === "faceout") && this.faceOutSelectMode) {
       this._pending = { kind, id, targetEl, startX, startY, moved: false, isFaceOutTap: true };
+      return;
+    }
+    if ((kind === "book" || kind === "faceout") && this.leanSelectMode) {
+      this._pending = { kind, id, targetEl, startX, startY, moved: false, isLeanTap: true };
       return;
     }
 
@@ -378,6 +420,8 @@ window.Shelf = class {
       } else if (this._pending.isFaceOutTap && !this._pending.moved) {
         const book = this.books.find((candidate) => candidate.id === this._pending.id);
         if (book) this.onFaceOutTap?.(book);
+      } else if (this._pending.isLeanTap && !this._pending.moved) {
+        this.toggleLeanSelection(this._pending.id);
       } else if (!this._drag && !this._pending.moved) {
         this.handleTap(this._pending.kind, this._pending.id, this._pending.stackedBookId);
       }
@@ -388,6 +432,11 @@ window.Shelf = class {
 
   handleTap(kind, id, stackedBookId) {
     if (kind === "book" || kind === "faceout") {
+      const tappedBook = this.books.find((candidate) => candidate.id === id);
+      if (kind === "book" && tappedBook?.leaned && this.decorateActive) {
+        this.onLeanTap?.(tappedBook);
+        return;
+      }
       if (kind === "faceout" && this.decorateActive) {
         const book = this.books.find((candidate) => candidate.id === id);
         if (book) this.onFaceOutTap?.(book);
@@ -486,6 +535,19 @@ window.Shelf = class {
     else record = this.stacks.find(s => s.id === id);
     if (!record) { this.render(); return; }
     record.shelfIndex = newShelf;
+    if (flowKind === "book" && record.leaned && newShelf !== originalShelfIndex) {
+      delete record.leaned;
+      delete record.leanGroupId;
+      delete record.leanAngle;
+      delete record.leanDirection;
+      delete record.leanOffset;
+    }
+    if (flowKind === "stack") {
+      this.booksInStack(record).forEach((book) => {
+        book.shelfIndex = newShelf;
+        NthDB.put(book);
+      });
+    }
 
     flowItems.forEach((entry, i) => {
       const rec = entry.id === id ? record : entry.data;

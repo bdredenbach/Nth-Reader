@@ -48,10 +48,16 @@ window.NthFormats = (function () {
       urlCache[i] = url;
       return url;
     }
+    function releasePageUrl(i) {
+      if (!urlCache[i]) return;
+      URL.revokeObjectURL(urlCache[i]);
+      urlCache[i] = null;
+    }
     return {
       kind: "paged",
       pageCount: entries.length,
       getPageUrl,
+      releasePageUrl,
       async coverUrl() { return getPageUrl(0); },
     };
   }
@@ -81,7 +87,12 @@ window.NthFormats = (function () {
       cache[i] = URL.createObjectURL(new Blob([bytes.slice(entry.start, entry.start + entry.size)]));
       return cache[i];
     };
-    return { kind: "paged", pageCount: entries.length, getPageUrl, async coverUrl() { return getPageUrl(0); } };
+    const releasePageUrl = (i) => {
+      if (!cache[i]) return;
+      URL.revokeObjectURL(cache[i]);
+      cache[i] = null;
+    };
+    return { kind: "paged", pageCount: entries.length, getPageUrl, releasePageUrl, async coverUrl() { return getPageUrl(0); } };
   }
 
   // ---------- PDF (rasterized per page) ----------
@@ -106,10 +117,16 @@ window.NthFormats = (function () {
       urlCache[i] = url;
       return url;
     }
+    function releasePageUrl(i) {
+      if (!urlCache[i]) return;
+      URL.revokeObjectURL(urlCache[i]);
+      urlCache[i] = null;
+    }
     return {
       kind: "paged",
       pageCount: pdf.numPages,
       getPageUrl,
+      releasePageUrl,
       async coverUrl() { return getPageUrl(0); },
     };
   }

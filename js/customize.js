@@ -14,8 +14,10 @@ window.Customize = class {
     this.selectedDecor = null;
     this.selectedStack = null;
     this.selectedFaceOut = null;
+    this.selectedLeanBooks = null;
     this.stackPickMode = false;
     this.faceOutPickMode = false;
+    this.leanPickMode = false;
 
     this.els = {
       topbar: document.getElementById("customize-topbar"),
@@ -52,7 +54,9 @@ window.Customize = class {
       this.renderPanel();
     };
     this.shelf.onFaceOutTap = (book) => this.selectFaceOut(book);
+    this.shelf.onLeanTap = (book) => this.openLeanGroup(book);
     this.shelf.onStackSelectionChanged = () => this.renderPanel();
+    this.shelf.onLeanSelectionChanged = () => this.renderPanel();
   }
 
   async enter() {
@@ -72,11 +76,14 @@ window.Customize = class {
     this.shelf.selectFaceOut(null);
     this.shelf.setStackSelectMode(false);
     this.shelf.setFaceOutSelectMode(false);
+    this.shelf.setLeanSelectMode(false);
     this.selectedDecor = null;
     this.selectedStack = null;
     this.selectedFaceOut = null;
+    this.selectedLeanBooks = null;
     this.stackPickMode = false;
     this.faceOutPickMode = false;
+    this.leanPickMode = false;
     document.body.classList.remove("customizing");
     this.els.topbar.hidden = true;
     this.els.tabbar.hidden = true;
@@ -93,6 +100,8 @@ window.Customize = class {
       this.stackPickMode = false; this.shelf.setStackSelectMode(false);
       this.selectedFaceOut = null; this.shelf.selectFaceOut(null);
       this.faceOutPickMode = false; this.shelf.setFaceOutSelectMode(false);
+      this.selectedLeanBooks = null;
+      this.leanPickMode = false; this.shelf.setLeanSelectMode(false);
     }
     this.els.tabbar.querySelectorAll(".customize-tab").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
@@ -113,6 +122,36 @@ window.Customize = class {
   renderArrangePanel() {
     if (this.selectedStack) { this.els.panel.appendChild(this.stackControlsEl(this.selectedStack)); return; }
     if (this.selectedFaceOut) { this.els.panel.appendChild(this.faceOutControlsEl(this.selectedFaceOut)); return; }
+    if (this.selectedLeanBooks?.length) { this.els.panel.appendChild(this.leanControlsEl(this.selectedLeanBooks)); return; }
+
+    if (this.leanPickMode) {
+      const count = this.shelf.selectedForLean.size;
+      const info = document.createElement("div");
+      info.className = "customize-hint";
+      info.textContent = count ? `${count} book${count === 1 ? "" : "s"} selected to lean.` : "Tap one or more books on the same shelf.";
+      this.els.panel.appendChild(info);
+      const row = document.createElement("div");
+      row.className = "decor-actions";
+      const apply = document.createElement("button");
+      apply.className = "decor-action-btn decor-action-done";
+      apply.type = "button";
+      apply.textContent = `Lean Selected${count ? ` (${count})` : ""}`;
+      apply.disabled = count < 1;
+      apply.addEventListener("click", () => this.createLean());
+      row.appendChild(apply);
+      const cancel = document.createElement("button");
+      cancel.className = "decor-action-btn";
+      cancel.type = "button";
+      cancel.textContent = "Cancel";
+      cancel.addEventListener("click", () => {
+        this.leanPickMode = false;
+        this.shelf.setLeanSelectMode(false);
+        this.renderPanel();
+      });
+      row.appendChild(cancel);
+      this.els.panel.appendChild(row);
+      return;
+    }
 
     if (this.faceOutPickMode) {
       const info = document.createElement("div");
@@ -166,7 +205,7 @@ window.Customize = class {
 
     const hint = document.createElement("div");
     hint.className = "customize-hint";
-    hint.textContent = "Long-press a book to move it. Tap an existing stack or face-out cover to edit it.";
+    hint.textContent = "Long-press a book to move it. Tap an existing stack, leaning book, or face-out cover to edit it.";
     this.els.panel.appendChild(hint);
 
     const buttonRow = document.createElement("div");
@@ -178,11 +217,28 @@ window.Customize = class {
     stackBtn.addEventListener("click", () => {
       this.stackPickMode = true;
       this.faceOutPickMode = false;
+      this.leanPickMode = false;
       this.shelf.setStackSelectMode(true);
       this.shelf.setFaceOutSelectMode(false);
+      this.shelf.setLeanSelectMode(false);
       this.renderPanel();
     });
     buttonRow.appendChild(stackBtn);
+
+    const leanBtn = document.createElement("button");
+    leanBtn.className = "customize-add-decor-btn";
+    leanBtn.type = "button";
+    leanBtn.textContent = "📐 Lean";
+    leanBtn.addEventListener("click", () => {
+      this.leanPickMode = true;
+      this.stackPickMode = false;
+      this.faceOutPickMode = false;
+      this.shelf.setStackSelectMode(false);
+      this.shelf.setFaceOutSelectMode(false);
+      this.shelf.setLeanSelectMode(true);
+      this.renderPanel();
+    });
+    buttonRow.appendChild(leanBtn);
 
     const faceOutBtn = document.createElement("button");
     faceOutBtn.className = "customize-add-decor-btn";
@@ -191,16 +247,103 @@ window.Customize = class {
     faceOutBtn.addEventListener("click", () => {
       this.faceOutPickMode = true;
       this.stackPickMode = false;
+      this.leanPickMode = false;
       this.shelf.setStackSelectMode(false);
       this.shelf.setFaceOutSelectMode(true);
+      this.shelf.setLeanSelectMode(false);
       this.renderPanel();
     });
     buttonRow.appendChild(faceOutBtn);
     this.els.panel.appendChild(buttonRow);
   }
 
+  async createLean() {
+    const books = [...this.shelf.selectedForLean]
+      .map((id) => this.shelf.books.find((book) => book.id === id))
+      .filter(Boolean)
+      .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    if (!books.length) return;
+    const groupId = `lean-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    books.forEach((book) => {
+      book.facedOut = false;
+      book.leaned = true;
+      book.leanGroupId = groupId;
+      book.leanAngle = 8;
+      book.leanDirection = "right";
+      book.leanOffset = 0;
+    });
+    await Promise.all(books.map((book) => NthDB.put(book)));
+    this.leanPickMode = false;
+    this.shelf.setLeanSelectMode(false);
+    this.selectedLeanBooks = books;
+    this.shelf.render();
+    this.renderPanel();
+  }
+
+  openLeanGroup(book) {
+    if (!this.active || this.tab !== "arrange") return;
+    this.selectedLeanBooks = this.shelf.books
+      .filter((candidate) => candidate.leanGroupId === book.leanGroupId)
+      .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    this.renderPanel();
+  }
+
+  leanControlsEl(books) {
+    const wrap = document.createElement("div");
+    wrap.className = "decor-controls lean-controls";
+    const heading = document.createElement("div");
+    heading.className = "customize-selection-title";
+    heading.textContent = `${books.length} Leaning selected`;
+    wrap.appendChild(heading);
+    const first = books[0];
+    const saveAll = () => Promise.all(books.map((book) => NthDB.put(book)));
+    wrap.appendChild(this.sliderRow("Angle", 1, 18, first.leanAngle ?? 8, (value) => {
+      books.forEach((book) => { book.leanAngle = value; }); this.shelf.render(); saveAll();
+    }));
+    wrap.appendChild(this.sliderRow("Position", -50, 180, first.leanOffset ?? 0, (value) => {
+      books.forEach((book) => { book.leanOffset = value; }); this.shelf.render(); saveAll();
+    }));
+    const actions = document.createElement("div");
+    actions.className = "decor-actions";
+    const direction = document.createElement("button");
+    direction.className = "decor-action-btn";
+    direction.type = "button";
+    direction.textContent = first.leanDirection === "left" ? "Lean Right" : "Lean Left";
+    direction.addEventListener("click", async () => {
+      const next = first.leanDirection === "left" ? "right" : "left";
+      books.forEach((book) => { book.leanDirection = next; });
+      await saveAll(); this.shelf.render(); this.renderPanel();
+    });
+    actions.appendChild(direction);
+    const stand = document.createElement("button");
+    stand.className = "decor-action-btn decor-action-danger";
+    stand.type = "button";
+    stand.textContent = "Stand Up";
+    stand.addEventListener("click", async () => {
+      books.forEach((book) => {
+        delete book.leaned; delete book.leanGroupId; delete book.leanAngle;
+        delete book.leanDirection; delete book.leanOffset;
+      });
+      await saveAll(); this.selectedLeanBooks = null; this.shelf.render(); this.renderPanel();
+    });
+    actions.appendChild(stand);
+    const done = document.createElement("button");
+    done.className = "decor-action-btn decor-action-done";
+    done.type = "button";
+    done.textContent = "Done";
+    done.addEventListener("click", () => { this.selectedLeanBooks = null; this.renderPanel(); });
+    actions.appendChild(done);
+    wrap.appendChild(actions);
+    return wrap;
+  }
+
   async selectFaceOut(book) {
     if (!this.active || this.tab !== "arrange") return;
+    delete book.leaned;
+    delete book.leanGroupId;
+    delete book.leanAngle;
+    delete book.leanDirection;
+    delete book.leanOffset;
     book.facedOut = true;
     book.faceWidth ||= 88;
     book.faceHeight ||= 118;
@@ -338,7 +481,11 @@ window.Customize = class {
       bookIds: books.map((b) => b.id),
       createdAt: Date.now(),
     };
-    books.forEach((b, i) => { b.stackId = stack.id; b.stackOrder = i; });
+    books.forEach((b, i) => {
+      b.stackId = stack.id; b.stackOrder = i;
+      delete b.leaned; delete b.leanGroupId; delete b.leanAngle;
+      delete b.leanDirection; delete b.leanOffset;
+    });
     await NthDB.stacks.put(stack);
     await Promise.all(books.map((b) => NthDB.put(b)));
 
@@ -352,7 +499,10 @@ window.Customize = class {
 
   async unstack(stack) {
     const books = this.shelf.booksInStack(stack);
-    books.forEach((b) => { delete b.stackId; delete b.stackOrder; });
+    books.forEach((b) => {
+      delete b.stackId; delete b.stackOrder;
+      b.shelfIndex = stack.shelfIndex ?? b.shelfIndex ?? 0;
+    });
     await Promise.all(books.map((b) => NthDB.put(b)));
     await NthDB.stacks.remove(stack.id);
 

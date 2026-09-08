@@ -86,7 +86,10 @@ window.Reader = class {
 
     if (content.kind === "paged") {
       this._flowUsingTurn = false;
-      this.comic = { pageCount: content.pageCount, id: book.id, title: book.title };
+      this.comic = {
+        pageCount: content.pageCount, id: book.id, title: book.title,
+        releasePageUrl: (index) => content.releasePageUrl?.(index),
+      };
       this.index = Math.min(bookmark?.pageIndex ?? book.progress ?? 0, content.pageCount - 1);
       this.els.viewport.hidden = false;
       this.els.flow.hidden = true;

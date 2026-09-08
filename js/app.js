@@ -73,13 +73,14 @@
     try {
       showStatus(`Adding "${file.name}"…`);
       const content = await NthFormats.load(file);
+      const shelfIndex = await firstEmptyShelfIndex();
       const book = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         title: content.title || file.name.replace(/\.[^.]+$/, ""),
         format: NthFormats.extOf(file.name),
         file,
         addedAt: Date.now(),
-        shelfIndex: 0,
+        shelfIndex,
         slot: Date.now(),
         progress: 0,
       };
@@ -93,6 +94,17 @@
     } catch (err) {
       showStatus(`Couldn't add "${file.name}": ${err.message || err}`, true);
     }
+  }
+
+  async function firstEmptyShelfIndex() {
+    const [books, decorItems, stacks] = await Promise.all([
+      NthDB.all(), NthDB.decor.all(), NthDB.stacks.all(),
+    ]);
+    const occupied = new Set([...books.filter((book) => !book.stackId), ...decorItems, ...stacks]
+      .map((item) => Math.max(0, Number(item.shelfIndex) || 0)));
+    let shelfIndex = 0;
+    while (occupied.has(shelfIndex)) shelfIndex++;
+    return shelfIndex;
   }
 
   function showStatus(msg, isError) {
