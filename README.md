@@ -1,4 +1,27 @@
-# Nth Reader V-0.05.00
+# Nth Reader V-0.08.00
+
+## V-0.08: full-bay drag and drop
+
+- Books, face-out books, stacks, and decorations can be dropped anywhere in the open space above a shelf, not only on its thin wooden ledge.
+- The shelf compartment under the finger receives the item, while horizontal position still determines where books and stacks land.
+- A warm full-bay highlight and “Drop on this shelf” label show the active destination.
+- Small misses along shelf boundaries and bookcase side rails are accepted; releases clearly outside the bookcase still cancel safely.
+
+## V-0.07: direct arrangement editing and stable saves
+
+- Tapping an already leaning book while using Lean reopens that entire group's Angle, Position, and direction controls.
+- Existing stacks and face-out books likewise reopen their own controls instead of starting a second arrangement operation.
+- Arranged objects can be tapped from any Customize tab; the app switches to Arrange automatically.
+- Shelf refreshes wait for pending drag and slider saves, preventing an older layout from snapping back over the newest one.
+- Stack creation, movement, and removal save related book and stack records atomically so a shelf cannot briefly combine mismatched states.
+
+## V-0.06: large-library shelf performance
+
+- Source files now live in a dedicated IndexedDB store, separate from shelf metadata.
+- Shelf rendering, drawers, moving, stacking, leaning, face-out controls, and progress saves no longer read or rewrite a large comic archive.
+- Existing V-0.05 libraries migrate automatically on the first V-0.06 launch; books and shelf arrangements are preserved.
+- Opening a book retrieves its source file only when the reader actually needs it.
+- Closing or finishing an import explicitly releases the parsed archive, page URLs, and reader DOM so a large comic cannot keep consuming memory behind the shelf.
 
 This build turns the prototype shelf into a dimensional bookcase and adds a page-shaped reader for reflowable ebooks.
 
@@ -70,7 +93,7 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 - IndexedDB writes now resolve only after the transaction has committed with strict durability requested on supporting browsers.
 - The app requests persistent site storage, serializes refresh rendering, and shows “Restoring your shelf…” until all records load.
 - The Remove Books drawer opens immediately with a loading state instead of appearing to ignore its first tap.
-- The service worker uses network-first loading for HTML, JavaScript, and CSS, and navigates an already-open tab into a newly activated build to prevent mixed old/new modules.
+- The service worker uses network-first loading for HTML, JavaScript, and CSS. It activates without forcibly reloading a reader or interrupting an import/database action.
 
 ## Supported formats
 
@@ -105,4 +128,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.05.00`.
+The service-worker cache key is `Nth-Reader-V-0.08.00`.
