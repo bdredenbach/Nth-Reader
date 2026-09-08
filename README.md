@@ -1,6 +1,13 @@
-# Nth Reader V-0.02.00
+# Nth Reader V-0.03.00
 
 This build turns the prototype shelf into a dimensional bookcase and adds a page-shaped reader for reflowable ebooks.
+
+## V-0.03: broad imports, ZIP collections, and bookmarks
+
+- **Mixed ZIP import:** an ordinary ZIP can contain any number of supported books and documents, including repeated formats, folders, and ZIPs nested up to three levels deep. Every supported entry becomes its own shelf book; unsupported entries are counted and skipped. An image-only ZIP remains one comic.
+- **Bookmarks:** tap the heart in the reader toolbar to add or remove the current page. Open **Menu → Bookmarks** to return to an exact page or delete a bookmark. Bookmarks are stored in IndexedDB, survive refreshes, and are removed automatically with their parent book.
+- **Currently Reading:** the right drawer shows the most recently opened title and its saved progress directly above Bookmarks.
+- **More open formats:** FB2, DOCX, ODT, PDB/PRC (Palm/MOBI-compatible files), JSON, XML/OPF, CSV/TSV, XHTML, logs/plain text, and standalone common images now join the existing readers.
 
 ## What changed
 
@@ -52,16 +59,22 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 
 | Format | Reader |
 |---|---|
-| CBZ / ZIP / CBT | Turn.js comic pages |
+| CBZ / image-only ZIP / CBT | Turn.js comic pages |
+| Mixed/document ZIP | Extracts every supported entry as a separate book |
 | PDF | Rasterized Turn.js pages |
 | EPUB | Live HTML through Turn.js |
 | RTF | Live HTML through Turn.js |
-| MOBI | Turn.js; best effort, DRM-free classic MOBI only |
-| TXT | Reflowable Turn.js pages |
-| HTML / HTM | Sanitized reflowable Turn.js pages |
+| MOBI / PDB / PRC | Turn.js; best effort, DRM-free PalmDOC/classic MOBI only |
+| FB2 | Reflowable Turn.js pages, including embedded images |
+| DOCX / ODT | Reflowable Turn.js pages |
+| TXT / TEXT / LOG | Reflowable Turn.js pages |
+| HTML / HTM / XHTML | Sanitized reflowable Turn.js pages |
 | Markdown / MD | Reflowable Turn.js pages |
+| JSON / XML / OPF | Structured reflowable pages |
+| CSV / TSV | Reflowable table pages |
+| JPEG / PNG / GIF / WebP / AVIF / BMP / SVG | Single-page Turn.js reader |
 | CBR / CB7 / 7Z / RAR | Not yet bundled; convert to CBZ/ZIP |
-| IBA / DRM-locked books | Not supported |
+| AZW / AZW3 / IBA / DRM-locked books | Not supported |
 
 ## Quick verification
 
@@ -71,6 +84,8 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 4. Stack two or more books. Adjust Book length and Stack position, exit Customize, and tap each horizontal bar.
 5. Open the EPUB. Use the same corner curl as a comic for several consecutive pages, go backward, close it, and reopen it to confirm progress restoration.
 6. Refresh the shelf immediately after moving an object and again after adding a book. Confirm all books, decor, stacks, themes, and positions return.
-7. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
+7. Import a ZIP containing two EPUBs, a PDF, a text file, and an unsupported file. Confirm four separate books appear and the skipped-entry count is shown.
+8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
+9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.02.00`.
+The service-worker cache key is `Nth-Reader-V-0.03.00`.

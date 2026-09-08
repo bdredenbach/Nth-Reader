@@ -53,7 +53,7 @@
 </main>
 
 <input type="file" id="file-input" multiple hidden
-  accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.txt,.html,.htm,.md,.markdown,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
+  accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.pdb,.prc,.fb2,.docx,.odt,.txt,.text,.log,.html,.htm,.xhtml,.md,.markdown,.json,.xml,.opf,.csv,.tsv,.jpg,.jpeg,.png,.gif,.webp,.avif,.bmp,.svg,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
 
 <!-- ===================== DECOR PICKER SHEET ===================== -->
 <div id="decor-picker-sheet" class="decor-picker-sheet" hidden>
@@ -92,6 +92,12 @@
   </div>
   <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
   <button id="menu-customize-btn" class="menu-action-btn menu-action-btn-secondary" type="button">🎨 Customize Shelf</button>
+  <div class="menu-section-label reading-section-label">Currently Reading</div>
+  <div id="currently-reading" class="currently-reading"></div>
+  <button id="menu-bookmarks-btn" class="menu-action-btn menu-action-btn-secondary bookmarks-panel-btn" type="button">
+    <span>🔖 Bookmarks</span><span id="menu-bookmark-count" class="menu-count">0</span>
+  </button>
+  <div id="menu-bookmark-list" class="menu-bookmark-list" hidden></div>
 </aside>
 
 <!-- ===================== READER ===================== -->
@@ -102,6 +108,7 @@
   </div>
   <div id="reader-chrome" class="reader-chrome visible">
     <button id="reader-prev-btn" class="reader-nav-arrow" type="button" aria-label="Previous page">‹</button>
+    <button id="reader-bookmark-btn" class="reader-bookmark-btn" type="button" aria-label="Bookmark this page" aria-pressed="false">♡</button>
     <div class="reader-chrome-center">
       <button id="reader-back-btn" class="reader-back-btn" type="button">‹ Shelf</button>
       <div id="reader-title" class="reader-title"></div>
