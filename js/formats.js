@@ -9,6 +9,7 @@
  *   EPUB                                        -- via JSZip, spine chapters concatenated to flow html
  *   RTF                                         -- minimal RTF -> text/html, flow
  *   MOBI (unencrypted / DRM-free only)          -- best-effort PalmDOC decompression, flow
+ *   TXT / HTML / Markdown                       -- sanitized reflowable text
  *
  * Not supported: CBR / CB7 / 7Z (need a rar/7z codec not bundled here) and
  * .iba (iBooks Author). iBA is a proprietary, typically DRM-wrapped Apple format
@@ -224,6 +225,49 @@ window.NthFormats = (function () {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  function sanitizeFlowHtml(markup) {
+    const doc = new DOMParser().parseFromString(markup, "text/html");
+    doc.querySelectorAll("script,style,iframe,object,embed,link,meta,base,form").forEach((el) => el.remove());
+    doc.querySelectorAll("*").forEach((el) => {
+      for (const attr of Array.from(el.attributes)) {
+        const value = attr.value.trim();
+        if (/^on/i.test(attr.name) || (/^(href|src|xlink:href)$/i.test(attr.name) && /^javascript:/i.test(value))) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+    return doc.body.innerHTML;
+  }
+
+  async function loadText(file) {
+    const text = await file.text();
+    const html = text.split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("");
+    return { kind: "flow", html: `<section class="chapter">${html}</section>` };
+  }
+
+  async function loadHtml(file) {
+    return { kind: "flow", html: `<section class="chapter">${sanitizeFlowHtml(await file.text())}</section>` };
+  }
+
+  async function loadMarkdown(file) {
+    const lines = (await file.text()).replace(/\r/g, "").split("\n");
+    let html = "", paragraph = [];
+    const flush = () => {
+      if (!paragraph.length) return;
+      html += `<p>${paragraph.join(" ")}</p>`;
+      paragraph = [];
+    };
+    for (const raw of lines) {
+      const line = escapeHtml(raw.trim());
+      const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+      if (heading) { flush(); const level = heading[1].length; html += `<h${level}>${heading[2]}</h${level}>`; }
+      else if (!line) flush();
+      else paragraph.push(line.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\*([^*]+)\*/g, "<em>$1</em>"));
+    }
+    flush();
+    return { kind: "flow", html: `<section class="chapter">${html}</section>` };
+  }
+
   // ---------- MOBI (best-effort, DRM-free only, flow) ----------
   async function loadMobi(file) {
     const buf = new Uint8Array(await file.arrayBuffer());
@@ -291,6 +335,12 @@ window.NthFormats = (function () {
         return loadRtf(file);
       case "mobi":
         return loadMobi(file);
+      case "txt":
+        return loadText(file);
+      case "html": case "htm":
+        return loadHtml(file);
+      case "md": case "markdown":
+        return loadMarkdown(file);
       case "cbr": case "cb7": case "7z": case "rar":
         throw new Error(`.${ext} needs a RAR/7z decoder that isn't bundled in this build yet — re-save as .cbz/.zip for now.`);
       case "iba":

@@ -4,6 +4,8 @@
   const fileInput = document.getElementById("file-input");
   const importStatus = document.getElementById("import-status");
   const reader = new Reader();
+  let refreshToken = 0;
+  shelfRoot.classList.add("shelf-loading");
 
   const shelf = new Shelf(shelfRoot, {
     onOpen: async (id) => {
@@ -42,7 +44,7 @@
     const files = Array.from(fileInput.files || []);
     fileInput.value = "";
     for (const file of files) await addBook(file);
-    refresh();
+    await refresh();
   });
 
   async function addBook(file) {
@@ -92,12 +94,22 @@
   }
 
   async function refresh() {
-    const books = await NthDB.all();
-    const decorItems = await NthDB.decor.all();
-    const stacks = await NthDB.stacks.all();
+    const token = ++refreshToken;
+    const [books, decorItems, stacks] = await Promise.all([
+      NthDB.all(), NthDB.decor.all(), NthDB.stacks.all(),
+    ]);
+    if (token !== refreshToken) return;
     shelf.setAll(books, decorItems, stacks);
+    shelfRoot.classList.remove("shelf-loading");
   }
 
-  await customize.applyStoredStyle();
-  refresh();
+  try {
+    await NthDB.ready();
+    NthDB.requestPersistence();
+    await customize.applyStoredStyle();
+    await refresh();
+  } catch (err) {
+    shelfRoot.classList.remove("shelf-loading");
+    showStatus(`Shelf storage couldn't open: ${err.message || err}`, true);
+  }
 })();

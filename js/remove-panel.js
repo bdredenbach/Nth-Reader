@@ -20,13 +20,24 @@ window.RemovePanel = class {
   }
 
   async open() {
-    await this.renderList();
+    // Open immediately. Waiting for IndexedDB before starting the transition
+    // made the first tap look broken on a cold mobile launch.
     this.els.overlay.hidden = false;
     this.els.panel.hidden = false;
+    this.els.list.innerHTML = '<div class="menu-empty">Loading your books…</div>';
     requestAnimationFrame(() => {
       this.els.overlay.classList.add("visible");
       this.els.panel.classList.add("visible");
     });
+    try {
+      await this.renderList();
+    } catch (error) {
+      this.els.list.innerHTML = "";
+      const message = document.createElement("div");
+      message.className = "menu-empty menu-error";
+      message.textContent = `Couldn't load your books: ${error.message || error}`;
+      this.els.list.appendChild(message);
+    }
   }
 
   close() {

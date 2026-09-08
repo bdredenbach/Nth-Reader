@@ -275,12 +275,29 @@ window.Customize = class {
     });
     wrap.appendChild(heightRow);
 
+    if (!DECOR_HANGING[item.type]) {
+      const contact = Math.abs(item.baseline ?? defaults.baseline ?? -6);
+      const contactRow = this.sliderRow("Shelf contact", 0, 18, contact, (v) => {
+        item.baseline = -v;
+        this.shelf.render();
+        NthDB.decor.put(item);
+      });
+      wrap.appendChild(contactRow);
+    }
+
     const posRow = this.sliderRow("Position", 0, 100, Math.round(item.position ?? 50), (v) => {
       item.position = v;
       this.shelf.render();
       NthDB.decor.put(item);
     });
     wrap.appendChild(posRow);
+
+    const spacingRow = this.sliderRow("Space around object", 4, 28, item.bookSpacing ?? 9, (v) => {
+      item.bookSpacing = v;
+      this.shelf.render();
+      NthDB.decor.put(item);
+    });
+    wrap.appendChild(spacingRow);
 
     if (item.type === "candle" || item.type === "lamp") {
       const glowRow = this.sliderRow("Glow", 0, 100, item.glow ?? 60, (v) => {

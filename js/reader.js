@@ -68,7 +68,7 @@ window.Reader = class {
     window.addEventListener("resize", () => {
       if (this.content?.kind === "flow") {
         clearTimeout(this._flowResizeTimer);
-        this._flowResizeTimer = setTimeout(() => this.epubPages.open(this.content.html, this.book.progress || 0), 180);
+        this._flowResizeTimer = setTimeout(() => this.openFlowWithTurn(this.book.progress || 0), 180);
       }
     });
   }
@@ -81,6 +81,7 @@ window.Reader = class {
     this.showChrome();
 
     if (content.kind === "paged") {
+      this._flowUsingTurn = false;
       this.comic = { pageCount: content.pageCount, id: book.id, title: book.title };
       this.index = Math.min(book.progress || 0, content.pageCount - 1);
       this.els.viewport.hidden = false;
@@ -91,11 +92,33 @@ window.Reader = class {
       if (!ok) await this.renderFallback();
       this.updateSliderLabel();
     } else {
+      await this.openFlowWithTurn(book.progress || 0);
+    }
+  }
+
+  async openFlowWithTurn(progress) {
+    // The flow host is briefly visible while chapters are measured at the
+    // actual device size, then the resulting live-HTML pages move to Turn.js.
+    this.els.viewport.hidden = true;
+    this.els.flow.hidden = false;
+    await this.epubPages.prepare(this.content.html, progress);
+    this.comic = {
+      pageCount: this.epubPages.pages.length,
+      id: `${this.book.id}-reflow-${this.els.flow.clientWidth}x${this.els.flow.clientHeight}`,
+      title: this.book.title,
+    };
+    this.index = this.epubPages.index;
+    this.els.flow.hidden = true;
+    this.els.viewport.hidden = false;
+    const ok = this.useTurnJSPageMode && await this.turnPageMode.render(this.els.viewport);
+    this._flowUsingTurn = !!ok;
+    this._usingFallback = !ok;
+    if (!ok) {
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
-      this.index = 0;
-      await this.epubPages.open(content.html, book.progress || 0);
+      this.epubPages.render();
     }
+    this.updateSliderLabel();
   }
 
   close() {
@@ -169,16 +192,21 @@ window.Reader = class {
   // render()/getPageUrl() are the hooks both LongboxNativePageTurn and
   // LongboxPageMode call into.
   async render() { return this.renderFallback(); }
-  async getPageUrl(i) { return this.content.getPageUrl(i); }
+  async getPageUrl(i) {
+    if (this.content?.kind === "flow") return this.epubPages.makeTurnSource(i);
+    return this.content.getPageUrl(i);
+  }
 
   // ---------- reflowable page mode ----------
   flowNext() {
     this.showChrome();
-    this.epubPages.next();
+    if (this._flowUsingTurn && this.turnPageMode?.book) this.turnPageMode.next();
+    else this.epubPages.next();
   }
   flowPrev() {
     this.showChrome();
-    this.epubPages.prev();
+    if (this._flowUsingTurn && this.turnPageMode?.book) this.turnPageMode.prev();
+    else this.epubPages.prev();
   }
 
   // ---------- shared chrome / progress ----------

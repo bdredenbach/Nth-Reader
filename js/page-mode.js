@@ -32,6 +32,7 @@ window.LongboxPageMode = (() => {
       this._boundGestureMove = (e) => this._gestureMove(e);
       this._boundGestureEnd = (e) => this._gestureEnd(e);
       this._destroyed = false;
+      this._lazySources = new Map();
     }
 
     async destroy() {
@@ -42,6 +43,7 @@ window.LongboxPageMode = (() => {
       this.book = null;
       this.issueKey = null;
       this.pageCount = 0;
+      this._lazySources.clear();
       window.removeEventListener("resize", this._boundResize);
       this._removeGestureGrab();
       if (this.host) {
@@ -59,6 +61,7 @@ window.LongboxPageMode = (() => {
     }
 
     async waitForImage(img) {
+      if (!img) return;
       if (img.complete) return;
       await new Promise(resolve => {
         const done = () => resolve();
@@ -68,17 +71,52 @@ window.LongboxPageMode = (() => {
       });
     }
 
-    makePage(url) {
+    makePage(source, index = 0) {
       const page = document.createElement("div");
       page.className = "longbox-turn-page";
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = "";
-      img.draggable = false;
-      img.decoding = "async";
-      img.loading = "eager";
-      page.appendChild(img);
+      page.dataset.sourceIndex = String(index);
+      let img = null;
+      if (typeof source === "string") {
+        img = document.createElement("img");
+        img.src = source;
+        img.alt = "";
+        img.draggable = false;
+        img.decoding = "async";
+        img.loading = "eager";
+        page.appendChild(img);
+      } else if (source?.lazy && typeof source.render === "function") {
+        page.classList.add("longbox-lazy-page");
+        this._lazySources.set(index, source);
+        if (source.eager) {
+          page.appendChild(source.render());
+          page.dataset.hydrated = "true";
+        }
+      } else {
+        const node = source?.node || source;
+        if (node instanceof Node) page.appendChild(node);
+      }
       return { page, img };
+    }
+
+    _hydrate(index) {
+      if (index < 0 || index >= this.pageCount) return;
+      const source = this._lazySources.get(index);
+      if (!source) return;
+      const page = this.host?.querySelector(`.longbox-turn-page[data-source-index="${index}"]`);
+      if (!page || page.dataset.hydrated === "true") return;
+      page.replaceChildren(source.render());
+      page.dataset.hydrated = "true";
+    }
+
+    _hydrateAround(index) {
+      for (let i = index - 2; i <= index + 2; i++) this._hydrate(i);
+      this.host?.querySelectorAll(".longbox-lazy-page[data-hydrated='true']").forEach((page) => {
+        const pageIndex = Number(page.dataset.sourceIndex);
+        if (Math.abs(pageIndex - index) > 3) {
+          page.replaceChildren();
+          delete page.dataset.hydrated;
+        }
+      });
     }
 
     async render(host) {
@@ -132,7 +170,7 @@ window.LongboxPageMode = (() => {
       book.className = "longbox-turn-book";
       book.style.width = width + "px";
       book.style.height = height + "px";
-      const first = this.makePage(firstUrl);
+      const first = this.makePage(firstUrl, 0);
       book.appendChild(first.page);
       host.innerHTML = "";
       host.appendChild(book);
@@ -171,10 +209,14 @@ window.LongboxPageMode = (() => {
 
       $book.bind("turned", (_event, page) => {
         const index = Math.max(0, Number(page) - 1);
+        this._hydrateAround(index);
         this.setIndex(index);
         this.onPageChanged(index);
       });
-      $book.bind("turning", (_event, page) => this.onState(`turning=${page}`));
+      $book.bind("turning", (_event, page) => {
+        this._hydrateAround(Math.max(0, Number(page) - 1));
+        this.onState(`turning=${page}`);
+      });
 
       window.addEventListener("resize", this._boundResize, { passive: true });
 
@@ -182,10 +224,11 @@ window.LongboxPageMode = (() => {
       // page cannot be loaded, skip it rather than blocking the whole reader.
       this.onState(`adding=${pageCount - 1}`);
       for (let i = 1; i < pageCount; i++) {
+        if (i % 24 === 0) await new Promise((resolve) => requestAnimationFrame(resolve));
         if (this._destroyed || !this.book) return false;
         const url = await this.getPageUrl(i);
         if (!url) continue;
-        const { page, img } = this.makePage(url);
+        const { page, img } = this.makePage(url, i);
         await this.waitForImage(img);
         if (this._destroyed || !this.book) return false;
         try {
@@ -200,6 +243,7 @@ window.LongboxPageMode = (() => {
 
       if (!this._destroyed && this.book) {
         const target = Math.max(1, Math.min(Number(this.getIndex()) + 1, this.pageCount));
+        this._hydrateAround(target - 1);
         try { this.book.turn("page", target); } catch (_) {}
         this.onState(`ready=${this.pageCount}`);
       }

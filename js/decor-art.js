@@ -30,12 +30,12 @@ window.DECOR_HANGING = { vine: true };
 // Natural starting proportions. Width and height can then be changed
 // independently; this lets vines grow longer without growing wider.
 window.DECOR_DEFAULTS = {
-  bust: { width: 76, height: 96 },
-  globe: { width: 78, height: 94 },
-  plant: { width: 92, height: 84 },
-  candle: { width: 72, height: 72 },
-  vine: { width: 78, height: 150 },
-  lamp: { width: 84, height: 96 },
-  mug: { width: 70, height: 66 },
-  frame: { width: 82, height: 76 },
+  bust: { width: 76, height: 96, baseline: -8 },
+  globe: { width: 78, height: 94, baseline: -7 },
+  plant: { width: 92, height: 84, baseline: -9 },
+  candle: { width: 72, height: 72, baseline: -6 },
+  vine: { width: 78, height: 150, baseline: 0 },
+  lamp: { width: 84, height: 96, baseline: -6 },
+  mug: { width: 70, height: 66, baseline: -9 },
+  frame: { width: 82, height: 76, baseline: -7 },
 };

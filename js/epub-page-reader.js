@@ -17,12 +17,17 @@ window.EpubPageReader = class {
   }
 
   async open(html, progress = 0) {
+    await this.prepare(html, progress);
+    this.render();
+  }
+
+  async prepare(html, progress = 0) {
     this.sourceHtml = html;
     this.host.innerHTML = '<div class="epub-loading">Laying out pages…</div>';
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await this.paginate();
     this.index = Math.min(this.pages.length - 1, Math.max(0, Math.round(progress * (this.pages.length - 1))));
-    this.render();
+    this.owner.index = this.index;
   }
 
   dimensions() {
@@ -33,6 +38,7 @@ window.EpubPageReader = class {
 
   async paginate() {
     const { contentW, contentH } = this.dimensions();
+    this.layout = this.dimensions();
     const source = document.createElement("div");
     source.innerHTML = this.sourceHtml;
     const chapters = Array.from(source.querySelectorAll(":scope > .chapter"));
@@ -59,6 +65,37 @@ window.EpubPageReader = class {
     }
     measure.remove();
     if (!this.pages.length) this.pages.push({ markup: this.sourceHtml, column: 0, count: 1 });
+  }
+
+  makeTurnSource(index) {
+    return {
+      lazy: true,
+      eager: index === 0,
+      render: () => this.makeTurnPage(index),
+    };
+  }
+
+  makeTurnPage(index) {
+    const page = this.pages[index];
+    const { pageW, pageH, contentW, contentH } = this.layout || this.dimensions();
+    const paper = document.createElement("article");
+    paper.className = "epub-turn-paper";
+    Object.assign(paper.style, { width: `${pageW}px`, height: `${pageH}px` });
+    const windowEl = document.createElement("div");
+    windowEl.className = "epub-page-window";
+    Object.assign(windowEl.style, { width: `${contentW}px`, height: `${contentH}px` });
+    const columns = document.createElement("div");
+    columns.className = "epub-page-columns";
+    columns.innerHTML = page.markup;
+    Object.assign(columns.style, {
+      width: `${contentW * page.count}px`, height: `${contentH}px`,
+      columnWidth: `${contentW}px`, columnCount: String(page.count), columnGap: "0px",
+      transform: `translateX(${-page.column * contentW}px)`,
+    });
+    windowEl.appendChild(columns);
+    paper.appendChild(windowEl);
+    paper.insertAdjacentHTML("beforeend", `<span class="epub-page-number">${index + 1}</span><span class="epub-corner-cue" aria-hidden="true"></span>`);
+    return paper;
   }
 
   waitForImages(root) {

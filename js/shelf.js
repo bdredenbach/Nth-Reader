@@ -68,6 +68,7 @@ window.Shelf = class {
   }
 
   render() {
+    cancelAnimationFrame(this._layoutFrame);
     this.root.innerHTML = "";
     for (let i = 0; i < this.shelfCount; i++) {
       const row = document.createElement("div");
@@ -93,6 +94,48 @@ window.Shelf = class {
       row.appendChild(this.woodLedge());
       this.root.appendChild(row);
     }
+    this._layoutFrame = requestAnimationFrame(() => this.layoutRows());
+  }
+
+  // Pack books around each decoration's real width. Books remain ordered by
+  // slot, but skip occupied decor intervals instead of disappearing behind it.
+  layoutRows() {
+    this.root.querySelectorAll(".shelf-row").forEach((row) => {
+      const plank = row.querySelector(".shelf-books");
+      const width = Math.max(1, plank.clientWidth);
+      const plankRect = plank.getBoundingClientRect();
+      const blockers = Array.from(this.root.querySelectorAll(".decor-item")).map((decorEl) => {
+        const item = this.decorItems.find((candidate) => candidate.id === decorEl.dataset.id) || {};
+        const rect = decorEl.getBoundingClientRect();
+        if (rect.bottom <= plankRect.top || rect.top >= plankRect.bottom) return null;
+        const spacing = item.bookSpacing ?? 9;
+        return {
+          start: Math.max(0, rect.left - plankRect.left - spacing),
+          end: rect.right - plankRect.left + spacing,
+        };
+      }).filter(Boolean).sort((a, b) => a.start - b.start);
+
+      let x = 7;
+      const nodes = Array.from(plank.querySelectorAll(":scope > .spine, :scope > .stack-pile"));
+      nodes.forEach((node) => {
+        const itemWidth = node.getBoundingClientRect().width || parseFloat(node.style.width) || 24;
+        let moved;
+        do {
+          moved = false;
+          for (const blocked of blockers) {
+            if (x < blocked.end && x + itemWidth > blocked.start) {
+              x = blocked.end;
+              moved = true;
+            }
+          }
+        } while (moved);
+        node.style.position = "absolute";
+        node.style.left = `${Math.round(x)}px`;
+        node.style.bottom = "1px";
+        x += itemWidth + 2;
+      });
+      plank.style.setProperty("--shelf-flow-end", `${Math.ceil(x + 8)}px`);
+    });
   }
 
   woodLedge() {
@@ -182,6 +225,11 @@ window.Shelf = class {
     el.style.width = `${width}px`;
     el.style.height = `${height}px`;
     el.style.transform = "translateX(-50%)";
+    if (DECOR_HANGING[item.type]) {
+      el.style.top = `${item.topOffset ?? -2}px`;
+    } else {
+      el.style.bottom = `${item.baseline ?? defaults.baseline ?? -6}px`;
+    }
     if ((item.type === "candle" || item.type === "lamp") && item.glow) {
       el.style.setProperty("--glow", Math.min(1, item.glow / 100));
       el.classList.add("has-glow");
