@@ -264,6 +264,14 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   background: rgba(255,255,255,.12); color: #fff;
   border: none; font-size: 20px; cursor: pointer;
 }
+.reader-bookmark-btn {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.28); background: rgba(20,12,7,.62);
+  color: #fff; font-size: 23px; line-height: 1; cursor: pointer;
+  transition: transform .16s ease, color .16s ease, background .16s ease;
+}
+.reader-bookmark-btn:active { transform: scale(.92); }
+.reader-bookmark-btn.active { color: #ffd078; background: rgba(106,62,20,.86); border-color: #ffd078; }
 
 /* corner page-turn visuals, reused from the original page-turn.js */
 .native-corner-known59-11 { position:absolute; inset:0; z-index:4; overflow:hidden; pointer-events:none; background:transparent; perspective:1800px; }
@@ -315,6 +323,36 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0;
 }
 .menu-empty { opacity: .6; font-size: 13px; padding: 8px 0; }
+.menu-error { color: #ffb1a4; opacity: 1; }
+
+.reading-section-label { margin-top: 2px; }
+.currently-reading { margin-bottom: 14px; }
+.current-book-card {
+  width: 100%; padding: 12px; text-align: left; color: #f4ead9; cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px;
+  border: 1px solid rgba(255,210,142,.2); border-radius: 10px;
+  background: linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.035));
+}
+.current-book-title { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.current-book-progress { color: var(--accent); font-size: 12px; }
+.bookmarks-panel-btn { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.menu-count {
+  min-width: 24px; padding: 2px 7px; border-radius: 12px; text-align: center;
+  color: #f6e9d3; background: rgba(36,22,9,.55); font-size: 11px;
+}
+.menu-bookmark-list { min-height: 0; overflow-y: auto; padding-right: 2px; }
+.bookmark-row {
+  display: flex; align-items: stretch; gap: 6px; border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.bookmark-open {
+  flex: 1; min-width: 0; padding: 10px 4px; border: 0; background: transparent;
+  color: #f3ead9; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 3px;
+}
+.bookmark-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.bookmark-open small { color: var(--accent); font-size: 11px; }
+.bookmark-remove {
+  width: 34px; border: 0; background: transparent; color: #ff9d8a; cursor: pointer; font-size: 21px;
+}
 
 /* Left panel (remove books) mirrors the right one */
 .menu-panel-left {
