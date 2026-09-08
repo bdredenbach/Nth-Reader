@@ -9,6 +9,9 @@ window.NthDB = (function () {
   const BOOKS = "books", DECOR = "decor", STACKS = "stacks", SETTINGS = "settings", BOOKMARKS = "bookmarks";
   let dbPromise = null;
 
+  const connectionChanged = (error) =>
+    error?.name === "InvalidStateError" || /connection is (closing|closed)|database connection is closing/i.test(error?.message || "");
+
   function open() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise((resolve, reject) => {
@@ -30,24 +33,34 @@ window.NthDB = (function () {
       };
       req.onsuccess = () => {
         const db = req.result;
-        db.onversionchange = () => { db.close(); dbPromise = null; };
+        db.onversionchange = () => {
+          // Another tab/build is upgrading the schema. Release this handle and
+          // make the next operation open the upgraded database automatically.
+          dbPromise = null;
+          db.close();
+        };
+        db.onclose = () => { dbPromise = null; };
         resolve(db);
       };
-      req.onblocked = () => reject(new Error("Shelf storage is waiting for an older tab to close."));
+      req.onblocked = () => {
+        dbPromise = null;
+        reject(new Error("Shelf storage is waiting for an older tab to close."));
+      };
       req.onerror = () => { dbPromise = null; reject(req.error); };
     });
     return dbPromise;
   }
 
-  async function transact(storeName, mode, operation) {
-    const db = await open();
+  async function transactOnce(db, storeName, mode, operation) {
     return new Promise((resolve, reject) => {
       let transaction;
       try {
         transaction = db.transaction(storeName, mode, { durability: mode === "readwrite" ? "strict" : "default" });
-      } catch (_) {
+      } catch (error) {
         // Older WebViews accept only the original two-argument signature.
-        transaction = db.transaction(storeName, mode);
+        if (error?.name !== "TypeError") { reject(error); return; }
+        try { transaction = db.transaction(storeName, mode); }
+        catch (fallbackError) { reject(fallbackError); return; }
       }
       const store = transaction.objectStore(storeName);
       let request;
@@ -56,6 +69,22 @@ window.NthDB = (function () {
       transaction.onerror = () => reject(transaction.error || request?.error);
       transaction.onabort = () => reject(transaction.error || new Error("Shelf storage transaction was aborted."));
     });
+  }
+
+  async function transact(storeName, mode, operation, attempt = 0) {
+    const db = await open();
+    try {
+      return await transactOnce(db, storeName, mode, operation);
+    } catch (error) {
+      if (!connectionChanged(error) || attempt >= 3) throw error;
+      // A service-worker reload or another tab can close the handle between
+      // open() resolving and transaction() starting. Reopen instead of leaving
+      // every drawer/import action broken until a manual refresh.
+      dbPromise = null;
+      try { db.close(); } catch (_) { /* already closed */ }
+      await new Promise((resolve) => setTimeout(resolve, 45 * (attempt + 1)));
+      return transact(storeName, mode, operation, attempt + 1);
+    }
   }
 
   function makeCrud(storeName) {

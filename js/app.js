@@ -32,22 +32,27 @@
   window.addEventListener("nth:reader-closed", refresh);
 
   fileInput.addEventListener("change", async () => {
-    const selectedFiles = Array.from(fileInput.files || []);
-    fileInput.value = "";
-    const files = [];
-    const ignored = [];
-    for (const selected of selectedFiles) {
-      showStatus(`Inspecting "${selected.name}"…`);
-      const expanded = await NthFormats.expandImport(selected);
-      files.push(...expanded.files);
-      ignored.push(...expanded.ignored);
+    try {
+      const selectedFiles = Array.from(fileInput.files || []);
+      fileInput.value = "";
+      const files = [];
+      const ignored = [];
+      for (const selected of selectedFiles) {
+        showStatus(`Inspecting "${selected.name}"…`);
+        const expanded = await NthFormats.expandImport(selected);
+        files.push(...expanded.files);
+        ignored.push(...expanded.ignored);
+      }
+      for (let i = 0; i < files.length; i++) {
+        showStatus(`Adding ${i + 1} of ${files.length}: "${files[i].name}"…`);
+        await addBook(files[i]);
+      }
+      if (ignored.length) showStatus(`Added ${files.length} item${files.length === 1 ? "" : "s"}; skipped ${ignored.length} unsupported archive entr${ignored.length === 1 ? "y" : "ies"}.`);
+      await refresh();
+    } catch (error) {
+      fileInput.value = "";
+      showStatus(`Import stopped: ${error.message || error}. You can try Add Books again without refreshing.`, true);
     }
-    for (let i = 0; i < files.length; i++) {
-      showStatus(`Adding ${i + 1} of ${files.length}: "${files[i].name}"…`);
-      await addBook(files[i]);
-    }
-    if (ignored.length) showStatus(`Added ${files.length} item${files.length === 1 ? "" : "s"}; skipped ${ignored.length} unsupported archive entr${ignored.length === 1 ? "y" : "ies"}.`);
-    await refresh();
   });
 
   async function openBook(id, bookmark = null) {
@@ -99,11 +104,11 @@
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const w = 90, h = Math.round((img.naturalHeight / img.naturalWidth) * w) || 130;
+        const w = 240, h = Math.round((img.naturalHeight / img.naturalWidth) * w) || 347;
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.onerror = () => resolve(null);
       img.src = url;

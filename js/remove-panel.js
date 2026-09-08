@@ -37,6 +37,12 @@ window.RemovePanel = class {
       message.className = "menu-empty menu-error";
       message.textContent = `Couldn't load your books: ${error.message || error}`;
       this.els.list.appendChild(message);
+      const retry = document.createElement("button");
+      retry.className = "menu-action-btn";
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => this.open());
+      this.els.list.appendChild(retry);
     }
   }
 

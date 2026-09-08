@@ -1,7 +1,7 @@
 /* Nth Reader — customize.js
  * The "make it aesthetic" layer: enter Customize mode from the shelf's
- * menu to add decor, drag decor to any shelf, resize/reposition/duplicate/
- * delete it, group books into a flat-lying stack (with book-length and
+ * menu to add decor, drag decor to any shelf, resize/reposition/flip/
+ * delete it, face books out, group books into a flat-lying stack (with book-length and
  * whole-stack position controls), change backdrop/shelf-wood style, and get an
  * undoable toast when a book gets dragged to a new spot.
  */
@@ -13,7 +13,9 @@ window.Customize = class {
     this.tab = "arrange";
     this.selectedDecor = null;
     this.selectedStack = null;
+    this.selectedFaceOut = null;
     this.stackPickMode = false;
+    this.faceOutPickMode = false;
 
     this.els = {
       topbar: document.getElementById("customize-topbar"),
@@ -49,6 +51,7 @@ window.Customize = class {
       this.shelf.selectStack(stack.id);
       this.renderPanel();
     };
+    this.shelf.onFaceOutTap = (book) => this.selectFaceOut(book);
     this.shelf.onStackSelectionChanged = () => this.renderPanel();
   }
 
@@ -66,10 +69,14 @@ window.Customize = class {
     this.shelf.decorateActive = false;
     this.shelf.selectDecor(null);
     this.shelf.selectStack(null);
+    this.shelf.selectFaceOut(null);
     this.shelf.setStackSelectMode(false);
+    this.shelf.setFaceOutSelectMode(false);
     this.selectedDecor = null;
     this.selectedStack = null;
+    this.selectedFaceOut = null;
     this.stackPickMode = false;
+    this.faceOutPickMode = false;
     document.body.classList.remove("customizing");
     this.els.topbar.hidden = true;
     this.els.tabbar.hidden = true;
@@ -84,6 +91,8 @@ window.Customize = class {
     if (tab !== "arrange") {
       this.selectedStack = null; this.shelf.selectStack(null);
       this.stackPickMode = false; this.shelf.setStackSelectMode(false);
+      this.selectedFaceOut = null; this.shelf.selectFaceOut(null);
+      this.faceOutPickMode = false; this.shelf.setFaceOutSelectMode(false);
     }
     this.els.tabbar.querySelectorAll(".customize-tab").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
@@ -103,6 +112,25 @@ window.Customize = class {
   // ---------- Arrange tab: drag, Stack Books, stack controls ----------
   renderArrangePanel() {
     if (this.selectedStack) { this.els.panel.appendChild(this.stackControlsEl(this.selectedStack)); return; }
+    if (this.selectedFaceOut) { this.els.panel.appendChild(this.faceOutControlsEl(this.selectedFaceOut)); return; }
+
+    if (this.faceOutPickMode) {
+      const info = document.createElement("div");
+      info.className = "customize-hint face-out-pick-hint";
+      info.textContent = "Faced-Out selected: tap one book to display its full cover.";
+      this.els.panel.appendChild(info);
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "decor-action-btn";
+      cancelBtn.type = "button";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        this.faceOutPickMode = false;
+        this.shelf.setFaceOutSelectMode(false);
+        this.renderPanel();
+      });
+      this.els.panel.appendChild(cancelBtn);
+      return;
+    }
 
     if (this.stackPickMode) {
       const count = this.shelf.selectedForStack.size;
@@ -138,19 +166,119 @@ window.Customize = class {
 
     const hint = document.createElement("div");
     hint.className = "customize-hint";
-    hint.textContent = "Long-press a book, then drag it to any shelf to move it. Tap an existing stack to edit it.";
+    hint.textContent = "Long-press a book to move it. Tap an existing stack or face-out cover to edit it.";
     this.els.panel.appendChild(hint);
 
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "arrange-mode-actions";
     const stackBtn = document.createElement("button");
     stackBtn.className = "customize-add-decor-btn";
     stackBtn.type = "button";
     stackBtn.textContent = "📚 Stack Books";
     stackBtn.addEventListener("click", () => {
       this.stackPickMode = true;
+      this.faceOutPickMode = false;
       this.shelf.setStackSelectMode(true);
+      this.shelf.setFaceOutSelectMode(false);
       this.renderPanel();
     });
-    this.els.panel.appendChild(stackBtn);
+    buttonRow.appendChild(stackBtn);
+
+    const faceOutBtn = document.createElement("button");
+    faceOutBtn.className = "customize-add-decor-btn";
+    faceOutBtn.type = "button";
+    faceOutBtn.textContent = "🖼 Face-Out";
+    faceOutBtn.addEventListener("click", () => {
+      this.faceOutPickMode = true;
+      this.stackPickMode = false;
+      this.shelf.setStackSelectMode(false);
+      this.shelf.setFaceOutSelectMode(true);
+      this.renderPanel();
+    });
+    buttonRow.appendChild(faceOutBtn);
+    this.els.panel.appendChild(buttonRow);
+  }
+
+  async selectFaceOut(book) {
+    if (!this.active || this.tab !== "arrange") return;
+    book.facedOut = true;
+    book.faceWidth ||= 88;
+    book.faceHeight ||= 118;
+    book.faceOffset ??= 0;
+    if (!book.faceCover && book.file) {
+      try {
+        const content = await NthFormats.load(book.file);
+        if (content.coverUrl) book.faceCover = await this.makeFaceCover(await content.coverUrl());
+      } catch (_) { /* the existing thumbnail/fallback title remains usable */ }
+    }
+    await NthDB.put(book);
+    this.faceOutPickMode = false;
+    this.shelf.setFaceOutSelectMode(false);
+    this.selectedFaceOut = book;
+    this.shelf.selectFaceOut(book.id);
+    this.renderPanel();
+  }
+
+  makeFaceCover(url) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        const width = 260;
+        const height = Math.max(1, Math.round((image.naturalHeight / Math.max(1, image.naturalWidth)) * width));
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", .84));
+      };
+      image.onerror = () => resolve(null);
+      image.src = url;
+    });
+  }
+
+  faceOutControlsEl(book) {
+    const wrap = document.createElement("div");
+    wrap.className = "decor-controls face-out-controls";
+    const heading = document.createElement("div");
+    heading.className = "customize-selection-title";
+    heading.textContent = "Faced-Out selected";
+    wrap.appendChild(heading);
+
+    wrap.appendChild(this.sliderRow("Length", 58, 170, book.faceWidth || 88, (value) => {
+      book.faceWidth = value; this.shelf.render(); NthDB.put(book);
+    }));
+    wrap.appendChild(this.sliderRow("Height", 76, 180, book.faceHeight || 118, (value) => {
+      book.faceHeight = value; this.shelf.render(); NthDB.put(book);
+    }));
+    wrap.appendChild(this.sliderRow("Position", -50, 180, book.faceOffset ?? 0, (value) => {
+      book.faceOffset = value; this.shelf.render(); NthDB.put(book);
+    }));
+
+    const actions = document.createElement("div");
+    actions.className = "decor-actions";
+    const cancel = document.createElement("button");
+    cancel.className = "decor-action-btn decor-action-danger";
+    cancel.type = "button";
+    cancel.textContent = "Cancel Face-Out";
+    cancel.addEventListener("click", async () => {
+      book.facedOut = false;
+      await NthDB.put(book);
+      this.selectedFaceOut = null;
+      this.shelf.selectFaceOut(null);
+      this.renderPanel();
+    });
+    actions.appendChild(cancel);
+    const done = document.createElement("button");
+    done.className = "decor-action-btn decor-action-done";
+    done.type = "button";
+    done.textContent = "Done";
+    done.addEventListener("click", () => {
+      this.selectedFaceOut = null;
+      this.shelf.selectFaceOut(null);
+      this.renderPanel();
+    });
+    actions.appendChild(done);
+    wrap.appendChild(actions);
+    return wrap;
   }
 
   stackControlsEl(stack) {
@@ -275,10 +403,13 @@ window.Customize = class {
     });
     wrap.appendChild(heightRow);
 
-    if (!DECOR_HANGING[item.type]) {
-      const contact = Math.abs(item.baseline ?? defaults.baseline ?? -6);
+    if (!DECOR_HANGING[item.type] || item.type === "vine") {
+      const contact = item.type === "vine"
+        ? Math.abs(item.topOffset ?? defaults.topOffset ?? -2)
+        : Math.abs(item.baseline ?? defaults.baseline ?? -6);
       const contactRow = this.sliderRow("Shelf contact", 0, 18, contact, (v) => {
-        item.baseline = -v;
+        if (item.type === "vine") item.topOffset = -v;
+        else item.baseline = -v;
         this.shelf.render();
         NthDB.decor.put(item);
       });
@@ -292,7 +423,7 @@ window.Customize = class {
     });
     wrap.appendChild(posRow);
 
-    const spacingRow = this.sliderRow("Space around object", 4, 28, item.bookSpacing ?? 9, (v) => {
+    const spacingRow = this.sliderRow("Space around object", -40, 28, item.bookSpacing ?? 9, (v) => {
       item.bookSpacing = v;
       this.shelf.render();
       NthDB.decor.put(item);
@@ -311,19 +442,17 @@ window.Customize = class {
     const actions = document.createElement("div");
     actions.className = "decor-actions";
 
-    const dupBtn = document.createElement("button");
-    dupBtn.className = "decor-action-btn";
-    dupBtn.type = "button";
-    dupBtn.textContent = "⧉ Duplicate";
-    dupBtn.addEventListener("click", async () => {
-      const copy = { ...item, id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, position: Math.min(100, (item.position ?? 50) + 8) };
-      await NthDB.decor.put(copy);
-      this.shelf.setDecor([...this.shelf.decorItems, copy]);
-      this.selectedDecor = copy;
-      this.shelf.selectDecor(copy.id);
+    const facingBtn = document.createElement("button");
+    facingBtn.className = "decor-action-btn";
+    facingBtn.type = "button";
+    facingBtn.textContent = item.facing === "left" ? "Face Right" : "Face Left";
+    facingBtn.addEventListener("click", async () => {
+      item.facing = item.facing === "left" ? "right" : "left";
+      await NthDB.decor.put(item);
+      this.shelf.render();
       this.renderPanel();
     });
-    actions.appendChild(dupBtn);
+    actions.appendChild(facingBtn);
 
     const delBtn = document.createElement("button");
     delBtn.className = "decor-action-btn decor-action-danger";

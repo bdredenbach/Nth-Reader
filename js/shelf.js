@@ -8,6 +8,8 @@
  *   - Stacks: a pile of books lying flat, built from a multi-selection in
  *     Customize mode's Arrange tab (Stack Books). Drags as one unit like a
  *     book; Unstack dissolves it back into individual spines.
+ *   - Face-out books: a persisted full-cover shelf display with independent
+ *     width, height and horizontal-position controls.
  */
 window.Shelf = class {
   constructor(root, { onOpen }) {
@@ -16,10 +18,13 @@ window.Shelf = class {
     this.onBookMoved = null;   // (book, previous:{shelfIndex,slot}) => void — Arrange undo toast
     this.onDecorTap = null;    // (decorItem) => void — wired by customize.js
     this.onStackTap = null;    // (stack) => void — wired by customize.js
+    this.onFaceOutTap = null;  // (book) => void — wired by customize.js
     this.decorateActive = false; // Decorate tab open: decor items become tappable/selectable
     this.stackSelectMode = false; // Arrange tab "Stack Books" active: taps toggle selection, not open/drag
+    this.faceOutSelectMode = false;
     this.selectedDecorId = null;
     this.selectedStackId = null;
+    this.selectedFaceOutId = null;
     this.selectedForStack = new Set();
     this.onStackSelectionChanged = null; // (Set) => void
 
@@ -28,7 +33,7 @@ window.Shelf = class {
     this.stacks = [];
     this.shelfCount = 5;
     this._lastTap = { id: null, time: 0 };
-    this._drag = null; // { kind: 'book'|'decor'|'stack', ... }
+    this._drag = null; // { kind: 'book'|'faceout'|'decor'|'stack', ... }
 
     this.root.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointermove", (e) => this.onPointerMove(e));
@@ -82,7 +87,7 @@ window.Shelf = class {
         ...this.stacksByShelf(i).map(s => ({ kind: "stack", slot: s.slot ?? 0, data: s })),
       ].sort((a, b) => a.slot - b.slot);
       flowItems.forEach(item => {
-        plank.appendChild(item.kind === "book" ? this.spineEl(item.data) : this.stackEl(item.data));
+        plank.appendChild(item.kind === "book" ? this.bookEl(item.data) : this.stackEl(item.data));
       });
       row.appendChild(plank);
 
@@ -116,9 +121,12 @@ window.Shelf = class {
       }).filter(Boolean).sort((a, b) => a.start - b.start);
 
       let x = 7;
-      const nodes = Array.from(plank.querySelectorAll(":scope > .spine, :scope > .stack-pile"));
+      const nodes = Array.from(plank.querySelectorAll(":scope > .spine, :scope > .face-out-book, :scope > .stack-pile"));
       nodes.forEach((node) => {
         const itemWidth = node.getBoundingClientRect().width || parseFloat(node.style.width) || 24;
+        const positionOffset = parseFloat(node.style.marginLeft) || 0;
+        node.style.marginLeft = "0px";
+        x = Math.max(0, x + positionOffset);
         let moved;
         do {
           moved = false;
@@ -136,6 +144,35 @@ window.Shelf = class {
       });
       plank.style.setProperty("--shelf-flow-end", `${Math.ceil(x + 8)}px`);
     });
+  }
+
+  bookEl(book) { return book.facedOut ? this.faceOutEl(book) : this.spineEl(book); }
+
+  faceOutEl(book) {
+    const el = document.createElement("div");
+    el.className = "face-out-book";
+    el.dataset.id = book.id;
+    el.dataset.kind = "faceout";
+    el.style.width = `${book.faceWidth || 88}px`;
+    el.style.height = `${book.faceHeight || 118}px`;
+    el.style.marginLeft = `${book.faceOffset ?? 0}px`;
+    if (book.id === this.selectedFaceOutId) el.classList.add("selected");
+    if (this.stackSelectMode && this.selectedForStack.has(book.id)) el.classList.add("selected-for-stack");
+    const coverArt = book.faceCover || book.coverThumb;
+    if (coverArt) {
+      const cover = document.createElement("img");
+      cover.className = "face-out-cover";
+      cover.src = coverArt;
+      cover.alt = book.title;
+      el.appendChild(cover);
+    } else {
+      const fallback = document.createElement("div");
+      fallback.className = "face-out-fallback";
+      fallback.style.setProperty("--spine-hue", book.hue ?? (book.hue = hashHue(book.title)));
+      fallback.textContent = book.title;
+      el.appendChild(fallback);
+    }
+    return el;
   }
 
   woodLedge() {
@@ -224,7 +261,8 @@ window.Shelf = class {
     el.style.left = (item.position ?? 50) + "%";
     el.style.width = `${width}px`;
     el.style.height = `${height}px`;
-    el.style.transform = "translateX(-50%)";
+    el.style.setProperty("--decor-facing", item.facing === "left" ? -1 : 1);
+    el.style.transform = "translateX(-50%) scaleX(var(--decor-facing))";
     if (DECOR_HANGING[item.type]) {
       el.style.top = `${item.topOffset ?? -2}px`;
     } else {
@@ -244,10 +282,15 @@ window.Shelf = class {
   // ---------- selection (decor / stack) ----------
   selectDecor(id) { this.selectedDecorId = id; this.render(); }
   selectStack(id) { this.selectedStackId = id; this.render(); }
+  selectFaceOut(id) { this.selectedFaceOutId = id; this.render(); }
 
   setStackSelectMode(active) {
     this.stackSelectMode = active;
     if (!active) this.selectedForStack.clear();
+    this.render();
+  }
+  setFaceOutSelectMode(active) {
+    this.faceOutSelectMode = active;
     this.render();
   }
   toggleStackSelection(bookId) {
@@ -269,26 +312,31 @@ window.Shelf = class {
 
   // ---------- unified pointer / drag ----------
   onPointerDown(e) {
-    const spineEl = e.target.closest(".spine");
-    const decorEl = !spineEl && this.decorateActive ? e.target.closest(".decor-item") : null;
+    const faceOutEl = e.target.closest(".face-out-book");
+    const spineEl = !faceOutEl ? e.target.closest(".spine") : null;
+    const decorEl = !spineEl && !faceOutEl && this.decorateActive ? e.target.closest(".decor-item") : null;
     // Stacks remain interactive outside Customize mode so their books open.
     const stackEl = !spineEl && !decorEl ? e.target.closest(".stack-pile") : null;
-    const targetEl = spineEl || decorEl || stackEl;
+    const targetEl = faceOutEl || spineEl || decorEl || stackEl;
     if (!targetEl) return;
 
-    const kind = spineEl ? "book" : decorEl ? "decor" : "stack";
+    const kind = faceOutEl ? "faceout" : spineEl ? "book" : decorEl ? "decor" : "stack";
     const id = targetEl.dataset.id;
     const startX = e.clientX, startY = e.clientY;
     const stackedBookId = kind === "stack" ? e.target.closest(".stack-book-bar")?.dataset.bookId : null;
 
-    if (kind === "book" && this.stackSelectMode) {
+    if ((kind === "book" || kind === "faceout") && this.stackSelectMode) {
       // In Stack Books mode, a tap toggles selection — no drag, no open.
       this._pending = { kind, id, targetEl, startX, startY, moved: false, isSelectTap: true };
       return;
     }
+    if ((kind === "book" || kind === "faceout") && this.faceOutSelectMode) {
+      this._pending = { kind, id, targetEl, startX, startY, moved: false, isFaceOutTap: true };
+      return;
+    }
 
     let originalShelfIndex = 0, originalSlot = 0;
-    if (kind === "book") {
+    if (kind === "book" || kind === "faceout") {
       const b = this.books.find(x => x.id === id);
       originalShelfIndex = b?.shelfIndex ?? 0; originalSlot = b?.slot ?? 0;
     } else if (kind === "decor") {
@@ -327,6 +375,9 @@ window.Shelf = class {
       clearTimeout(this._pending.timer);
       if (this._pending.isSelectTap && !this._pending.moved) {
         this.toggleStackSelection(this._pending.id);
+      } else if (this._pending.isFaceOutTap && !this._pending.moved) {
+        const book = this.books.find((candidate) => candidate.id === this._pending.id);
+        if (book) this.onFaceOutTap?.(book);
       } else if (!this._drag && !this._pending.moved) {
         this.handleTap(this._pending.kind, this._pending.id, this._pending.stackedBookId);
       }
@@ -336,7 +387,12 @@ window.Shelf = class {
   }
 
   handleTap(kind, id, stackedBookId) {
-    if (kind === "book") {
+    if (kind === "book" || kind === "faceout") {
+      if (kind === "faceout" && this.decorateActive) {
+        const book = this.books.find((candidate) => candidate.id === id);
+        if (book) this.onFaceOutTap?.(book);
+        return;
+      }
       const now = Date.now();
       if (this._lastTap.id === id && now - this._lastTap.time < 320) {
         this._lastTap = { id: null, time: 0 };
@@ -408,7 +464,7 @@ window.Shelf = class {
 
     // book or stack — both live in the .shelf-books flex flow, ordered by "slot"
     const plank = row.querySelector(".shelf-books");
-    const siblings = Array.from(plank.querySelectorAll(".spine:not(.drag-ghost), .stack-pile:not(.drag-ghost)"))
+    const siblings = Array.from(plank.querySelectorAll(".spine:not(.drag-ghost), .face-out-book:not(.drag-ghost), .stack-pile:not(.drag-ghost)"))
       .filter(s => s.dataset.id !== id);
     let insertAt = siblings.length;
     for (let i = 0; i < siblings.length; i++) {
@@ -416,16 +472,17 @@ window.Shelf = class {
       if (x < r.left + r.width / 2) { insertAt = i; break; }
     }
 
+    const flowKind = kind === "stack" ? "stack" : "book";
     const flowItems = [
       ...this.byShelf(newShelf).map(b => ({ id: b.id, kind: "book", data: b })),
       ...this.stacksByShelf(newShelf).map(s => ({ id: s.id, kind: "stack", data: s })),
     ]
       .filter(x => x.id !== id)
       .sort((a, b) => (a.data.slot ?? 0) - (b.data.slot ?? 0));
-    flowItems.splice(insertAt, 0, { id, kind, data: null });
+    flowItems.splice(insertAt, 0, { id, kind: flowKind, data: null });
 
     let record;
-    if (kind === "book") record = this.books.find(b => b.id === id);
+    if (flowKind === "book") record = this.books.find(b => b.id === id);
     else record = this.stacks.find(s => s.id === id);
     if (!record) { this.render(); return; }
     record.shelfIndex = newShelf;
@@ -439,7 +496,7 @@ window.Shelf = class {
     if (newShelf === this.shelfCount - 1) this.shelfCount++;
     this.render();
 
-    if (kind === "book") {
+    if (flowKind === "book") {
       const moved = newShelf !== originalShelfIndex || record.slot !== originalSlot;
       if (moved) this.onBookMoved?.(record, { shelfIndex: originalShelfIndex, slot: originalSlot });
     }
