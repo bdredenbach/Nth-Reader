@@ -140,6 +140,11 @@ body.customizing .shelf-header { display: none; }
   background: var(--accent); border-radius: 2px; opacity: .85;
 }
 .selected-for-stack { outline: 2px solid var(--accent); outline-offset: 3px; }
+.selected-for-lean { outline: 2px solid #b8e6a2; outline-offset: 3px; }
+.leaned-book {
+  transform: rotate(var(--lean-angle, 8deg)); transform-origin: bottom center;
+  margin-right: -3px; z-index: 2;
+}
 
 /* Face-out books reserve a real shelf-width slot and show the uncropped cover
    as a standing display book. */
@@ -426,7 +431,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   width: 100%; background: var(--accent); color: #241609; border: none; border-radius: 10px;
   padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer;
 }
-.arrange-mode-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.arrange-mode-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 .arrange-mode-actions .customize-add-decor-btn { min-width:0; padding-inline:8px; }
 .customize-selection-title { color:var(--accent); font-size:13px; font-weight:700; margin-bottom:10px; }
 .face-out-pick-hint { color:var(--accent); margin-bottom:10px; }
