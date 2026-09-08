@@ -1,4 +1,13 @@
-# Nth Reader V-0.08.00
+# Nth Reader V-0.09.00
+
+## V-0.09: mobile shelf and control gestures
+
+- The shelf remains vertically scrollable while an arrangement or decoration control sheet is open.
+- Bottom padding follows the control sheet's real height, so every shelf can scroll fully above it.
+- Control sheets can grow to 58% of the usable viewport, and their action buttons remain pinned at the bottom on shorter screens.
+- Decorations begin dragging as soon as intentional movement is detected, preventing the browser from scrolling instead of moving the object.
+- Books, stacks, and face-out covers use a shorter hold-to-pick-up gesture; a quick vertical swipe beginning on a book scrolls the shelf instead.
+- Active drags capture the pointer, cleanly handle interrupted gestures, and auto-scroll near the visible shelf area's top or bottom edge.
 
 ## V-0.08: full-bay drag and drop
 
@@ -128,4 +137,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.08.00`.
+The service-worker cache key is `Nth-Reader-V-0.09.00`.

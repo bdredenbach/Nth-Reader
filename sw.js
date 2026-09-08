@@ -1,6 +1,6 @@
-// NTH READER — V-0.08.00
+// NTH READER — V-0.09.00
 
-const SW_VERSION = "Nth-Reader-V-0.08.00";
+const SW_VERSION = "Nth-Reader-V-0.09.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
