@@ -1,6 +1,6 @@
-// NTH READER — V-0.01.00
+// NTH READER — V-0.02.00
 
-const SW_VERSION = "Nth-Reader-V-0.01.00";
+const SW_VERSION = "Nth-Reader-V-0.02.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -38,23 +38,33 @@ const ALLOWED_CDN_HOSTS = ["code.jquery.com", "cdnjs.cloudflare.com"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(SHELL_FILES).catch((err) => {
-        // Don't fail install if a CDN is briefly unreachable; retry on next fetch.
-        console.warn(`[${SW_VERSION}] Shell precache partial failure:`, err);
-      })
-    )
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const local = SHELL_FILES.filter((path) => !path.startsWith("http"));
+      const remote = SHELL_FILES.filter((path) => path.startsWith("http"));
+      await cache.addAll(local);
+      await Promise.all(remote.map((path) => cache.add(path).catch((err) => {
+        console.warn(`[${SW_VERSION}] Optional CDN cache failed for ${path}:`, err);
+      })));
+    })
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+      // A newly activated shell must not leave the already-open tab running a
+      // mixture of old HTML and new modules. Navigate it once into this build.
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) => Promise.all(clients.map((client) => {
+        try {
+          const navigation = client.navigate?.(client.url);
+          return navigation?.catch(() => null) || null;
+        } catch (_) { return null; }
+      })))
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -66,10 +76,10 @@ self.addEventListener("fetch", (event) => {
   const allowedCdn = ALLOWED_CDN_HOSTS.includes(url.hostname);
   if (!sameOrigin && !allowedCdn) return;
 
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
+  const shellCode = sameOrigin && (req.mode === "navigate" || ["script", "style"].includes(req.destination));
+  if (shellCode) {
+    event.respondWith(
+      fetch(req)
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
@@ -77,8 +87,16 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(() => cached);
-    })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(req).then((cached) => cached || fetch(req).then((res) => {
+      if (res && res.ok) caches.open(CACHE_NAME).then((cache) => cache.put(req, res.clone()));
+      return res;
+    }))
   );
 });
 

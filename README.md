@@ -1,4 +1,4 @@
-# Nth Reader V-0.01.00
+# Nth Reader V-0.02.00
 
 This build turns the prototype shelf into a dimensional bookcase and adds a page-shaped reader for reflowable ebooks.
 
@@ -29,13 +29,24 @@ Stacks are longer, slightly irregular piles with thin page-like edges. Their con
 
 Outside Customize mode, tapping a specific horizontal book opens that exact book. Long-pressing still moves the complete stack. Removing a book also repairs or dissolves its stack record so no invisible/orphaned books remain.
 
-### EPUB/RTF/MOBI page reader
+### One Turn.js engine for every page-based reader
 
-Reflowable books now open as one right-hand paper page with visible sheets underneath, a spine edge, page number, curled lower corner, button navigation, and touch/pointer page turns. Drag inward from the right side to advance or from the left side to go back.
+EPUB, MOBI, RTF, TXT, HTML, and Markdown are chapter-paginated and passed into the same Turn.js curl engine used by comics. The pages remain live selectable HTML rather than screenshots. Only the current pages and nearby pages are hydrated, so a long book does not duplicate hundreds of full chapter trees in memory. PDF already uses the same Turn.js path.
 
 Pagination is performed one chapter at a time. This is important: it keeps the page presentation while avoiding the former failure where a long omnibus created thousands of columns in one DOM element and eventually rendered blank pages. Reading position is stored as normalized page progress and survives reloads.
 
-Comics and PDFs continue to use the existing Turn.js comic reader path unchanged.
+The previous CSS-only ebook turn remains available automatically if Turn.js cannot initialize.
+
+### V-0.02 shelf and startup corrections
+
+- Decorations now sit slightly into the ledge surface, eliminating the floating bust, globe, plant, mug, lamp, candle, and frame.
+- The decor layer is above the shelf face, so trailing vines remain in front.
+- Shelf layout measures every visible decoration and packs books around its true screen rectangle. A long vine also reserves space on any lower shelf it overlaps.
+- **Space around object** adjusts that automatic book clearance; **Shelf contact** fine-tunes how firmly a standing object rests on the ledge.
+- IndexedDB writes now resolve only after the transaction has committed with strict durability requested on supporting browsers.
+- The app requests persistent site storage, serializes refresh rendering, and shows “Restoring your shelf…” until all records load.
+- The Remove Books drawer opens immediately with a loading state instead of appearing to ignore its first tap.
+- The service worker uses network-first loading for HTML, JavaScript, and CSS, and navigates an already-open tab into a newly activated build to prevent mixed old/new modules.
 
 ## Supported formats
 
@@ -43,9 +54,12 @@ Comics and PDFs continue to use the existing Turn.js comic reader path unchanged
 |---|---|
 | CBZ / ZIP / CBT | Turn.js comic pages |
 | PDF | Rasterized Turn.js pages |
-| EPUB | Reflowable paper-page reader |
-| RTF | Reflowable paper-page reader |
-| MOBI | Best effort, DRM-free classic MOBI only |
+| EPUB | Live HTML through Turn.js |
+| RTF | Live HTML through Turn.js |
+| MOBI | Turn.js; best effort, DRM-free classic MOBI only |
+| TXT | Reflowable Turn.js pages |
+| HTML / HTM | Sanitized reflowable Turn.js pages |
+| Markdown / MD | Reflowable Turn.js pages |
 | CBR / CB7 / 7Z / RAR | Not yet bundled; convert to CBZ/ZIP |
 | IBA / DRM-locked books | Not supported |
 
@@ -55,6 +69,8 @@ Comics and PDFs continue to use the existing Turn.js comic reader path unchanged
 2. Switch through every Backdrop and Shelf swatch; the entire cabinet should visibly change.
 3. Add a vine, make it taller, move it, duplicate it, then remove the duplicate.
 4. Stack two or more books. Adjust Book length and Stack position, exit Customize, and tap each horizontal bar.
-5. Open the EPUB. Drag the lower/right half inward several consecutive times, go backward from the left, close it, and reopen it to confirm progress restoration.
+5. Open the EPUB. Use the same corner curl as a comic for several consecutive pages, go backward, close it, and reopen it to confirm progress restoration.
+6. Refresh the shelf immediately after moving an object and again after adding a book. Confirm all books, decor, stacks, themes, and positions return.
+7. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.01.00`, so an installed copy fetches this build's new scripts and assets rather than retaining the prototype shell.
+The service-worker cache key is `Nth-Reader-V-0.02.00`.
