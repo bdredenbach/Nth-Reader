@@ -42,6 +42,7 @@ window.Shelf = class {
     this.root.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointermove", (e) => this.onPointerMove(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    window.addEventListener("pointercancel", (e) => this.onPointerCancel(e));
   }
 
   setBooks(books) { this.books = books; this._recalcShelfCount(); this.render(); }
@@ -396,7 +397,9 @@ window.Shelf = class {
 
     this._pending = {
       kind, id, targetEl, startX, startY, moved: false,
-      timer: setTimeout(() => this.beginDrag(kind, id, targetEl, startX, startY), 350),
+      pointerId: e.pointerId,
+      lastY: startY,
+      timer: setTimeout(() => this.beginDrag(kind, id, targetEl, startX, startY, e.pointerId), 240),
       originalShelfIndex, originalSlot, stackedBookId,
     };
   }
@@ -404,15 +407,41 @@ window.Shelf = class {
   onPointerMove(e) {
     if (this._pending && !this._drag) {
       const dx = e.clientX - this._pending.startX, dy = e.clientY - this._pending.startY;
+      if (this._pending.isShelfScroll) {
+        e.preventDefault();
+        this.root.scrollTop -= e.clientY - this._pending.lastY;
+        this._pending.lastY = e.clientY;
+        return;
+      }
       if (Math.hypot(dx, dy) > 10) {
-        clearTimeout(this._pending.timer);
-        this._pending.moved = true;
+        if (this._pending.kind === "decor") {
+          // A decoration has no reading/tap gesture to protect once movement
+          // begins. Pick it up immediately instead of letting the page scroll.
+          clearTimeout(this._pending.timer);
+          this.beginDrag(
+            this._pending.kind, this._pending.id, this._pending.targetEl,
+            this._pending.startX, this._pending.startY, this._pending.pointerId,
+          );
+        } else if (Math.abs(dy) > Math.abs(dx) * 1.12) {
+          // Books occupy much of a full shelf. A vertical swipe that starts on
+          // one still scrolls the shelf unless the user paused to pick it up.
+          clearTimeout(this._pending.timer);
+          this._pending.moved = true;
+          this._pending.isShelfScroll = true;
+          this._pending.lastY = e.clientY;
+          e.preventDefault();
+          return;
+        } else {
+          clearTimeout(this._pending.timer);
+          this._pending.moved = true;
+        }
       }
     }
     if (this._drag) {
       e.preventDefault();
       this._drag.ghost.style.left = (e.clientX - this._drag.offX) + "px";
       this._drag.ghost.style.top = (e.clientY - this._drag.offY) + "px";
+      this.autoScrollShelf(e.clientY);
       this.highlightDropTarget(e.clientX, e.clientY);
     }
   }
@@ -436,6 +465,19 @@ window.Shelf = class {
       this._pending = null;
     }
     if (this._drag) this.endDrag(e.clientX, e.clientY);
+  }
+
+  onPointerCancel() {
+    if (this._pending) {
+      clearTimeout(this._pending.timer);
+      this._pending = null;
+    }
+    if (!this._drag) return;
+    this._drag.ghost.remove();
+    this._drag.el.classList.remove("drag-lifted");
+    this.root.querySelectorAll(".shelf-row.drop-target").forEach((row) => row.classList.remove("drop-target"));
+    this._drag = null;
+    this.render();
   }
 
   handleTap(kind, id, stackedBookId) {
@@ -470,7 +512,8 @@ window.Shelf = class {
     }
   }
 
-  beginDrag(kind, id, el, x, y) {
+  beginDrag(kind, id, el, x, y, pointerId = this._pending?.pointerId) {
+    if (this._drag) return;
     const rect = el.getBoundingClientRect();
     const ghost = el.cloneNode(true);
     ghost.className = el.className + " drag-ghost";
@@ -481,12 +524,27 @@ window.Shelf = class {
     ghost.style.transform = "";
     document.body.appendChild(ghost);
     el.classList.add("drag-lifted");
+    try { if (pointerId !== undefined) el.setPointerCapture(pointerId); } catch (_) { /* optional mobile capability */ }
     if (navigator.vibrate) navigator.vibrate(15);
     this._drag = {
       kind, id, el, ghost, offX: x - rect.left, offY: y - rect.top,
       originalShelfIndex: this._pending?.originalShelfIndex ?? 0,
       originalSlot: this._pending?.originalSlot ?? 0,
+      pointerId,
     };
+  }
+
+  autoScrollShelf(pointerY) {
+    const rootRect = this.root.getBoundingClientRect();
+    const panel = document.getElementById("customize-panel");
+    const panelTop = panel && !panel.hidden ? panel.getBoundingClientRect().top : rootRect.bottom;
+    const visibleBottom = Math.min(rootRect.bottom, panelTop);
+    const edge = Math.min(72, Math.max(42, (visibleBottom - rootRect.top) * 0.18));
+    if (pointerY < rootRect.top + edge) {
+      this.root.scrollTop -= Math.ceil((rootRect.top + edge - pointerY) / 7);
+    } else if (pointerY > visibleBottom - edge && pointerY < visibleBottom + 24) {
+      this.root.scrollTop += Math.ceil((pointerY - (visibleBottom - edge)) / 7);
+    }
   }
 
   highlightDropTarget(x, y) {
@@ -524,6 +582,7 @@ window.Shelf = class {
 
   endDrag(x, y) {
     const { kind, id, el, ghost, originalShelfIndex, originalSlot } = this._drag;
+    try { if (this._drag.pointerId !== undefined) el.releasePointerCapture(this._drag.pointerId); } catch (_) { /* already released */ }
     ghost.remove();
     el.classList.remove("drag-lifted");
     this.root.querySelectorAll(".shelf-row.drop-target").forEach(r => r.classList.remove("drop-target"));

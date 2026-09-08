@@ -43,6 +43,10 @@ window.Customize = class {
       const type = el.dataset.type;
       if (DECOR_ART[type]) el.innerHTML = DECOR_ART[type]();
     });
+    if (window.ResizeObserver) {
+      this._panelObserver = new ResizeObserver(() => this.updateShelfPanelSpace());
+      this._panelObserver.observe(this.els.panel);
+    }
 
     this.shelf.onDecorTap = (item) => {
       this.selectedDecor = item;
@@ -98,7 +102,8 @@ window.Customize = class {
     document.body.classList.remove("customizing");
     this.els.topbar.hidden = true;
     this.els.tabbar.hidden = true;
-    this.els.panel.hidden = true;
+        this.els.panel.hidden = true;
+    document.documentElement.style.removeProperty("--customize-panel-height");
     this.closeDecorPicker();
     this.onExit?.();
   }
@@ -127,6 +132,13 @@ window.Customize = class {
     else if (this.tab === "decorate") this.renderDecoratePanel();
     else if (this.tab === "backdrop") this.renderSwatchPanel("backdrop", BACKDROP_PRESETS);
     else if (this.tab === "shelf") this.renderSwatchPanel("shelfTheme", SHELF_PRESETS);
+    requestAnimationFrame(() => this.updateShelfPanelSpace());
+  }
+
+  updateShelfPanelSpace() {
+    if (!this.active || this.els.panel.hidden) return;
+    const height = Math.ceil(this.els.panel.getBoundingClientRect().height || 0);
+    document.documentElement.style.setProperty("--customize-panel-height", `${height}px`);
   }
 
   // ---------- Arrange tab: drag, Stack Books, stack controls ----------
