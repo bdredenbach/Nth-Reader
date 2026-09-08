@@ -82,6 +82,8 @@ window.RemovePanel = class {
       const ok = confirm(`Remove "${book.title}"? This can't be undone.`);
       if (!ok) return;
       await NthDB.remove(book.id);
+      const bookmarks = await NthDB.bookmarks.forBook(book.id);
+      await Promise.all(bookmarks.map((bookmark) => NthDB.bookmarks.remove(bookmark.id)));
       // Keep stack records consistent when one of their books is deleted.
       const stacks = await NthDB.stacks.all();
       for (const stack of stacks.filter((s) => (s.bookIds || []).includes(book.id))) {
@@ -101,6 +103,7 @@ window.RemovePanel = class {
         }
       }
       await this.renderList();
+      window.dispatchEvent(new CustomEvent("nth:bookmarks-changed"));
       this.onRemoved();
     });
     row.appendChild(removeBtn);

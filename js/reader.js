@@ -26,6 +26,7 @@ window.Reader = class {
       chrome: document.getElementById("reader-chrome"),
       prevBtn: document.getElementById("reader-prev-btn"),
       nextBtn: document.getElementById("reader-next-btn"),
+      bookmarkBtn: document.getElementById("reader-bookmark-btn"),
     };
 
     this.mode = "single";
@@ -48,11 +49,13 @@ window.Reader = class {
         this.index = Math.max(0, Math.min(this.comic.pageCount - 1, i));
         this.updateSliderLabel();
         this.saveProgress();
+        this.updateBookmarkFlag();
       },
       onPageChanged: (i) => {
         this.index = Math.max(0, Math.min(this.comic.pageCount - 1, i));
         this.updateSliderLabel();
         this.saveProgress();
+        this.updateBookmarkFlag();
       },
       onState: () => { /* console.debug("turnjs:", s) if you need to trace init */ },
     });
@@ -60,6 +63,7 @@ window.Reader = class {
     this.els.backBtn.addEventListener("click", () => this.close());
     this.els.prevBtn.addEventListener("click", () => this.onPrevBtn());
     this.els.nextBtn.addEventListener("click", () => this.onNextBtn());
+    this.els.bookmarkBtn.addEventListener("click", () => this.toggleBookmark());
     // A plain tap anywhere on the page toggles the nav bar. This has to be
     // bound unconditionally (not just for the fallback engine) — Turn.js's
     // own gestures handle page-turning via drag, so nothing else was ever
@@ -73,7 +77,7 @@ window.Reader = class {
     });
   }
 
-  async open(book, content) {
+  async open(book, content, bookmark = null) {
     this.book = book;
     this.content = content;
     this.els.title.textContent = book.title;
@@ -83,7 +87,7 @@ window.Reader = class {
     if (content.kind === "paged") {
       this._flowUsingTurn = false;
       this.comic = { pageCount: content.pageCount, id: book.id, title: book.title };
-      this.index = Math.min(book.progress || 0, content.pageCount - 1);
+      this.index = Math.min(bookmark?.pageIndex ?? book.progress ?? 0, content.pageCount - 1);
       this.els.viewport.hidden = false;
       this.els.flow.hidden = true;
 
@@ -91,8 +95,10 @@ window.Reader = class {
       this._usingFallback = !ok;
       if (!ok) await this.renderFallback();
       this.updateSliderLabel();
+      await this.updateBookmarkFlag();
     } else {
-      await this.openFlowWithTurn(book.progress || 0);
+      await this.openFlowWithTurn(bookmark?.progress ?? book.progress ?? 0);
+      await this.updateBookmarkFlag();
     }
   }
 
@@ -187,6 +193,7 @@ window.Reader = class {
     this.index = i;
     await this.renderFallback();
     this.saveProgress();
+    this.updateBookmarkFlag();
   }
 
   // render()/getPageUrl() are the hooks both LongboxNativePageTurn and
@@ -232,7 +239,35 @@ window.Reader = class {
       this.els.pageLabel.textContent = `${this.index + 1} / ${total}`;
     }
   }
-  updateBookmarkFlag() { /* reserved for a future bookmarks feature */ }
+  bookmarkId() { return this.book ? `${this.book.id}:${this.index}` : ""; }
+
+  async updateBookmarkFlag() {
+    if (!this.book || !this.els.bookmarkBtn) return;
+    const marked = !!(await NthDB.bookmarks.get(this.bookmarkId()));
+    this.els.bookmarkBtn.classList.toggle("active", marked);
+    this.els.bookmarkBtn.textContent = marked ? "♥" : "♡";
+    this.els.bookmarkBtn.setAttribute("aria-pressed", String(marked));
+    this.els.bookmarkBtn.setAttribute("aria-label", marked ? "Remove bookmark from this page" : "Bookmark this page");
+  }
+
+  async toggleBookmark() {
+    if (!this.book) return;
+    const id = this.bookmarkId();
+    const existing = await NthDB.bookmarks.get(id);
+    if (existing) {
+      await NthDB.bookmarks.remove(id);
+    } else {
+      const total = Math.max(1, this.comic?.pageCount || this.epubPages?.pages?.length || 1);
+      const progress = this.content.kind === "flow" ? this.index / Math.max(1, total - 1) : undefined;
+      const percent = progress === undefined ? "" : ` · ${Math.round(progress * 100)}%`;
+      await NthDB.bookmarks.put({
+        id, bookId: this.book.id, bookTitle: this.book.title, format: this.book.format,
+        pageIndex: this.index, progress, label: `Page ${this.index + 1}${percent}`, createdAt: Date.now(),
+      });
+    }
+    await this.updateBookmarkFlag();
+    window.dispatchEvent(new CustomEvent("nth:bookmarks-changed"));
+  }
 
   saveProgress() {
     if (!this.book) return;

@@ -8,17 +8,7 @@
   shelfRoot.classList.add("shelf-loading");
 
   const shelf = new Shelf(shelfRoot, {
-    onOpen: async (id) => {
-      const book = await NthDB.get(id);
-      if (!book) return;
-      try {
-        importStatus.textContent = "";
-        const content = await NthFormats.load(book.file);
-        await reader.open(book, content);
-      } catch (err) {
-        showStatus(err.message || String(err), true);
-      }
-    },
+    onOpen: (id) => openBook(id),
   });
 
   const customize = new Customize(shelf, {
@@ -32,6 +22,7 @@
   const menu = new Menu({
     onAdd: () => fileInput.click(),
     onCustomize: () => customize.enter(),
+    onOpenBook: (id, bookmark) => openBook(id, bookmark),
   });
 
   const removePanel = new RemovePanel({
@@ -41,11 +32,37 @@
   window.addEventListener("nth:reader-closed", refresh);
 
   fileInput.addEventListener("change", async () => {
-    const files = Array.from(fileInput.files || []);
+    const selectedFiles = Array.from(fileInput.files || []);
     fileInput.value = "";
-    for (const file of files) await addBook(file);
+    const files = [];
+    const ignored = [];
+    for (const selected of selectedFiles) {
+      showStatus(`Inspecting "${selected.name}"…`);
+      const expanded = await NthFormats.expandImport(selected);
+      files.push(...expanded.files);
+      ignored.push(...expanded.ignored);
+    }
+    for (let i = 0; i < files.length; i++) {
+      showStatus(`Adding ${i + 1} of ${files.length}: "${files[i].name}"…`);
+      await addBook(files[i]);
+    }
+    if (ignored.length) showStatus(`Added ${files.length} item${files.length === 1 ? "" : "s"}; skipped ${ignored.length} unsupported archive entr${ignored.length === 1 ? "y" : "ies"}.`);
     await refresh();
   });
+
+  async function openBook(id, bookmark = null) {
+    const book = await NthDB.get(id);
+    if (!book) return;
+    try {
+      importStatus.textContent = "";
+      book.lastReadAt = Date.now();
+      await NthDB.put(book);
+      const content = await NthFormats.load(book.file);
+      await reader.open(book, content, bookmark);
+    } catch (err) {
+      showStatus(err.message || String(err), true);
+    }
+  }
 
   async function addBook(file) {
     try {

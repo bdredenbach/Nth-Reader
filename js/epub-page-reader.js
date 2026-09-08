@@ -139,6 +139,7 @@ window.EpubPageReader = class {
     this.paper = paper;
     this.owner.index = this.index;
     this.owner.updateSliderLabel();
+    this.owner.updateBookmarkFlag();
   }
 
   next() { this.turn(1); }

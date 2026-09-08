@@ -5,8 +5,8 @@
  */
 window.NthDB = (function () {
   const DB_NAME = "nth-reader-db";
-  const DB_VERSION = 4;
-  const BOOKS = "books", DECOR = "decor", STACKS = "stacks", SETTINGS = "settings";
+  const DB_VERSION = 5;
+  const BOOKS = "books", DECOR = "decor", STACKS = "stacks", SETTINGS = "settings", BOOKMARKS = "bookmarks";
   let dbPromise = null;
 
   function open() {
@@ -22,6 +22,11 @@ window.NthDB = (function () {
           }
         }
         if (!db.objectStoreNames.contains(SETTINGS)) db.createObjectStore(SETTINGS, { keyPath: "key" });
+        if (!db.objectStoreNames.contains(BOOKMARKS)) {
+          const store = db.createObjectStore(BOOKMARKS, { keyPath: "id" });
+          store.createIndex("bookId", "bookId");
+          store.createIndex("createdAt", "createdAt");
+        }
       };
       req.onsuccess = () => {
         const db = req.result;
@@ -65,6 +70,13 @@ window.NthDB = (function () {
   const books = makeCrud(BOOKS);
   const decor = makeCrud(DECOR);
   const stacks = makeCrud(STACKS);
+  const bookmarkCrud = makeCrud(BOOKMARKS);
+  const bookmarks = {
+    ...bookmarkCrud,
+    async forBook(bookId) {
+      return (await transact(BOOKMARKS, "readonly", (store) => store.index("bookId").getAll(bookId))) || [];
+    },
+  };
   const settings = {
     async get(key, fallback) {
       const record = await transact(SETTINGS, "readonly", (store) => store.get(key));
@@ -83,5 +95,5 @@ window.NthDB = (function () {
     return false;
   }
 
-  return { ...books, books, decor, stacks, settings, ready: open, requestPersistence };
+  return { ...books, books, decor, stacks, bookmarks, settings, ready: open, requestPersistence };
 })();
