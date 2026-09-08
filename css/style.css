@@ -55,7 +55,11 @@ html, body {
 .shelf-root[data-backdrop="rose"] { background-color: #2a1620; }
 .shelf-root[data-backdrop="forest"] { background-color: #141f18; }
 
-body.customizing .shelf-root { padding-bottom: 190px; top: 58px; }
+body.customizing .shelf-root {
+  padding-bottom: calc(var(--customize-panel-height, 360px) + 92px);
+  top: 58px;
+  overscroll-behavior-y: contain;
+}
 body.customizing .shelf-header { display: none; }
 
 .shelf-row {
@@ -448,7 +452,10 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   background: #1c1108ee;
   border-top: 1px solid rgba(255,255,255,.08);
   padding: 14px 16px;
-  max-height: 40vh; overflow-y: auto;
+  max-height: min(58vh, 560px); overflow-y: auto;
+  max-height: min(58dvh, 560px);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .customize-hint { font-size: 12px; opacity: .65; line-height: 1.4; margin-top: 8px; }
 .customize-add-decor-btn {
@@ -472,6 +479,13 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 .slider-row input[type="range"] { width: 100%; }
 
 .decor-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.decor-controls > .decor-actions {
+  position: sticky;
+  bottom: -14px;
+  z-index: 2;
+  padding: 10px 0 14px;
+  background: linear-gradient(180deg, transparent, #1c1108 24%);
+}
 .decor-action-btn {
   flex: 1; min-width: 90px; background: rgba(255,255,255,.1); color: #f3ead9;
   border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 10px 8px;
