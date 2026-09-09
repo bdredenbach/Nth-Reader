@@ -799,13 +799,7 @@ window.Customize = class {
   async addDecor(type) {
     this.closeDecorPicker();
     const defaults = DECOR_DEFAULTS[type] || { width: 72, height: 84 };
-    const occupied = new Set([
-      ...this.shelf.books.filter((book) => !book.stackId),
-      ...this.shelf.decorItems,
-      ...this.shelf.stacks,
-    ].map((entry) => Math.max(0, Number(entry.shelfIndex) || 0)));
-    let shelfIndex = 0;
-    while (occupied.has(shelfIndex)) shelfIndex++;
+    const shelfIndex = this.shelf.firstEmptyShelfInActiveBookcase();
     const item = {
       id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type,
@@ -821,6 +815,7 @@ window.Customize = class {
       createdAt: Date.now(),
     };
     await NthDB.decor.put(item);
+    this.shelf.setActiveBookcase(Math.floor(shelfIndex / 5), { render: false });
     this.shelf.setDecor([...this.shelf.decorItems, item]);
     this.selectedDecor = item;
     this.shelf.selectDecor(item.id);

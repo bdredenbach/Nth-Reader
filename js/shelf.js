@@ -12,6 +12,7 @@
  *     width, height and horizontal-position controls.
  */
 const SHELF_PICKUP_DELAY_MS = 340;
+const SHELVES_PER_BOOKCASE = 5;
 
 window.Shelf = class {
   constructor(root, { onOpen }) {
@@ -37,7 +38,12 @@ window.Shelf = class {
     this.books = [];
     this.decorItems = [];
     this.stacks = [];
-    this.shelfCount = 1;
+    this.shelfCount = SHELVES_PER_BOOKCASE;
+    this.bookcaseCount = 1;
+    this.activeBookcase = 0;
+    this.bookcaseScrollPositions = new Map();
+    this.onBookcaseChanged = null;
+    this.onBookcaseScrollChanged = null;
     this._lastTap = { id: null, time: 0 };
     this._drag = null; // { kind: 'book'|'faceout'|'decor'|'stack', ... }
 
@@ -45,6 +51,13 @@ window.Shelf = class {
     window.addEventListener("pointermove", (e) => this.onPointerMove(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     window.addEventListener("pointercancel", (e) => this.onPointerCancel(e));
+    let scrollTimer = 0;
+    this.root.addEventListener("scroll", () => {
+      if (this._restoringBookcaseScroll) return;
+      this.bookcaseScrollPositions.set(this.activeBookcase, this.root.scrollTop);
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => this.onBookcaseScrollChanged?.(this.scrollState()), 220);
+    }, { passive: true });
   }
 
   setBooks(books) { this.books = books; this._recalcShelfCount(); this.render(); }
@@ -59,9 +72,50 @@ window.Shelf = class {
   _recalcShelfCount() {
     const occupied = [...this.books.filter((book) => !book.stackId), ...this.decorItems, ...this.stacks]
       .map((item) => Math.max(0, Number(item.shelfIndex) || 0));
-    // Start with one shelf. Once it contains anything, keep exactly one new
-    // trailing shelf available; filling that shelf creates the next one.
-    this.shelfCount = occupied.length ? Math.max(...occupied) + 2 : 1;
+    // Shelf indices remain global for backward compatibility. Every five
+    // shelves form one cabinet, and one completely empty cabinet is always
+    // retained at the end of the carousel.
+    const highestCase = occupied.length
+      ? Math.floor(Math.max(...occupied) / SHELVES_PER_BOOKCASE)
+      : -1;
+    this.bookcaseCount = Math.max(1, highestCase + 2);
+    this.shelfCount = this.bookcaseCount * SHELVES_PER_BOOKCASE;
+    this.activeBookcase = Math.max(0, Math.min(this.activeBookcase, this.bookcaseCount - 1));
+  }
+
+  restoreBookcaseState(activeBookcase, scrollPositions = {}) {
+    this.activeBookcase = Math.max(0, Number(activeBookcase) || 0);
+    this.bookcaseScrollPositions = new Map(Object.entries(scrollPositions || {})
+      .map(([key, value]) => [Number(key), Math.max(0, Number(value) || 0)]));
+  }
+
+  scrollState() { return Object.fromEntries(this.bookcaseScrollPositions); }
+
+  isBookcaseEmpty(index) {
+    const start = index * SHELVES_PER_BOOKCASE;
+    const end = start + SHELVES_PER_BOOKCASE;
+    return ![...this.books.filter((book) => !book.stackId), ...this.decorItems, ...this.stacks]
+      .some((item) => (Number(item.shelfIndex) || 0) >= start && (Number(item.shelfIndex) || 0) < end);
+  }
+
+  firstEmptyShelfInActiveBookcase() {
+    const start = this.activeBookcase * SHELVES_PER_BOOKCASE;
+    const occupied = new Set([...this.books.filter((book) => !book.stackId), ...this.decorItems, ...this.stacks]
+      .map((item) => Math.max(0, Number(item.shelfIndex) || 0)));
+    for (let shelf = start; shelf < start + SHELVES_PER_BOOKCASE; shelf++) {
+      if (!occupied.has(shelf)) return shelf;
+    }
+    return start + SHELVES_PER_BOOKCASE;
+  }
+
+  setActiveBookcase(index, { render = true } = {}) {
+    const next = Math.max(0, Math.min(Number(index) || 0, this.bookcaseCount - 1));
+    this.bookcaseScrollPositions.set(this.activeBookcase, this.root.scrollTop);
+    if (next === this.activeBookcase) return;
+    this.activeBookcase = next;
+    if (render) this.render();
+    this.onBookcaseChanged?.(next, this.scrollState());
+    window.dispatchEvent(new CustomEvent("nth:bookcase-changed", { detail: { index: next, count: this.bookcaseCount } }));
   }
 
   // Unstacked books only — stacked books are rendered inside their stack pile.
@@ -85,7 +139,20 @@ window.Shelf = class {
   render() {
     cancelAnimationFrame(this._layoutFrame);
     this.root.innerHTML = "";
-    for (let i = 0; i < this.shelfCount; i++) {
+    this.renderBookcaseInto(this.root, this.activeBookcase);
+    if (window.syncDecorClocks) window.syncDecorClocks();
+    this._layoutFrame = requestAnimationFrame(() => {
+      this.layoutRows(this.root);
+      this._restoringBookcaseScroll = true;
+      this.root.scrollTop = this.bookcaseScrollPositions.get(this.activeBookcase) || 0;
+      requestAnimationFrame(() => { this._restoringBookcaseScroll = false; });
+    });
+  }
+
+  renderBookcaseInto(container, bookcaseIndex) {
+    container.innerHTML = "";
+    const firstShelf = bookcaseIndex * SHELVES_PER_BOOKCASE;
+    for (let i = firstShelf; i < firstShelf + SHELVES_PER_BOOKCASE; i++) {
       const row = document.createElement("div");
       row.className = "shelf-row";
       row.dataset.shelfIndex = String(i);
@@ -107,20 +174,25 @@ window.Shelf = class {
       row.appendChild(decorLayer);
 
       row.appendChild(this.woodLedge());
-    this.root.appendChild(row);
+      container.appendChild(row);
     }
-    if (window.syncDecorClocks) window.syncDecorClocks();
-    this._layoutFrame = requestAnimationFrame(() => this.layoutRows());
+  }
+
+  renderBookcasePreview(container, bookcaseIndex) {
+    container.dataset.backdrop = this.root.dataset.backdrop || "walnut";
+    container.dataset.shelfTheme = this.root.dataset.shelfTheme || "walnut";
+    this.renderBookcaseInto(container, bookcaseIndex);
+    requestAnimationFrame(() => this.layoutRows(container));
   }
 
   // Pack books around each decoration's real width. Books remain ordered by
   // slot, but skip occupied decor intervals instead of disappearing behind it.
-  layoutRows() {
-    this.root.querySelectorAll(".shelf-row").forEach((row) => {
+  layoutRows(container = this.root) {
+    container.querySelectorAll(".shelf-row").forEach((row) => {
       const plank = row.querySelector(".shelf-books");
       const width = Math.max(1, plank.clientWidth);
       const plankRect = plank.getBoundingClientRect();
-      const blockers = Array.from(this.root.querySelectorAll(".decor-item")).map((decorEl) => {
+      const blockers = Array.from(container.querySelectorAll(".decor-item")).map((decorEl) => {
         const item = this.decorItems.find((candidate) => candidate.id === decorEl.dataset.id) || {};
         const rect = decorEl.getBoundingClientRect();
         if (rect.bottom <= plankRect.top || rect.top >= plankRect.bottom) return null;
@@ -614,7 +686,7 @@ window.Shelf = class {
       item.shelfIndex = newShelf;
       item.position = Math.round(pct);
       NthDB.decor.put(item);
-      if (newShelf === this.shelfCount - 1) this.shelfCount++;
+      this._recalcShelfCount();
       this.render();
       return;
     }
@@ -668,7 +740,7 @@ window.Shelf = class {
     });
     NthDB.saveArrangement({ books: [...changedBooks.values()], stacksToPut: [...changedStacks.values()] });
 
-    if (newShelf === this.shelfCount - 1) this.shelfCount++;
+    this._recalcShelfCount();
     this.render();
 
     if (flowKind === "book") {

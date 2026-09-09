@@ -11,6 +11,14 @@
   const shelf = new Shelf(shelfRoot, {
     onOpen: (id) => openBook(id),
   });
+  const carousel = new BookcaseCarousel(shelf);
+  shelf.onBookcaseChanged = (index, scrollPositions) => {
+    NthDB.settings.set("activeBookcase", index);
+    NthDB.settings.set("bookcaseScrollPositions", scrollPositions);
+  };
+  shelf.onBookcaseScrollChanged = (scrollPositions) => {
+    NthDB.settings.set("bookcaseScrollPositions", scrollPositions);
+  };
 
   const customize = new Customize(shelf, {
     onExit: refresh,
@@ -75,6 +83,7 @@
     const [book, sourceFile] = await Promise.all([NthDB.get(id), NthDB.getFile(id)]);
     if (!book) return;
     try {
+      shelf.setActiveBookcase(Math.floor((Number(book.shelfIndex) || 0) / 5));
       if (!sourceFile) {
         pendingRepairBookId = id;
         throw new Error(`The shelf entry is safe, but its source file is missing. Use Add Books and select "${book.fileName || book.title}" to repair it in place; your shelf arrangement and progress will be preserved.`);
@@ -121,6 +130,13 @@
         await NthDB.remove(book.id);
         throw new Error("The source could not be verified after saving, so no incomplete shelf entry was created.");
       }
+      const targetBookcase = Math.floor(shelfIndex / 5);
+      // Archive entries are saved before the final shelf refresh. Keep the
+      // in-memory carousel range moving with them so a large archive can span
+      // several new cabinets and finish on the cabinet it most recently used.
+      shelf.bookcaseCount = Math.max(shelf.bookcaseCount, targetBookcase + 2);
+      shelf.shelfCount = shelf.bookcaseCount * 5;
+      shelf.setActiveBookcase(targetBookcase, { render: false });
       showStatus("");
       return true;
     } catch (err) {
@@ -166,9 +182,14 @@
     ]);
     const occupied = new Set([...books.filter((book) => !book.stackId), ...decorItems, ...stacks]
       .map((item) => Math.max(0, Number(item.shelfIndex) || 0)));
-    let shelfIndex = 0;
-    while (occupied.has(shelfIndex)) shelfIndex++;
-    return shelfIndex;
+    let bookcase = shelf.activeBookcase;
+    while (true) {
+      const first = bookcase * 5;
+      for (let shelfIndex = first; shelfIndex < first + 5; shelfIndex++) {
+        if (!occupied.has(shelfIndex)) return shelfIndex;
+      }
+      bookcase++;
+    }
   }
 
   function showStatus(msg, isError) {
@@ -200,12 +221,18 @@
     ]);
     if (token !== refreshToken) return;
     shelf.setAll(books, decorItems, stacks);
+    carousel.updateButton();
     shelfRoot.classList.remove("shelf-loading");
   }
 
   try {
     await NthDB.ready();
     NthDB.requestPersistence();
+    const [activeBookcase, bookcaseScrollPositions] = await Promise.all([
+      NthDB.settings.get("activeBookcase", 0),
+      NthDB.settings.get("bookcaseScrollPositions", {}),
+    ]);
+    shelf.restoreBookcaseState(activeBookcase, bookcaseScrollPositions);
     await customize.applyStoredStyle();
     await refresh();
   } catch (err) {
