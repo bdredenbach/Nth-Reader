@@ -1,4 +1,11 @@
-# Nth Reader V-0.19.00
+# Nth Reader V-0.20.00
+
+## V-0.20: perspective-correct wooden photo frame
+
+- The wooden gallery frame now uses a measured four-corner opening that follows the artwork's 11% top-to-bottom perspective shift.
+- The photograph remains independently cropped and upright while the opening itself supplies the parallelogram mask.
+- Adds a persistent Opening Slant control from -20.0% to +20.0% in 0.1% steps.
+- Reset Opening restores the frame's calibrated perspective without changing the selected photo or its crop controls.
 
 ## V-0.19: fine photo rotation and unobtrusive carousel access
 
@@ -222,4 +229,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.19.00`.
+The service-worker cache key is `Nth-Reader-V-0.20.00`.
