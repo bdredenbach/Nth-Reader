@@ -157,6 +157,9 @@ window.Customize = class {
     if (!item) return;
     try {
       item.photoData = await this.compactPhoto(file);
+      item.photoZoom = 100;
+      item.photoX = 50;
+      item.photoY = 50;
       await NthDB.decor.put(item);
       this.shelf.render();
       if (this.active && this.selectedDecor?.id === id) this.renderPanel();
@@ -790,6 +793,28 @@ window.Customize = class {
     });
     wrap.appendChild(spacingRow);
 
+    if (DECOR_PHOTO_FRAMES[item.type] && item.photoData) {
+      const photoHeading = document.createElement("div");
+      photoHeading.className = "photo-controls-heading";
+      photoHeading.textContent = "Photo crop";
+      wrap.appendChild(photoHeading);
+      wrap.appendChild(this.sliderRow("Photo zoom", 100, 250, item.photoZoom ?? 100, (v) => {
+        item.photoZoom = v;
+        this.shelf.render();
+        NthDB.decor.put(item);
+      }));
+      wrap.appendChild(this.sliderRow("Photo left / right", 0, 100, item.photoX ?? 50, (v) => {
+        item.photoX = v;
+        this.shelf.render();
+        NthDB.decor.put(item);
+      }));
+      wrap.appendChild(this.sliderRow("Photo up / down", 0, 100, item.photoY ?? 50, (v) => {
+        item.photoY = v;
+        this.shelf.render();
+        NthDB.decor.put(item);
+      }));
+    }
+
     if (item.type === "candle" || item.type === "lamp") {
       const glowRow = this.sliderRow("Glow", 0, 100, item.glow ?? 60, (v) => {
         item.glow = v;
@@ -810,6 +835,19 @@ window.Customize = class {
       photoBtn.addEventListener("click", () => this.choosePhoto(item));
       actions.appendChild(photoBtn);
       if (item.photoData) {
+        const resetPhotoBtn = document.createElement("button");
+        resetPhotoBtn.className = "decor-action-btn";
+        resetPhotoBtn.type = "button";
+        resetPhotoBtn.textContent = "Reset Crop";
+        resetPhotoBtn.addEventListener("click", async () => {
+          item.photoZoom = 100;
+          item.photoX = 50;
+          item.photoY = 50;
+          await NthDB.decor.put(item);
+          this.shelf.render();
+          this.renderPanel();
+        });
+        actions.appendChild(resetPhotoBtn);
         const clearPhotoBtn = document.createElement("button");
         clearPhotoBtn.className = "decor-action-btn";
         clearPhotoBtn.type = "button";

@@ -100,16 +100,21 @@ window.DECOR_ART.clock = () => `
   </span>`;
 
 window.DECOR_PHOTO_FRAMES = {
-  ovalPhotoFrame: { inset: "22% 25% 18%", shape: "oval" },
-  walnutPhotoFrame: { inset: "20% 24% 17%", shape: "portrait" },
-  gothicPhotoFrame: { inset: "21% 27% 18%", shape: "arch" },
-  goldPhotoFrame: { inset: "26% 22% 27%", shape: "landscape" },
+  // Insets follow each generated frame's actual transparent opening, rather
+  // than the outer decor control box. Aspect is the trimmed artwork ratio.
+  ovalPhotoFrame: { inset: "20.5% 24.5% 20.5% 26.5%", shape: "oval", aspect: 710 / 900 },
+  walnutPhotoFrame: { inset: "17.5% 24.8% 23.5% 33%", shape: "portrait", aspect: 876 / 900 },
+  gothicPhotoFrame: { inset: "24.5% 20.5% 18.5% 33.5%", shape: "arch", aspect: 694 / 900 },
+  goldPhotoFrame: { inset: "20% 17.6% 23.7% 23%", shape: "landscape", aspect: 900 / 606 },
 };
 Object.keys(window.DECOR_PHOTO_FRAMES).forEach((type) => {
   window.DECOR_ART[type] = (item = {}) => {
     const safePhoto = /^data:image\/(?:jpeg|png|webp);base64,/i.test(item.photoData || "") ? item.photoData : "";
     const config = window.DECOR_PHOTO_FRAMES[type];
-    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset}">
+    const zoom = Math.max(100, Math.min(250, Number(item.photoZoom) || 100));
+    const photoX = Math.max(0, Math.min(100, Number(item.photoX ?? 50)));
+    const photoY = Math.max(0, Math.min(100, Number(item.photoY ?? 50)));
+    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset};--photo-scale:${zoom / 100};--photo-x:${photoX}%;--photo-y:${photoY}%">
       <img class="decor-photo frame-art" src="${window.DECOR_ASSETS[type]}" alt="" draggable="false" loading="lazy" decoding="async">
       <span class="frame-photo-window">
         ${safePhoto ? `<img class="frame-user-photo" src="${safePhoto}" alt="Chosen photo" draggable="false">` : `<span class="frame-empty-prompt">＋<small>Add photo</small></span>`}
@@ -117,6 +122,19 @@ Object.keys(window.DECOR_PHOTO_FRAMES).forEach((type) => {
     </span>`;
   };
 });
+
+window.syncDecorPhotoFrames = function syncDecorPhotoFrames(root = document) {
+  root.querySelectorAll('.decor-item[data-type$="PhotoFrame"]').forEach((itemEl) => {
+    const artboard = itemEl.querySelector(".custom-photo-frame");
+    const config = window.DECOR_PHOTO_FRAMES[itemEl.dataset.type];
+    if (!artboard || !config) return;
+    const width = itemEl.clientWidth;
+    const height = itemEl.clientHeight;
+    const fitByWidth = width / Math.max(1, height) <= config.aspect;
+    artboard.style.width = `${fitByWidth ? width : height * config.aspect}px`;
+    artboard.style.height = `${fitByWidth ? width / config.aspect : height}px`;
+  });
+};
 
 window.syncDecorClocks = function syncDecorClocks() {
   const now = new Date();

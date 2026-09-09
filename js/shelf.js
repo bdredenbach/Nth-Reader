@@ -142,6 +142,7 @@ window.Shelf = class {
     this.root.innerHTML = "";
     this.renderBookcaseInto(this.root, this.activeBookcase);
     if (window.syncDecorClocks) window.syncDecorClocks();
+    if (window.syncDecorPhotoFrames) window.syncDecorPhotoFrames(this.root);
     this._layoutFrame = requestAnimationFrame(() => {
       this.layoutRows(this.root);
       this._restoringBookcaseScroll = true;
@@ -189,6 +190,7 @@ window.Shelf = class {
     container.style.width = `${naturalWidth}px`;
     container.classList.add("carousel-preview-measuring");
     this.renderBookcaseInto(container, bookcaseIndex);
+    if (window.syncDecorPhotoFrames) window.syncDecorPhotoFrames(container);
     this.layoutRows(container);
     const naturalHeight = Math.max(1, container.scrollHeight);
     container.classList.remove("carousel-preview-measuring");
