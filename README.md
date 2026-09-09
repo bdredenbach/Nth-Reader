@@ -1,4 +1,13 @@
-# Nth Reader V-0.14.00
+# Nth Reader V-0.15.00
+
+## V-0.15: five-shelf bookcase carousel
+
+- Shelves are presented as five-shelf bookcases without rewriting existing shelf records.
+- The Bookcase button opens a perspective carousel with Previous/Next arrows, horizontal swipe, mouse-wheel/trackpad, and keyboard navigation.
+- The selected cabinet zooms back into the normal interactive shelf view.
+- Each cabinet remembers its own vertical scroll position.
+- New books, archive entries, and decorations fill empty shelves in the active cabinet first, then continue into the next cabinet.
+- One empty trailing bookcase is always available, and only the active preview is rendered while browsing.
 
 ## V-0.14: verified source-file storage and repair
 
@@ -176,4 +185,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.14.00`.
+The service-worker cache key is `Nth-Reader-V-0.15.00`.

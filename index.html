@@ -35,6 +35,28 @@
   </header>
   <div id="import-status" class="import-status"></div>
   <div id="shelf-root" class="shelf-root"></div>
+  <button id="carousel-open-btn" class="carousel-open-btn" type="button" aria-label="Browse bookcases">
+    <span aria-hidden="true">◫</span><span id="carousel-open-label">Bookcase 1</span>
+  </button>
+
+  <section id="bookcase-carousel" class="bookcase-carousel" hidden aria-label="Bookcase carousel">
+    <div class="carousel-topline">
+      <div>
+        <strong>Your Bookcases</strong>
+        <span>Swipe or scroll to rotate</span>
+      </div>
+      <button id="carousel-close-btn" class="carousel-close-btn" type="button" aria-label="Close carousel">✕</button>
+    </div>
+    <div id="carousel-stage" class="carousel-stage">
+      <button id="carousel-prev-btn" class="carousel-arrow carousel-arrow-prev" type="button" aria-label="Previous bookcase">‹</button>
+      <button id="carousel-card" class="carousel-card" type="button" aria-label="Open selected bookcase">
+        <div id="carousel-preview" class="carousel-bookcase-content shelf-root"></div>
+      </button>
+      <button id="carousel-next-btn" class="carousel-arrow carousel-arrow-next" type="button" aria-label="Next bookcase">›</button>
+    </div>
+    <div id="carousel-position" class="carousel-position" aria-live="polite">Bookcase 1 of 1</div>
+    <button id="carousel-enter-btn" class="carousel-enter-btn" type="button">Open Bookcase</button>
+  </section>
 
   <!-- Customize mode chrome -->
   <div id="customize-topbar" class="customize-topbar" hidden>
@@ -126,6 +148,7 @@
 <script src="js/reader.js"></script>
 <script src="js/decor-art.js"></script>
 <script src="js/shelf.js"></script>
+<script src="js/carousel.js"></script>
 <script src="js/customize.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/remove-panel.js"></script>
