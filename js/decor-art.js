@@ -114,7 +114,8 @@ Object.keys(window.DECOR_PHOTO_FRAMES).forEach((type) => {
     const zoom = Math.max(100, Math.min(250, Number(item.photoZoom) || 100));
     const photoX = Math.max(0, Math.min(100, Number(item.photoX ?? 50)));
     const photoY = Math.max(0, Math.min(100, Number(item.photoY ?? 50)));
-    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset};--photo-scale:${zoom / 100};--photo-x:${photoX}%;--photo-y:${photoY}%">
+    const photoRotate = Math.max(-10, Math.min(10, Number(item.photoRotate ?? 0)));
+    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset};--photo-scale:${zoom / 100};--photo-x:${photoX}%;--photo-y:${photoY}%;--photo-rotate:${photoRotate}deg">
       <img class="decor-photo frame-art" src="${window.DECOR_ASSETS[type]}" alt="" draggable="false" loading="lazy" decoding="async">
       <span class="frame-photo-window">
         ${safePhoto ? `<img class="frame-user-photo" src="${safePhoto}" alt="Chosen photo" draggable="false">` : `<span class="frame-empty-prompt">＋<small>Add photo</small></span>`}

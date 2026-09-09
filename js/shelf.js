@@ -45,6 +45,7 @@ window.Shelf = class {
     this.bookcaseScrollPositions = new Map();
     this.onBookcaseChanged = null;
     this.onBookcaseScrollChanged = null;
+    this.onViewportChanged = null;
     this._lastTap = { id: null, time: 0 };
     this._drag = null; // { kind: 'book'|'faceout'|'decor'|'stack', ... }
 
@@ -54,6 +55,7 @@ window.Shelf = class {
     window.addEventListener("pointercancel", (e) => this.onPointerCancel(e));
     let scrollTimer = 0;
     this.root.addEventListener("scroll", () => {
+      this.onViewportChanged?.();
       if (this._restoringBookcaseScroll) return;
       this.bookcaseScrollPositions.set(this.activeBookcase, this.root.scrollTop);
       clearTimeout(scrollTimer);
@@ -147,7 +149,10 @@ window.Shelf = class {
       this.layoutRows(this.root);
       this._restoringBookcaseScroll = true;
       this.root.scrollTop = this.bookcaseScrollPositions.get(this.activeBookcase) || 0;
-      requestAnimationFrame(() => { this._restoringBookcaseScroll = false; });
+      requestAnimationFrame(() => {
+        this._restoringBookcaseScroll = false;
+        this.onViewportChanged?.();
+      });
     });
   }
 

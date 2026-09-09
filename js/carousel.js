@@ -65,7 +65,9 @@ window.BookcaseCarousel = class {
     window.addEventListener("resize", () => {
       if (!this.overlay.hidden && !this.busy) this.renderSelected();
     });
+    this.shelf.onViewportChanged = () => this.updateButtonVisibility();
     this.updateButton();
+    this.updateButtonVisibility();
   }
 
   open() {
@@ -130,5 +132,16 @@ window.BookcaseCarousel = class {
   updateButton() {
     if (!this.openLabel) return;
     this.openLabel.textContent = `Bookcase ${this.shelf.activeBookcase + 1}`;
+    this.updateButtonVisibility();
+  }
+
+  updateButtonVisibility() {
+    const root = this.shelf.root;
+    const remaining = root.scrollHeight - root.clientHeight - root.scrollTop;
+    const atBottom = remaining <= 24;
+    const show = atBottom && !root.classList.contains("shelf-loading");
+    this.openButton.classList.toggle("at-bottom", show);
+    this.openButton.disabled = !show;
+    this.openButton.setAttribute("aria-hidden", show ? "false" : "true");
   }
 };

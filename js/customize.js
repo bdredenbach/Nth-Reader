@@ -160,6 +160,7 @@ window.Customize = class {
       item.photoZoom = 100;
       item.photoX = 50;
       item.photoY = 50;
+      item.photoRotate = 0;
       await NthDB.decor.put(item);
       this.shelf.render();
       if (this.active && this.selectedDecor?.id === id) this.renderPanel();
@@ -813,6 +814,11 @@ window.Customize = class {
         this.shelf.render();
         NthDB.decor.put(item);
       }));
+      wrap.appendChild(this.sliderRow("Photo rotate", -10, 10, item.photoRotate ?? 0, (v) => {
+        item.photoRotate = v;
+        this.shelf.render();
+        NthDB.decor.put(item);
+      }, 0.01, (v) => `${v.toFixed(2)}°`));
     }
 
     if (item.type === "candle" || item.type === "lamp") {
@@ -843,6 +849,7 @@ window.Customize = class {
           item.photoZoom = 100;
           item.photoX = 50;
           item.photoY = 50;
+          item.photoRotate = 0;
           await NthDB.decor.put(item);
           this.shelf.render();
           this.renderPanel();
@@ -904,24 +911,26 @@ window.Customize = class {
     return wrap;
   }
 
-  sliderRow(label, min, max, value, onChange) {
+  sliderRow(label, min, max, value, onChange, step = 1, formatValue = (v) => String(v)) {
     const row = document.createElement("div");
     row.className = "slider-row";
     const labelEl = document.createElement("label");
     labelEl.textContent = label;
     const valueEl = document.createElement("span");
     valueEl.className = "slider-value";
-    valueEl.textContent = value;
+    valueEl.textContent = formatValue(Number(value));
     const input = document.createElement("input");
     input.type = "range";
     input.min = String(min);
     input.max = String(max);
+    input.step = String(step);
     input.value = String(value);
     input.addEventListener("pointerdown", () => this.focusWorkingShelf("auto"));
     input.addEventListener("focus", () => this.focusWorkingShelf("auto"));
     input.addEventListener("input", () => {
-      valueEl.textContent = input.value;
-      onChange(Number(input.value));
+      const numericValue = Number(input.value);
+      valueEl.textContent = formatValue(numericValue);
+      onChange(numericValue);
       // The change handler may rebuild the shelf DOM. Re-anchor the newly
       // rendered working row while this slider is actively being adjusted.
       requestAnimationFrame(() => this.focusWorkingShelf("auto"));
