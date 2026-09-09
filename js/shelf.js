@@ -545,6 +545,7 @@ window.Shelf = class {
       this._drag.ghost.style.left = (e.clientX - this._drag.offX) + "px";
       this._drag.ghost.style.top = (e.clientY - this._drag.offY) + "px";
       this.autoScrollShelf(e.clientY);
+      this.updateBookcaseEdgeDrag(e.clientX);
       this.highlightDropTarget(e.clientX, e.clientY);
     }
   }
@@ -579,6 +580,7 @@ window.Shelf = class {
       this._pending = null;
     }
     if (!this._drag) return;
+    this.clearBookcaseEdgeDrag();
     this._drag.ghost.remove();
     this._drag.el.classList.remove("drag-lifted");
     this.root.querySelectorAll(".shelf-row.drop-target").forEach((row) => row.classList.remove("drop-target"));
@@ -630,6 +632,10 @@ window.Shelf = class {
     ghost.style.top = y - (y - rect.top) + "px";
     ghost.style.transform = "";
     document.body.appendChild(ghost);
+    const edgeCue = document.createElement("div");
+    edgeCue.className = "drag-bookcase-edge-cue";
+    edgeCue.setAttribute("aria-live", "polite");
+    document.body.appendChild(edgeCue);
     el.classList.add("drag-lifted");
     try { if (pointerId !== undefined) el.setPointerCapture(pointerId); } catch (_) { /* optional mobile capability */ }
     if (navigator.vibrate) navigator.vibrate(15);
@@ -637,8 +643,55 @@ window.Shelf = class {
       kind, id, el, ghost, offX: x - rect.left, offY: y - rect.top,
       originalShelfIndex: this._pending?.originalShelfIndex ?? 0,
       originalSlot: this._pending?.originalSlot ?? 0,
-      pointerId,
+      pointerId, edgeCue, edgeDirection: 0, edgeTimer: 0, edgeLocked: false,
     };
+  }
+
+  updateBookcaseEdgeDrag(pointerX) {
+    if (!this._drag) return;
+    const rect = this.root.getBoundingClientRect();
+    const edgeWidth = Math.max(34, Math.min(52, rect.width * 0.11));
+    let direction = 0;
+    if (pointerX <= rect.left + edgeWidth && this.activeBookcase > 0) direction = -1;
+    else if (pointerX >= rect.right - edgeWidth && this.activeBookcase < this.bookcaseCount - 1) direction = 1;
+
+    if (!direction) {
+      clearTimeout(this._drag.edgeTimer);
+      this._drag.edgeTimer = 0;
+      this._drag.edgeDirection = 0;
+      this._drag.edgeCue.className = "drag-bookcase-edge-cue";
+      this._drag.edgeCue.textContent = "";
+      this._drag.edgeLocked = false;
+      return;
+    }
+    if (this._drag.edgeLocked || this._drag.edgeDirection === direction) return;
+
+    clearTimeout(this._drag.edgeTimer);
+    this._drag.edgeDirection = direction;
+    this._drag.edgeCue.className = `drag-bookcase-edge-cue visible ${direction < 0 ? "left" : "right"}`;
+    this._drag.edgeCue.textContent = `${direction < 0 ? "‹" : "›"} Hold for Bookcase ${this.activeBookcase + direction + 1}`;
+    this._drag.edgeTimer = setTimeout(() => {
+      if (!this._drag || this._drag.edgeDirection !== direction) return;
+      const target = this.activeBookcase + direction;
+      if (target < 0 || target >= this.bookcaseCount) return;
+      this._drag.edgeLocked = true;
+      this._drag.edgeTimer = 0;
+      this.setActiveBookcase(target);
+      this._drag.edgeCue.textContent = `Bookcase ${target + 1}`;
+      this._drag.edgeCue.classList.add("arrived");
+      if (navigator.vibrate) navigator.vibrate(22);
+      setTimeout(() => {
+        if (!this._drag) return;
+        this._drag.edgeCue.className = "drag-bookcase-edge-cue";
+        this._drag.edgeCue.textContent = "";
+      }, 420);
+    }, 560);
+  }
+
+  clearBookcaseEdgeDrag() {
+    if (!this._drag) return;
+    clearTimeout(this._drag.edgeTimer);
+    this._drag.edgeCue?.remove();
   }
 
   autoScrollShelf(pointerY) {
@@ -689,6 +742,7 @@ window.Shelf = class {
 
   endDrag(x, y) {
     const { kind, id, el, ghost, originalShelfIndex, originalSlot } = this._drag;
+    this.clearBookcaseEdgeDrag();
     try { if (this._drag.pointerId !== undefined) el.releasePointerCapture(this._drag.pointerId); } catch (_) { /* already released */ }
     ghost.remove();
     el.classList.remove("drag-lifted");

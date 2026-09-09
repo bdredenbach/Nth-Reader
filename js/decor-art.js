@@ -111,7 +111,9 @@ Object.keys(window.DECOR_PHOTO_FRAMES).forEach((type) => {
     const config = window.DECOR_PHOTO_FRAMES[type];
     return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset}">
       <img class="decor-photo frame-art" src="${window.DECOR_ASSETS[type]}" alt="" draggable="false" loading="lazy" decoding="async">
-      ${safePhoto ? `<img class="frame-user-photo" src="${safePhoto}" alt="Chosen photo" draggable="false">` : `<span class="frame-empty-prompt">＋<small>Add photo</small></span>`}
+      <span class="frame-photo-window">
+        ${safePhoto ? `<img class="frame-user-photo" src="${safePhoto}" alt="Chosen photo" draggable="false">` : `<span class="frame-empty-prompt">＋<small>Add photo</small></span>`}
+      </span>
     </span>`;
   };
 });
