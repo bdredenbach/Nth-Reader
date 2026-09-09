@@ -1,6 +1,13 @@
-# Nth Reader V-1.00.00
+# Nth Reader V-0.11.00
 
-## V-1.00: living shelf collection
+## V-0.11: décor sizing, placement, and touch refinements
+
+- Every newly added decoration starts at Width 100, Height 100, and Space around object -40.
+- Working-clock hands are positioned against the clock artwork's actual contained dimensions, so independently changing Width or Height no longer pulls the hands away from the dial center.
+- Shelf items now require a deliberate 340 ms hold before pickup. A vertical swipe made before that hold scrolls the shelf instead of accidentally lifting the item.
+- A newly added decoration uses the first completely empty shelf, matching book and archive imports. The bookcase then creates another empty shelf below it automatically.
+
+## V-0.10: living shelf collection
 
 - Sixteen new photorealistic, transparent shelf assets join the original collection: a carved walnut working clock, three hand-blown glass animals, white-tiger and heroic figure bookends, three ornate vessels, two cozy airplants, two wire sculptures, and three framed paintings.
 - The clock's hour, minute, and second hands use the phone or computer's local time and continue updating while it is on the shelf.
@@ -145,4 +152,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-1.00.00`.
+The service-worker cache key is `Nth-Reader-V-0.11.00`.

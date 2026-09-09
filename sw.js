@@ -1,6 +1,6 @@
-// NTH READER — V-1.00.00
+// NTH READER — V-0.11.00
 
-const SW_VERSION = "Nth-Reader-V-1.00.00";
+const SW_VERSION = "Nth-Reader-V-0.11.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -28,6 +28,22 @@ const SHELL_FILES = [
   "./assets/decor/lamp.webp",
   "./assets/decor/mug.webp",
   "./assets/decor/frame.webp",
+  "./assets/decor/clock.webp",
+  "./assets/decor/glass-fox.webp",
+  "./assets/decor/glass-elephant.webp",
+  "./assets/decor/glass-swan.webp",
+  "./assets/decor/white-tiger-bookend.webp",
+  "./assets/decor/hero-bookend.webp",
+  "./assets/decor/cobalt-vase.webp",
+  "./assets/decor/porcelain-vase.webp",
+  "./assets/decor/copper-pot.webp",
+  "./assets/decor/woven-airplant.webp",
+  "./assets/decor/ceramic-airplant.webp",
+  "./assets/decor/wire-orb.webp",
+  "./assets/decor/wire-polyhedron.webp",
+  "./assets/decor/mountain-painting.webp",
+  "./assets/decor/abstract-painting.webp",
+  "./assets/decor/cosmos-painting.webp",
   "https://code.jquery.com/jquery-3.6.0.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
