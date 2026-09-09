@@ -7,6 +7,7 @@ window.NthDB = (function () {
   const DB_NAME = "nth-reader-db";
   const DB_VERSION = 6;
   const BOOKS = "books", BOOK_FILES = "book-files", DECOR = "decor", STACKS = "stacks", SETTINGS = "settings", BOOKMARKS = "bookmarks";
+  const OPFS_DIRECTORY = "nth-reader-book-sources";
   let dbPromise = null;
   const pendingWrites = new Set();
 
@@ -150,6 +151,57 @@ window.NthDB = (function () {
 
   const bookMetaCrud = makeCrud(BOOKS);
   const fileCrud = makeCrud(BOOK_FILES);
+
+  function sourceEntryName(id) {
+    return `${String(id).replace(/[^a-z0-9_-]/gi, "_")}.source`;
+  }
+
+  async function opfsDirectory(create = false) {
+    if (!navigator.storage?.getDirectory) return null;
+    const root = await navigator.storage.getDirectory();
+    return root.getDirectoryHandle(OPFS_DIRECTORY, { create });
+  }
+
+  async function removeOpfsSource(id) {
+    try {
+      const directory = await opfsDirectory(false);
+      if (directory) await directory.removeEntry(sourceEntryName(id));
+    } catch (error) {
+      if (error?.name !== "NotFoundError") throw error;
+    }
+  }
+
+  async function writeOpfsSource(id, source) {
+    let writable;
+    try {
+      const directory = await opfsDirectory(true);
+      if (!directory) return false;
+      const handle = await directory.getFileHandle(sourceEntryName(id), { create: true });
+      writable = await handle.createWritable({ keepExistingData: false });
+      await writable.write(source);
+      await writable.close();
+      writable = null;
+      const saved = await handle.getFile();
+      if (saved.size !== source.size) throw new Error("Stored source size did not match the original file.");
+      return true;
+    } catch (_) {
+      try { await writable?.abort?.(); } catch (_) { /* best effort */ }
+      try { await removeOpfsSource(id); } catch (_) { /* fall back below */ }
+      return false;
+    }
+  }
+
+  async function readOpfsSource(id) {
+    try {
+      const directory = await opfsDirectory(false);
+      if (!directory) return null;
+      const handle = await directory.getFileHandle(sourceEntryName(id));
+      return await handle.getFile();
+    } catch (_) {
+      return null;
+    }
+  }
+
   const books = {
     ...bookMetaCrud,
     async put(record) {
@@ -160,27 +212,68 @@ window.NthDB = (function () {
         metadata.fileName ||= source.name || `${metadata.title || "book"}.${metadata.format || "bin"}`;
         metadata.fileType ||= source.type || "";
         metadata.fileSize ||= source.size || 0;
-        await transact([BOOKS, BOOK_FILES], "readwrite", (_, transaction) => {
-          transaction.objectStore(BOOK_FILES).put({ id: metadata.id, file: source });
-          return transaction.objectStore(BOOKS).put(metadata);
-        });
+        const storedInOpfs = await writeOpfsSource(metadata.id, source);
+        if (storedInOpfs) {
+          metadata.sourceStorage = "opfs";
+          metadata.sourceVerifiedAt = Date.now();
+          try {
+            // The shelf record is created only after the full source has been
+            // written and its size has been read back successfully.
+            await bookMetaCrud.put(metadata);
+          } catch (error) {
+            await removeOpfsSource(metadata.id).catch(() => {});
+            throw error;
+          }
+        } else {
+          // Older browsers use one strict transaction so a shelf record can
+          // never commit without its IndexedDB source record.
+          metadata.sourceStorage = "indexeddb";
+          await transact([BOOKS, BOOK_FILES], "readwrite", (_, transaction) => {
+            transaction.objectStore(BOOK_FILES).put({ id: metadata.id, file: source });
+            return transaction.objectStore(BOOKS).put(metadata);
+          });
+        }
       } else {
         await bookMetaCrud.put(metadata);
       }
       return metadata;
     },
     async getFile(id) {
-      return (await fileCrud.get(id))?.file || null;
+      const metadata = await bookMetaCrud.get(id);
+      if (!metadata) return null;
+      let source = null;
+      if (metadata.sourceStorage === "opfs") source = await readOpfsSource(id);
+      if (!source) source = (await fileCrud.get(id))?.file || null;
+      // A verified OPFS file can also repair a metadata record left behind if
+      // its final IndexedDB write was interrupted after the file write.
+      if (!source) source = await readOpfsSource(id);
+      if (!source) return null;
+      const name = metadata.fileName || source.name || `${metadata.title || "book"}.${metadata.format || "bin"}`;
+      return new File([source], name, { type: metadata.fileType || source.type || "", lastModified: source.lastModified || Date.now() });
     },
     async getWithFile(id) {
-      const [metadata, source] = await Promise.all([bookMetaCrud.get(id), fileCrud.get(id)]);
-      return metadata ? { ...metadata, file: source?.file || null } : null;
+      const metadata = await bookMetaCrud.get(id);
+      return metadata ? { ...metadata, file: await books.getFile(id) } : null;
+    },
+    async verifySource(id, expectedSize = null) {
+      const source = await books.getFile(id);
+      if (!source) return false;
+      if (expectedSize !== null && Number(expectedSize) !== source.size) return false;
+      try {
+        const sample = 65536;
+        await source.slice(0, Math.min(sample, source.size)).arrayBuffer();
+        if (source.size > sample) await source.slice(Math.max(0, source.size - sample)).arrayBuffer();
+        return true;
+      } catch (_) {
+        return false;
+      }
     },
     async remove(id) {
       await transact([BOOKS, BOOK_FILES], "readwrite", (_, transaction) => {
         transaction.objectStore(BOOK_FILES).delete(id);
         return transaction.objectStore(BOOKS).delete(id);
       });
+      await removeOpfsSource(id).catch(() => {});
     },
   };
 
