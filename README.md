@@ -1,4 +1,12 @@
-# Nth Reader V-0.09.00
+# Nth Reader V-1.00.00
+
+## V-1.00: living shelf collection
+
+- Sixteen new photorealistic, transparent shelf assets join the original collection: a carved walnut working clock, three hand-blown glass animals, white-tiger and heroic figure bookends, three ornate vessels, two cozy airplants, two wire sculptures, and three framed paintings.
+- The clock's hour, minute, and second hands use the phone or computer's local time and continue updating while it is on the shelf.
+- Bookends begin with close book clearance and can be flipped with Face Left / Face Right, making either side of a book row or leaning group appear physically supported.
+- Every new decoration retains the existing independent Width, Height, Position, Shelf Contact, spacing, direction, drag/drop, and removal controls.
+- The expanded picker is height-limited and scrollable so all twenty-four decorations remain reachable on small phones.
 
 ## V-0.09: mobile shelf and control gestures
 
@@ -137,4 +145,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.09.00`.
+The service-worker cache key is `Nth-Reader-V-1.00.00`.
