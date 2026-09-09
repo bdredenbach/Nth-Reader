@@ -1,4 +1,11 @@
-# Nth Reader V-0.16.00
+# Nth Reader V-0.17.00
+
+## V-0.17: fitted frame photos and edge-to-bookcase dragging
+
+- Gallery photos now live inside a clipped frame window instead of retaining their original screen-sized dimensions.
+- The photo window uses percentage geometry, so it stays aligned and scales with independent Width and Height changes.
+- While dragging a book, stack, or decoration, holding it at the far left or right edge for a moment opens the adjacent bookcase without dropping the item.
+- An edge cue names the destination bookcase; moving away from the edge cancels it, preventing accidental carousel changes while rearranging.
 
 ## V-0.16: expanded decoration collection
 
@@ -200,4 +207,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.16.00`.
+The service-worker cache key is `Nth-Reader-V-0.17.00`.
