@@ -1,6 +1,21 @@
-# Nth Reader V-1.11.00
+# Nth Reader V-0.13.00
 
-## V-1.11.00: décor sizing, placement, and touch refinements
+## V-0.13: compact leaning groups
+
+- Leaning groups now include a persisted **Space around objects** slider ranging from -40 to 28 and starting at -40.
+- Leaned books are packed using their true upright spine width rather than the much wider bounding rectangle created by rotation. Increasing the angle therefore no longer fans the group apart.
+- The default -40 spacing produces a compact, slightly overlapping bundle; raising the slider progressively opens the group and its neighboring clearance.
+- Working-shelf focus now runs again after every lean-slider render, keeping the edited group immediately above the controls for the duration of an adjustment.
+- The shelf remains manually scrollable whenever a slider is not actively being changed.
+
+## V-0.12: working-shelf focus
+
+- Selecting a decoration, stack, face-out book, or leaning group brings its shelf ledge immediately above the slider panel, keeping the edited object and its controls visually connected.
+- Beginning another slider adjustment restores that working shelf if it has drifted out of view.
+- The shelf is not locked: it remains freely scrollable between adjustments, so other shelves and objects can still be inspected whenever needed.
+- The final shelf can also reach the working position because the existing control-panel clearance remains part of the shelf's scrollable area.
+
+## V-0.11: décor sizing, placement, and touch refinements
 
 - Every newly added decoration starts at Width 100, Height 100, and Space around object -40.
 - Working-clock hands are positioned against the clock artwork's actual contained dimensions, so independently changing Width or Height no longer pulls the hands away from the dial center.
@@ -152,4 +167,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.11.00`.
+The service-worker cache key is `Nth-Reader-V-0.13.00`.
