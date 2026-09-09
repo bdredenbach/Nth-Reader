@@ -1,4 +1,11 @@
-# Nth Reader V-0.15.00
+# Nth Reader V-0.15.01
+
+## V-0.15.01: faithful carousel composition
+
+- Carousel previews now use the exact same natural-width coordinate system as the interactive shelf.
+- Books, lean groups, stacks, face-out covers, and decorations are packed before the completed cabinet is uniformly scaled.
+- Collision spacing and percentage-based decoration positions no longer shift when entering carousel mode.
+- Preview scale is calculated from the available frame dimensions and updates after an orientation or viewport change.
 
 ## V-0.15: five-shelf bookcase carousel
 
@@ -185,4 +192,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.15.00`.
+The service-worker cache key is `Nth-Reader-V-0.15.01`.
