@@ -501,6 +501,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%); transition: transform .22s ease;
   box-shadow: 0 -10px 30px rgba(0,0,0,.5);
+  max-height: min(84dvh, 720px); display: flex; flex-direction: column;
 }
 .decor-picker-sheet.visible { transform: translateY(0); }
 .decor-picker-handle {
@@ -508,7 +509,12 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   margin: 6px auto 14px;
 }
 .decor-picker-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-.decor-picker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.decor-picker-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain; padding: 2px 2px 8px;
+  scrollbar-color: rgba(217,164,92,.55) transparent;
+}
 .decor-pick-btn {
   background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 12px;
   color: #f3ead9; padding: 14px 4px; font-size: 12px; cursor: pointer;
@@ -611,6 +617,22 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   background:radial-gradient(circle,rgba(255,187,82,calc(var(--glow,.6)*.5)),transparent 68%); filter:blur(7px); pointer-events:none;
 }
 .decor-pick-preview img { width:100%; height:100%; object-fit:contain; }
+.live-clock { position: relative; display: block; width: 100%; height: 100%; }
+.clock-dial-hands {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.clock-hand {
+  position: absolute; left: 50%; bottom: 56%; width: 1.8px; border-radius: 2px;
+  background: #23170f; transform-origin: 50% 100%; box-shadow: 0 0 1px rgba(255,255,255,.35);
+}
+.clock-hour { height: 13%; transform: translateX(-50%) rotate(var(--clock-hour, 0deg)); }
+.clock-minute { height: 19%; width: 1.4px; transform: translateX(-50%) rotate(var(--clock-minute, 0deg)); }
+.clock-second { height: 20%; width: 1px; background: #9b2b1f; transform: translateX(-50%) rotate(var(--clock-second, 0deg)); }
+.clock-pin {
+  position: absolute; width: 4px; height: 4px; left: calc(50% - 2px); top: calc(44% - 2px);
+  border-radius: 50%; background: #b98a3d; box-shadow: 0 0 0 1px #3b2412;
+}
 .shelf-loading::after {
   content:"Restoring your shelf…"; position:fixed; left:50%; top:50%; z-index:12; transform:translate(-50%,-50%);
   padding:10px 16px; border-radius:20px; background:rgba(20,12,7,.84); color:#eadcc8; font-size:13px;
