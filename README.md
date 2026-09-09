@@ -1,4 +1,13 @@
-# Nth Reader V-0.13.00
+# Nth Reader V-0.14.00
+
+## V-0.14: verified source-file storage and repair
+
+- New and repaired books use the browser's origin-private file storage when available, avoiding dependence on one large IndexedDB `File`/Blob record. Browsers without that API retain the existing strict atomic IndexedDB fallback.
+- The complete file is written and its stored size verified before book metadata is allowed onto the shelf. A readable sample from both the beginning and end is checked after import; a failed verification rolls the incomplete entry back.
+- Existing IndexedDB sources remain readable, so this upgrade does not reset or discard the current library.
+- If an older shelf entry has already lost its source, **Add Books** can now repair it in place: select the same original filename and the app reconnects it without losing shelf position, stacks, lean/face-out settings, progress, or bookmarks.
+- The missing-source message now explains that the shelf entry is safe and gives the repair action instead of requiring deletion.
+- Persistent browser storage is requested again on every file-picker selection, when the browser is most able to honor the user gesture.
 
 ## V-0.13: compact leaning groups
 
@@ -167,4 +176,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.13.00`.
+The service-worker cache key is `Nth-Reader-V-0.14.00`.
