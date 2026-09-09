@@ -76,21 +76,15 @@
 
 <input type="file" id="file-input" multiple hidden
   accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.pdb,.prc,.fb2,.docx,.odt,.txt,.text,.log,.html,.htm,.xhtml,.md,.markdown,.json,.xml,.opf,.csv,.tsv,.jpg,.jpeg,.png,.gif,.webp,.avif,.bmp,.svg,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
+<input type="file" id="decor-photo-input" accept="image/*" hidden />
 
 <!-- ===================== DECOR PICKER SHEET ===================== -->
 <div id="decor-picker-sheet" class="decor-picker-sheet" hidden>
   <div class="decor-picker-handle"></div>
   <div class="decor-picker-title">Add Decor</div>
-  <div class="decor-picker-grid">
-    <button class="decor-pick-btn" type="button" data-type="bust"><span class="decor-pick-preview" data-type="bust"></span>Bust</button>
-    <button class="decor-pick-btn" type="button" data-type="globe"><span class="decor-pick-preview" data-type="globe"></span>Globe</button>
-    <button class="decor-pick-btn" type="button" data-type="plant"><span class="decor-pick-preview" data-type="plant"></span>Plant</button>
-    <button class="decor-pick-btn" type="button" data-type="candle"><span class="decor-pick-preview" data-type="candle"></span>Candle</button>
-    <button class="decor-pick-btn" type="button" data-type="vine"><span class="decor-pick-preview" data-type="vine"></span>Vine</button>
-    <button class="decor-pick-btn" type="button" data-type="lamp"><span class="decor-pick-preview" data-type="lamp"></span>Lamp</button>
-    <button class="decor-pick-btn" type="button" data-type="mug"><span class="decor-pick-preview" data-type="mug"></span>Mug</button>
-    <button class="decor-pick-btn" type="button" data-type="frame"><span class="decor-pick-preview" data-type="frame"></span>Frame</button>
-  </div>
+  <input id="decor-picker-search" class="decor-picker-search" type="search" placeholder="Search decorations" autocomplete="off" />
+  <div id="decor-category-tabs" class="decor-category-tabs" aria-label="Decoration categories"></div>
+  <div class="decor-picker-grid"></div>
   <button id="decor-picker-cancel" class="decor-picker-cancel" type="button">Cancel</button>
 </div>
 

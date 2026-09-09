@@ -1,4 +1,12 @@
-# Nth Reader V-0.15.01
+# Nth Reader V-0.16.00
+
+## V-0.16: expanded decoration collection
+
+- Adds 48 high-resolution decorations: wildlife bookends, glass animals, pottery, ornate boxes, ten succulents, four air plants, three framed paintings, and four empty photo frames.
+- The decoration picker is organized into named categories with quick-filter chips and search.
+- Empty photo frames open the device photo picker when tapped. Chosen photos are resized for dependable local storage and remain attached to the frame across refreshes.
+- Every new object remains independently movable, resizable, reversible, and starts at Width 100, Height 100, and Space around object -40.
+- New image files are compressed WebP assets, decoded asynchronously, and cached for offline use.
 
 ## V-0.15.01: faithful carousel composition
 
@@ -192,4 +200,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.15.01`.
+The service-worker cache key is `Nth-Reader-V-0.16.00`.
