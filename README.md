@@ -1,6 +1,6 @@
-# Nth Reader V-0.11.00
+# Nth Reader V-1.11.00
 
-## V-0.11: décor sizing, placement, and touch refinements
+## V-1.11.00: décor sizing, placement, and touch refinements
 
 - Every newly added decoration starts at Width 100, Height 100, and Space around object -40.
 - Working-clock hands are positioned against the clock artwork's actual contained dimensions, so independently changing Width or Height no longer pulls the hands away from the dial center.
