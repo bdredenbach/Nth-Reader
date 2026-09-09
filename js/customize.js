@@ -758,16 +758,23 @@ window.Customize = class {
   async addDecor(type) {
     this.closeDecorPicker();
     const defaults = DECOR_DEFAULTS[type] || { width: 72, height: 84 };
+    const occupied = new Set([
+      ...this.shelf.books.filter((book) => !book.stackId),
+      ...this.shelf.decorItems,
+      ...this.shelf.stacks,
+    ].map((entry) => Math.max(0, Number(entry.shelfIndex) || 0)));
+    let shelfIndex = 0;
+    while (occupied.has(shelfIndex)) shelfIndex++;
     const item = {
       id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type,
-      shelfIndex: 0,
+      shelfIndex,
       position: 50,
-      width: defaults.width,
-      height: defaults.height,
+      width: 100,
+      height: 100,
       baseline: defaults.baseline,
       topOffset: defaults.topOffset,
-      bookSpacing: defaults.bookSpacing,
+      bookSpacing: -40,
       facing: defaults.facing || "right",
       glow: (type === "candle" || type === "lamp") ? 60 : undefined,
       createdAt: Date.now(),

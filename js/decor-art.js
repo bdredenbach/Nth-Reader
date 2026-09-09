@@ -40,12 +40,14 @@ window.DECOR_ART = Object.fromEntries(
 // hands sit over it so every clock follows the device's own local time.
 window.DECOR_ART.clock = () => `
   <span class="live-clock" aria-hidden="true">
-    <img class="decor-photo" src="${window.DECOR_ASSETS.clock}" alt="" draggable="false">
-    <span class="clock-dial-hands">
-      <i class="clock-hand clock-hour"></i>
-      <i class="clock-hand clock-minute"></i>
-      <i class="clock-hand clock-second"></i>
-      <b class="clock-pin"></b>
+    <span class="clock-artboard">
+      <img class="decor-photo" src="${window.DECOR_ASSETS.clock}" alt="" draggable="false">
+      <span class="clock-dial-hands">
+        <i class="clock-hand clock-hour"></i>
+        <i class="clock-hand clock-minute"></i>
+        <i class="clock-hand clock-second"></i>
+        <b class="clock-pin"></b>
+      </span>
     </span>
   </span>`;
 
@@ -55,6 +57,18 @@ window.syncDecorClocks = function syncDecorClocks() {
   const minutes = now.getMinutes() + seconds / 60;
   const hours = (now.getHours() % 12) + minutes / 60;
   document.querySelectorAll('.decor-item[data-type="clock"]').forEach((clock) => {
+    const artboard = clock.querySelector(".clock-artboard");
+    if (artboard) {
+      // Fit the generated 900×721 clock into independently adjustable Width
+      // and Height bounds, then anchor the hands to that fitted image—not to
+      // the outer control box. This keeps the dial centered at every size.
+      const aspect = 900 / 721;
+      const width = clock.clientWidth;
+      const height = clock.clientHeight;
+      const fitByWidth = width / Math.max(1, height) <= aspect;
+      artboard.style.width = `${fitByWidth ? width : height * aspect}px`;
+      artboard.style.height = `${fitByWidth ? width / aspect : height}px`;
+    }
     clock.style.setProperty("--clock-hour", `${hours * 30}deg`);
     clock.style.setProperty("--clock-minute", `${minutes * 6}deg`);
     clock.style.setProperty("--clock-second", `${seconds * 6}deg`);

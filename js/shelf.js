@@ -1,6 +1,6 @@
 /* Nth Reader — shelf.js
  * Home screen: a literal wooden bookshelf.
- *   - Books: double-tap to open; long-press (~350ms) to pick up, drag,
+ *   - Books: double-tap to open; long-press (340ms) to pick up, drag,
  *     and drop on any shelf to re-shelve.
  *   - Decor items (bust/globe/plant/candle/vine/lamp/mug/frame): same
  *     long-press-drag to move between shelves; tap to select in Customize
@@ -11,6 +11,8 @@
  *   - Face-out books: a persisted full-cover shelf display with independent
  *     width, height and horizontal-position controls.
  */
+const SHELF_PICKUP_DELAY_MS = 340;
+
 window.Shelf = class {
   constructor(root, { onOpen }) {
     this.root = root;
@@ -400,7 +402,7 @@ window.Shelf = class {
       kind, id, targetEl, startX, startY, moved: false,
       pointerId: e.pointerId,
       lastY: startY,
-      timer: setTimeout(() => this.beginDrag(kind, id, targetEl, startX, startY, e.pointerId), 240),
+      timer: setTimeout(() => this.beginDrag(kind, id, targetEl, startX, startY, e.pointerId), SHELF_PICKUP_DELAY_MS),
       originalShelfIndex, originalSlot, stackedBookId,
     };
   }
@@ -414,18 +416,10 @@ window.Shelf = class {
         this._pending.lastY = e.clientY;
         return;
       }
-      if (Math.hypot(dx, dy) > 10) {
-        if (this._pending.kind === "decor") {
-          // A decoration has no reading/tap gesture to protect once movement
-          // begins. Pick it up immediately instead of letting the page scroll.
-          clearTimeout(this._pending.timer);
-          this.beginDrag(
-            this._pending.kind, this._pending.id, this._pending.targetEl,
-            this._pending.startX, this._pending.startY, this._pending.pointerId,
-          );
-        } else if (Math.abs(dy) > Math.abs(dx) * 1.12) {
-          // Books occupy much of a full shelf. A vertical swipe that starts on
-          // one still scrolls the shelf unless the user paused to pick it up.
+      if (Math.hypot(dx, dy) > 12) {
+        if (Math.abs(dy) > Math.abs(dx) * 1.12) {
+          // A vertical swipe that starts on any shelf item still scrolls the
+          // shelf unless the user first paused for the pickup hold.
           clearTimeout(this._pending.timer);
           this._pending.moved = true;
           this._pending.isShelfScroll = true;
@@ -433,6 +427,8 @@ window.Shelf = class {
           e.preventDefault();
           return;
         } else {
+          // Horizontal movement before the hold is treated as a cancelled tap;
+          // a deliberate drag starts after the short hold above.
           clearTimeout(this._pending.timer);
           this._pending.moved = true;
         }
