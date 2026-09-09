@@ -758,6 +758,7 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
   border-radius:inherit;
 }
 .custom-photo-frame[data-shape="oval"] .frame-photo-window { border-radius:50%; }
+.custom-photo-frame[data-shape="trapezoid"] .frame-photo-window { clip-path:var(--opening-clip); }
 .custom-photo-frame[data-shape="arch"] .frame-photo-window {
   clip-path:polygon(50% 0,68% 8%,85% 23%,100% 39%,100% 100%,0 100%,0 39%,15% 23%,32% 8%);
 }
