@@ -145,13 +145,44 @@ window.Customize = class {
     else if (this.tab === "decorate") this.renderDecoratePanel();
     else if (this.tab === "backdrop") this.renderSwatchPanel("backdrop", BACKDROP_PRESETS);
     else if (this.tab === "shelf") this.renderSwatchPanel("shelfTheme", SHELF_PRESETS);
-    requestAnimationFrame(() => this.updateShelfPanelSpace());
+    requestAnimationFrame(() => {
+      this.updateShelfPanelSpace();
+      this.focusWorkingShelf("smooth");
+    });
   }
 
   updateShelfPanelSpace() {
     if (!this.active || this.els.panel.hidden) return;
     const height = Math.ceil(this.els.panel.getBoundingClientRect().height || 0);
     document.documentElement.style.setProperty("--customize-panel-height", `${height}px`);
+  }
+
+  workingShelfIndex() {
+    if (this.selectedDecor) return this.selectedDecor.shelfIndex ?? 0;
+    if (this.selectedStack) return this.selectedStack.shelfIndex ?? 0;
+    if (this.selectedFaceOut) return this.selectedFaceOut.shelfIndex ?? 0;
+    if (this.selectedLeanBooks?.length) return this.selectedLeanBooks[0].shelfIndex ?? 0;
+    return null;
+  }
+
+  focusWorkingShelf(behavior = "auto") {
+    if (!this.active || this.els.panel.hidden) return;
+    const shelfIndex = this.workingShelfIndex();
+    if (shelfIndex === null) return;
+    const row = this.shelf.root.querySelector(`.shelf-row[data-shelf-index="${shelfIndex}"]`);
+    if (!row) return;
+
+    const panelTop = this.els.panel.getBoundingClientRect().top;
+    const rootRect = this.shelf.root.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    // Put the working shelf's ledge just above the controls. Bottom padding on
+    // the scroll area leaves enough travel even for the final occupied shelf.
+    const desiredBottom = Math.min(panelTop, rootRect.bottom) - 8;
+    const delta = rowRect.bottom - desiredBottom;
+    if (Math.abs(delta) < 3) return;
+    const maxScroll = Math.max(0, this.shelf.root.scrollHeight - this.shelf.root.clientHeight);
+    const top = Math.max(0, Math.min(maxScroll, this.shelf.root.scrollTop + delta));
+    this.shelf.root.scrollTo({ top, behavior });
   }
 
   // ---------- Arrange tab: drag, Stack Books, stack controls ----------
@@ -307,6 +338,7 @@ window.Customize = class {
       book.leanAngle = 8;
       book.leanDirection = "right";
       book.leanOffset = 0;
+      book.leanSpacing = -40;
     });
     await NthDB.saveArrangement({ books });
     this.leanPickMode = false;
@@ -350,6 +382,9 @@ window.Customize = class {
     wrap.appendChild(this.sliderRow("Position", -50, 180, first.leanOffset ?? 0, (value) => {
       books.forEach((book) => { book.leanOffset = value; }); this.shelf.render(); saveAll();
     }));
+    wrap.appendChild(this.sliderRow("Space around objects", -40, 28, first.leanSpacing ?? -40, (value) => {
+      books.forEach((book) => { book.leanSpacing = value; }); this.shelf.render(); saveAll();
+    }));
     const actions = document.createElement("div");
     actions.className = "decor-actions";
     const direction = document.createElement("button");
@@ -369,7 +404,7 @@ window.Customize = class {
     stand.addEventListener("click", async () => {
       books.forEach((book) => {
         delete book.leaned; delete book.leanGroupId; delete book.leanAngle;
-        delete book.leanDirection; delete book.leanOffset;
+        delete book.leanDirection; delete book.leanOffset; delete book.leanSpacing;
       });
       await saveAll(); this.selectedLeanBooks = null; this.shelf.render(); this.renderPanel();
     });
@@ -407,6 +442,7 @@ window.Customize = class {
     delete book.leanAngle;
     delete book.leanDirection;
     delete book.leanOffset;
+    delete book.leanSpacing;
     book.facedOut = true;
     book.faceWidth ||= 88;
     book.faceHeight ||= 118;
@@ -554,7 +590,7 @@ window.Customize = class {
     books.forEach((b, i) => {
       b.stackId = stack.id; b.stackOrder = i;
       delete b.leaned; delete b.leanGroupId; delete b.leanAngle;
-      delete b.leanDirection; delete b.leanOffset;
+      delete b.leanDirection; delete b.leanOffset; delete b.leanSpacing;
     });
     await NthDB.saveArrangement({ books, stacksToPut: [stack] });
 
@@ -715,9 +751,14 @@ window.Customize = class {
     input.min = String(min);
     input.max = String(max);
     input.value = String(value);
+    input.addEventListener("pointerdown", () => this.focusWorkingShelf("auto"));
+    input.addEventListener("focus", () => this.focusWorkingShelf("auto"));
     input.addEventListener("input", () => {
       valueEl.textContent = input.value;
       onChange(Number(input.value));
+      // The change handler may rebuild the shelf DOM. Re-anchor the newly
+      // rendered working row while this slider is actively being adjusted.
+      requestAnimationFrame(() => this.focusWorkingShelf("auto"));
     });
     const top = document.createElement("div");
     top.className = "slider-row-top";

@@ -132,12 +132,28 @@ window.Shelf = class {
       }).filter(Boolean).sort((a, b) => a.start - b.start);
 
       let x = 7;
+      let previousBook = null;
       const nodes = Array.from(plank.querySelectorAll(":scope > .spine, :scope > .face-out-book, :scope > .stack-pile"));
       nodes.forEach((node) => {
-        const itemWidth = node.getBoundingClientRect().width || parseFloat(node.style.width) || 24;
+        const book = node.classList.contains("spine")
+          ? this.books.find((candidate) => candidate.id === node.dataset.id)
+          : null;
+        // A rotated bounding box grows wider as the angle increases. Using it
+        // for packing was what made a lean group fan apart. Pack leaned books
+        // by their real, unrotated spine width instead.
+        const itemWidth = book?.leaned
+          ? (node.offsetWidth || parseFloat(node.style.width) || 24)
+          : (node.getBoundingClientRect().width || parseFloat(node.style.width) || 24);
         const positionOffset = parseFloat(node.style.marginLeft) || 0;
         node.style.marginLeft = "0px";
         x = Math.max(0, x + positionOffset);
+        const spacingBook = book?.leaned ? book : (previousBook?.leaned ? previousBook : null);
+        if (spacingBook) {
+          // Map the familiar -40…28 control onto a useful visual gap. At the
+          // default -40, adjacent spines overlap by 6px as a compact bundle.
+          const visualGap = Math.round(2 + Math.max(-40, Math.min(28, spacingBook.leanSpacing ?? -40)) * 0.2);
+          x = Math.max(0, x + visualGap - 2);
+        }
         let moved;
         do {
           moved = false;
@@ -152,6 +168,7 @@ window.Shelf = class {
         node.style.left = `${Math.round(x)}px`;
         node.style.bottom = "1px";
         x += itemWidth + 2;
+        previousBook = book;
       });
       plank.style.setProperty("--shelf-flow-end", `${Math.ceil(x + 8)}px`);
     });
@@ -632,6 +649,7 @@ window.Shelf = class {
       delete record.leanAngle;
       delete record.leanDirection;
       delete record.leanOffset;
+      delete record.leanSpacing;
     }
     const changedBooks = new Map();
     const changedStacks = new Map();
