@@ -1,4 +1,11 @@
-# Nth Reader V-0.18.00
+# Nth Reader V-0.19.00
+
+## V-0.19: fine photo rotation and unobtrusive carousel access
+
+- Adds a persistent Photo Rotate slider from -10.00° to +10.00° in exact 0.01° increments.
+- Reset Crop and newly selected photos restore rotation to 0.00° along with the centered zoom and position.
+- The floating Bookcase button is hidden while browsing a cabinet and appears only upon reaching the bottom of that cabinet.
+- Leaving the bottom hides and disables the button again so it cannot cover books or decorations during normal scrolling.
 
 ## V-0.18: precision gallery-frame cropping
 
@@ -215,4 +222,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.18.00`.
+The service-worker cache key is `Nth-Reader-V-0.19.00`.
