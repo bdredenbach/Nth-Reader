@@ -26,6 +26,9 @@ window.Customize = class {
       panel: document.getElementById("customize-panel"),
       pickerSheet: document.getElementById("decor-picker-sheet"),
       pickerCancel: document.getElementById("decor-picker-cancel"),
+      pickerSearch: document.getElementById("decor-picker-search"),
+      pickerTabs: document.getElementById("decor-category-tabs"),
+      photoInput: document.getElementById("decor-photo-input"),
       toast: document.getElementById("nth-toast"),
     };
 
@@ -35,27 +38,14 @@ window.Customize = class {
       if (btn) this.setTab(btn.dataset.tab);
     });
     this.els.pickerCancel.addEventListener("click", () => this.closeDecorPicker());
-    const pickerGrid = this.els.pickerSheet.querySelector(".decor-picker-grid");
-    DECOR_TYPES.forEach((type) => {
-      if (pickerGrid.querySelector(`[data-type="${type}"]`)) return;
-      const button = document.createElement("button");
-      button.className = "decor-pick-btn";
-      button.type = "button";
-      button.dataset.type = type;
-      const preview = document.createElement("span");
-      preview.className = "decor-pick-preview";
-      preview.dataset.type = type;
-      button.append(preview, document.createTextNode(DECOR_LABELS[type] || type));
-      pickerGrid.appendChild(button);
-    });
+    this.decorCategory = "all";
+    this.buildDecorPicker();
     this.els.pickerSheet.addEventListener("click", (e) => {
       const btn = e.target.closest(".decor-pick-btn");
       if (btn) this.addDecor(btn.dataset.type);
     });
-    this.els.pickerSheet.querySelectorAll(".decor-pick-preview").forEach((el) => {
-      const type = el.dataset.type;
-      if (DECOR_ART[type]) el.innerHTML = DECOR_ART[type]();
-    });
+    this.els.pickerSearch.addEventListener("input", () => this.filterDecorPicker());
+    this.els.photoInput.addEventListener("change", () => this.finishPhotoChoice());
     if (window.ResizeObserver) {
       this._panelObserver = new ResizeObserver(() => this.updateShelfPanelSpace());
       this._panelObserver.observe(this.els.panel);
@@ -65,6 +55,7 @@ window.Customize = class {
       this.selectedDecor = item;
       this.setTab("decorate");
     };
+    this.shelf.onPhotoFrameTap = (item) => this.choosePhoto(item);
     this.shelf.onStackTap = (stack) => {
       if (!this.active) return;
       if (this.tab !== "arrange") this.setTab("arrange");
@@ -85,6 +76,121 @@ window.Customize = class {
     this.shelf.onLeanTap = (book) => this.openLeanGroup(book);
     this.shelf.onStackSelectionChanged = () => this.renderPanel();
     this.shelf.onLeanSelectionChanged = () => this.renderPanel();
+  }
+
+  buildDecorPicker() {
+    const grid = this.els.pickerSheet.querySelector(".decor-picker-grid");
+    grid.replaceChildren();
+    this.els.pickerTabs.replaceChildren();
+    [{ id: "all", label: "All" }, ...DECOR_CATEGORIES].forEach((category) => {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "decor-category-tab";
+      tab.dataset.category = category.id;
+      tab.textContent = category.label;
+      tab.addEventListener("click", () => {
+        this.decorCategory = category.id;
+        this.filterDecorPicker();
+      });
+      this.els.pickerTabs.appendChild(tab);
+    });
+    DECOR_CATEGORIES.forEach((category) => {
+      const section = document.createElement("section");
+      section.className = "decor-category";
+      section.dataset.category = category.id;
+      const heading = document.createElement("h3");
+      heading.textContent = `${category.label} · ${category.types.length}`;
+      const items = document.createElement("div");
+      items.className = "decor-category-grid";
+      category.types.forEach((type) => {
+        const button = document.createElement("button");
+        button.className = "decor-pick-btn";
+        button.type = "button";
+        button.dataset.type = type;
+        button.dataset.label = (DECOR_LABELS[type] || type).toLowerCase();
+        const preview = document.createElement("span");
+        preview.className = "decor-pick-preview";
+        preview.dataset.type = type;
+        preview.innerHTML = DECOR_ART[type]?.() || "";
+        const label = document.createElement("span");
+        label.className = "decor-pick-label";
+        label.textContent = DECOR_LABELS[type] || type;
+        button.append(preview, label);
+        items.appendChild(button);
+      });
+      section.append(heading, items);
+      grid.appendChild(section);
+    });
+    this.filterDecorPicker();
+  }
+
+  filterDecorPicker() {
+    const query = this.els.pickerSearch.value.trim().toLowerCase();
+    this.els.pickerTabs.querySelectorAll(".decor-category-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.category === this.decorCategory);
+    });
+    this.els.pickerSheet.querySelectorAll(".decor-category").forEach((section) => {
+      let visible = 0;
+      section.querySelectorAll(".decor-pick-btn").forEach((button) => {
+        const matchesCategory = this.decorCategory === "all" || section.dataset.category === this.decorCategory;
+        const matchesQuery = !query || button.dataset.label.includes(query);
+        button.hidden = !(matchesCategory && matchesQuery);
+        if (!button.hidden) visible += 1;
+      });
+      section.hidden = visible === 0;
+    });
+  }
+
+  choosePhoto(item) {
+    if (!item || !DECOR_PHOTO_FRAMES[item.type]) return;
+    this.pendingPhotoDecorId = item.id;
+    this.els.photoInput.value = "";
+    this.els.photoInput.click();
+  }
+
+  async finishPhotoChoice() {
+    const file = this.els.photoInput.files?.[0];
+    const id = this.pendingPhotoDecorId;
+    this.pendingPhotoDecorId = null;
+    if (!file || !id) return;
+    const item = this.shelf.decorItems.find((decor) => decor.id === id);
+    if (!item) return;
+    try {
+      item.photoData = await this.compactPhoto(file);
+      await NthDB.decor.put(item);
+      this.shelf.render();
+      if (this.active && this.selectedDecor?.id === id) this.renderPanel();
+    } catch (error) {
+      console.error("Could not add frame photo", error);
+      this.showSimpleToast("That photo could not be opened");
+    }
+  }
+
+  compactPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const source = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        const max = 1000;
+        const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(source);
+        resolve(canvas.toDataURL("image/jpeg", 0.84));
+      };
+      image.onerror = () => { URL.revokeObjectURL(source); reject(new Error("Image decode failed")); };
+      image.src = source;
+    });
+  }
+
+  showSimpleToast(message) {
+    this.els.toast.textContent = message;
+    this.els.toast.hidden = false;
+    requestAnimationFrame(() => this.els.toast.classList.add("visible"));
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.hideToast(), 3500);
   }
 
   async enter() {
@@ -695,6 +801,28 @@ window.Customize = class {
 
     const actions = document.createElement("div");
     actions.className = "decor-actions";
+
+    if (DECOR_PHOTO_FRAMES[item.type]) {
+      const photoBtn = document.createElement("button");
+      photoBtn.className = "decor-action-btn decor-photo-action";
+      photoBtn.type = "button";
+      photoBtn.textContent = item.photoData ? "Change Photo" : "Choose Photo";
+      photoBtn.addEventListener("click", () => this.choosePhoto(item));
+      actions.appendChild(photoBtn);
+      if (item.photoData) {
+        const clearPhotoBtn = document.createElement("button");
+        clearPhotoBtn.className = "decor-action-btn";
+        clearPhotoBtn.type = "button";
+        clearPhotoBtn.textContent = "Clear Photo";
+        clearPhotoBtn.addEventListener("click", async () => {
+          delete item.photoData;
+          await NthDB.decor.put(item);
+          this.shelf.render();
+          this.renderPanel();
+        });
+        actions.appendChild(clearPhotoBtn);
+      }
+    }
 
     const facingBtn = document.createElement("button");
     facingBtn.className = "decor-action-btn";

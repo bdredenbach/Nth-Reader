@@ -20,6 +20,7 @@ window.Shelf = class {
     this.onOpen = onOpen;
     this.onBookMoved = null;   // (book, previous:{shelfIndex,slot}) => void — Arrange undo toast
     this.onDecorTap = null;    // (decorItem) => void — wired by customize.js
+    this.onPhotoFrameTap = null; // gallery-ready frame tap outside Customize
     this.onStackTap = null;    // (stack) => void — wired by customize.js
     this.onFaceOutTap = null;  // (book) => void — wired by customize.js
     this.onLeanTap = null;     // (book) => void — wired by customize.js
@@ -394,7 +395,7 @@ window.Shelf = class {
     }
     const art = document.createElement("div");
     art.className = "decor-art";
-    art.innerHTML = (DECOR_ART[item.type] || DECOR_ART.frame)();
+    art.innerHTML = (DECOR_ART[item.type] || DECOR_ART.frame)(item);
     el.appendChild(art);
     return el;
   }
@@ -454,7 +455,9 @@ window.Shelf = class {
   onPointerDown(e) {
     const faceOutEl = e.target.closest(".face-out-book");
     const spineEl = !faceOutEl ? e.target.closest(".spine") : null;
-    const decorEl = !spineEl && !faceOutEl && this.decorateActive ? e.target.closest(".decor-item") : null;
+    const decorCandidate = !spineEl && !faceOutEl ? e.target.closest(".decor-item") : null;
+    const isPhotoFrame = !!(decorCandidate && DECOR_PHOTO_FRAMES?.[decorCandidate.dataset.type]);
+    const decorEl = decorCandidate && (this.decorateActive || isPhotoFrame) ? decorCandidate : null;
     // Stacks remain interactive outside Customize mode so their books open.
     const stackEl = !spineEl && !decorEl ? e.target.closest(".stack-pile") : null;
     const targetEl = faceOutEl || spineEl || decorEl || stackEl;
@@ -464,6 +467,11 @@ window.Shelf = class {
     const id = targetEl.dataset.id;
     const startX = e.clientX, startY = e.clientY;
     const stackedBookId = kind === "stack" ? e.target.closest(".stack-book-bar")?.dataset.bookId : null;
+
+    if (kind === "decor" && isPhotoFrame && !this.decorateActive) {
+      this._pending = { kind, id, targetEl, startX, startY, moved: false, isPhotoFrameTap: true };
+      return;
+    }
 
     if ((kind === "book" || kind === "faceout") && this.stackSelectMode) {
       // In Stack Books mode, a tap toggles selection — no drag, no open.
@@ -554,6 +562,9 @@ window.Shelf = class {
         if (book) this.onLeanTap?.(book);
       } else if (this._pending.isLeanTap && !this._pending.moved) {
         this.toggleLeanSelection(this._pending.id);
+      } else if (this._pending.isPhotoFrameTap && !this._pending.moved) {
+        const item = this.decorItems.find((candidate) => candidate.id === this._pending.id);
+        if (item) this.onPhotoFrameTap?.(item);
       } else if (!this._drag && !this._pending.moved) {
         this.handleTap(this._pending.kind, this._pending.id, this._pending.stackedBookId);
       }
@@ -596,7 +607,8 @@ window.Shelf = class {
       }
     } else if (kind === "decor") {
       const item = this.decorItems.find(d => d.id === id);
-      if (item) this.onDecorTap?.(item);
+      if (item && !this.decorateActive && DECOR_PHOTO_FRAMES?.[item.type]) this.onPhotoFrameTap?.(item);
+      else if (item) this.onDecorTap?.(item);
     } else if (kind === "stack" && !this.decorateActive) {
       const stack = this.stacks.find(s => s.id === id);
       const fallbackId = this.booksInStack(stack || {}).at(-1)?.id;
