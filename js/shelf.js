@@ -181,8 +181,17 @@ window.Shelf = class {
   renderBookcasePreview(container, bookcaseIndex) {
     container.dataset.backdrop = this.root.dataset.backdrop || "walnut";
     container.dataset.shelfTheme = this.root.dataset.shelfTheme || "walnut";
+    // The interactive shelf and the carousel must share one coordinate system.
+    // Lay the preview out at the real shelf width while it is untransformed;
+    // the carousel scales that finished composition only after packing.
+    const naturalWidth = Math.max(280, this.root.clientWidth || window.innerWidth || 360);
+    container.style.width = `${naturalWidth}px`;
+    container.classList.add("carousel-preview-measuring");
     this.renderBookcaseInto(container, bookcaseIndex);
-    requestAnimationFrame(() => this.layoutRows(container));
+    this.layoutRows(container);
+    const naturalHeight = Math.max(1, container.scrollHeight);
+    container.classList.remove("carousel-preview-measuring");
+    return { width: naturalWidth, height: naturalHeight };
   }
 
   // Pack books around each decoration's real width. Books remain ordered by

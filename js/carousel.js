@@ -62,6 +62,9 @@ window.BookcaseCarousel = class {
       if (event.key === "Escape") this.close();
     });
     window.addEventListener("nth:bookcase-changed", () => this.updateButton());
+    window.addEventListener("resize", () => {
+      if (!this.overlay.hidden && !this.busy) this.renderSelected();
+    });
     this.updateButton();
   }
 
@@ -93,7 +96,11 @@ window.BookcaseCarousel = class {
     const outgoing = direction > 0
       ? [{ transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }, { transform: "translateX(-34%) rotateY(34deg) scale(.82)", opacity: 0 }]
       : [{ transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }, { transform: "translateX(34%) rotateY(-34deg) scale(.82)", opacity: 0 }];
-    await this.card.animate(outgoing, { duration: 210, easing: "ease-in", fill: "forwards" }).finished.catch(() => {});
+    const outgoingAnimation = this.card.animate(outgoing, { duration: 210, easing: "ease-in", fill: "forwards" });
+    await outgoingAnimation.finished.catch(() => {});
+    // Remove the outgoing transform before measuring the next cabinet. A
+    // transformed ancestor would otherwise distort getBoundingClientRect().
+    outgoingAnimation.cancel();
     this.shelf.setActiveBookcase(target, { render: false });
     this.renderSelected();
     const incoming = direction > 0
@@ -105,7 +112,11 @@ window.BookcaseCarousel = class {
   }
 
   renderSelected() {
-    this.shelf.renderBookcasePreview(this.preview, this.shelf.activeBookcase);
+    const natural = this.shelf.renderBookcasePreview(this.preview, this.shelf.activeBookcase);
+    const availableWidth = Math.max(1, this.card.clientWidth - 24);
+    const availableHeight = Math.max(1, this.card.clientHeight - 12);
+    const scale = Math.min(1, availableWidth / natural.width, availableHeight / natural.height);
+    this.preview.style.setProperty("--carousel-scale", String(scale));
     if (window.syncDecorClocks) window.syncDecorClocks();
     const current = this.shelf.activeBookcase + 1;
     const empty = this.shelf.isBookcaseEmpty(this.shelf.activeBookcase);
