@@ -610,14 +610,14 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 .bookcase-carousel {
   position: fixed; inset: 0; z-index: 90; overflow: hidden;
   padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
-  color: #fff3dc; opacity: 0; transform: scale(1.035);
+  color: #fff3dc; opacity: 0;
   background:
     radial-gradient(circle at 50% 43%,rgba(183,111,48,.22),transparent 45%),
     linear-gradient(180deg,rgba(12,7,4,.96),rgba(25,12,5,.985));
-  backdrop-filter: blur(10px); transition: opacity .22s ease,transform .28s ease;
+  backdrop-filter: blur(10px); transition: opacity .22s ease;
   touch-action: pan-x;
 }
-.bookcase-carousel.visible { opacity: 1; transform: scale(1); }
+.bookcase-carousel.visible { opacity: 1; }
 .carousel-topline { height: 60px; display:flex; align-items:center; justify-content:space-between; max-width:560px; margin:0 auto; }
 .carousel-topline strong { display:block; font-size:20px; }
 .carousel-topline span { display:block; margin-top:4px; color:#cdb897; font-size:12px; }
@@ -643,9 +643,12 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 .carousel-card::before { left:0; }
 .carousel-card::after { right:0; transform:scaleX(-1); }
 .carousel-bookcase-content.shelf-root {
-  --carousel-scale:.62; position:absolute; inset:0 auto auto 0; overflow:hidden;
-  width:calc(100% / var(--carousel-scale)); height:calc(100% / var(--carousel-scale));
-  padding:12px 25px 24px; transform:scale(var(--carousel-scale)); transform-origin:top left;
+  --carousel-scale:1; position:absolute; top:0; right:auto; bottom:auto; left:50%; overflow:visible;
+  height:auto; padding:18px 25px 24px;
+  transform:translateX(-50%) scale(var(--carousel-scale)); transform-origin:top center;
+}
+.carousel-bookcase-content.shelf-root.carousel-preview-measuring {
+  left:0; transform:none !important;
 }
 .carousel-bookcase-content.shelf-root::before,.carousel-bookcase-content.shelf-root::after { display:none; }
 .carousel-bookcase-content .shelf-row { min-height:151px; }
@@ -667,12 +670,10 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
   .carousel-stage { grid-template-columns:42px minmax(0,1fr) 42px; }
   .carousel-card { height:min(69dvh,610px); }
   .carousel-arrow { width:40px; height:56px; }
-  .carousel-bookcase-content.shelf-root { --carousel-scale:.58; }
 }
 @media (max-height:700px) {
   .carousel-stage { min-height:365px; }
   .carousel-card { min-height:365px; }
-  .carousel-bookcase-content.shelf-root { --carousel-scale:.50; }
 }
 
 .spine { border-radius: 2px 3px 3px 2px; padding-bottom: 6px; }
