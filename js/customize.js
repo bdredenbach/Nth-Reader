@@ -819,6 +819,18 @@ window.Customize = class {
         this.shelf.render();
         NthDB.decor.put(item);
       }, 0.01, (v) => `${v.toFixed(2)}°`));
+      const frameConfig = DECOR_PHOTO_FRAMES[item.type];
+      if (frameConfig.openingSlant !== undefined) {
+        const openingHeading = document.createElement("div");
+        openingHeading.className = "photo-controls-heading";
+        openingHeading.textContent = "Frame opening";
+        wrap.appendChild(openingHeading);
+        wrap.appendChild(this.sliderRow("Opening slant", -20, 20, item.openingSlant ?? frameConfig.openingSlant, (v) => {
+          item.openingSlant = v;
+          this.shelf.render();
+          NthDB.decor.put(item);
+        }, 0.1, (v) => `${v.toFixed(1)}%`));
+      }
     }
 
     if (item.type === "candle" || item.type === "lamp") {
@@ -855,6 +867,19 @@ window.Customize = class {
           this.renderPanel();
         });
         actions.appendChild(resetPhotoBtn);
+        if (DECOR_PHOTO_FRAMES[item.type].openingSlant !== undefined) {
+          const resetOpeningBtn = document.createElement("button");
+          resetOpeningBtn.className = "decor-action-btn";
+          resetOpeningBtn.type = "button";
+          resetOpeningBtn.textContent = "Reset Opening";
+          resetOpeningBtn.addEventListener("click", async () => {
+            delete item.openingSlant;
+            await NthDB.decor.put(item);
+            this.shelf.render();
+            this.renderPanel();
+          });
+          actions.appendChild(resetOpeningBtn);
+        }
         const clearPhotoBtn = document.createElement("button");
         clearPhotoBtn.className = "decor-action-btn";
         clearPhotoBtn.type = "button";

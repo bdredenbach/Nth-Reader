@@ -103,7 +103,7 @@ window.DECOR_PHOTO_FRAMES = {
   // Insets follow each generated frame's actual transparent opening, rather
   // than the outer decor control box. Aspect is the trimmed artwork ratio.
   ovalPhotoFrame: { inset: "20.5% 24.5% 20.5% 26.5%", shape: "oval", aspect: 710 / 900 },
-  walnutPhotoFrame: { inset: "17.5% 24.8% 23.5% 33%", shape: "portrait", aspect: 876 / 900 },
+  walnutPhotoFrame: { inset: "17.5% 24.8% 23.5% 33%", shape: "trapezoid", aspect: 876 / 900, openingSlant: 11 },
   gothicPhotoFrame: { inset: "24.5% 20.5% 18.5% 33.5%", shape: "arch", aspect: 694 / 900 },
   goldPhotoFrame: { inset: "20% 17.6% 23.7% 23%", shape: "landscape", aspect: 900 / 606 },
 };
@@ -115,7 +115,11 @@ Object.keys(window.DECOR_PHOTO_FRAMES).forEach((type) => {
     const photoX = Math.max(0, Math.min(100, Number(item.photoX ?? 50)));
     const photoY = Math.max(0, Math.min(100, Number(item.photoY ?? 50)));
     const photoRotate = Math.max(-10, Math.min(10, Number(item.photoRotate ?? 0)));
-    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset};--photo-scale:${zoom / 100};--photo-x:${photoX}%;--photo-y:${photoY}%;--photo-rotate:${photoRotate}deg">
+    const openingSlant = Math.max(-20, Math.min(20, Number(item.openingSlant ?? config.openingSlant ?? 0)));
+    const openingClip = openingSlant >= 0
+      ? `polygon(0 0,${100 - openingSlant}% 0,100% 100%,${openingSlant}% 100%)`
+      : `polygon(${-openingSlant}% 0,100% 0,${100 + openingSlant}% 100%,0 100%)`;
+    return `<span class="custom-photo-frame" data-shape="${config.shape}" style="--photo-inset:${config.inset};--photo-scale:${zoom / 100};--photo-x:${photoX}%;--photo-y:${photoY}%;--photo-rotate:${photoRotate}deg;--opening-clip:${openingClip}">
       <img class="decor-photo frame-art" src="${window.DECOR_ASSETS[type]}" alt="" draggable="false" loading="lazy" decoding="async">
       <span class="frame-photo-window">
         ${safePhoto ? `<img class="frame-user-photo" src="${safePhoto}" alt="Chosen photo" draggable="false">` : `<span class="frame-empty-prompt">＋<small>Add photo</small></span>`}
