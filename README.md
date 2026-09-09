@@ -1,4 +1,12 @@
-# Nth Reader V-0.17.00
+# Nth Reader V-0.18.00
+
+## V-0.18: precision gallery-frame cropping
+
+- Each gallery frame now uses a calibrated opening based on its actual transparent artwork dimensions.
+- The frame artboard preserves its natural aspect ratio inside independently resized Width and Height bounds, keeping the photo aligned at every size.
+- Adds persistent Photo Zoom, Photo Left / Right, and Photo Up / Down sliders for every filled frame.
+- Adds Reset Crop, and replacing a photo starts the new image from a clean centered crop.
+- A subtle inner-edge shadow makes the photo appear mounted behind the frame rather than pasted over it.
 
 ## V-0.17: fitted frame photos and edge-to-bookcase dragging
 
@@ -207,4 +215,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.17.00`.
+The service-worker cache key is `Nth-Reader-V-0.18.00`.
