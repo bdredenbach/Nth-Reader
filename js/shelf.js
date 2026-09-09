@@ -105,8 +105,9 @@ window.Shelf = class {
       row.appendChild(decorLayer);
 
       row.appendChild(this.woodLedge());
-      this.root.appendChild(row);
+    this.root.appendChild(row);
     }
+    if (window.syncDecorClocks) window.syncDecorClocks();
     this._layoutFrame = requestAnimationFrame(() => this.layoutRows());
   }
 

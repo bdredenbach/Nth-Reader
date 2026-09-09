@@ -35,6 +35,19 @@ window.Customize = class {
       if (btn) this.setTab(btn.dataset.tab);
     });
     this.els.pickerCancel.addEventListener("click", () => this.closeDecorPicker());
+    const pickerGrid = this.els.pickerSheet.querySelector(".decor-picker-grid");
+    DECOR_TYPES.forEach((type) => {
+      if (pickerGrid.querySelector(`[data-type="${type}"]`)) return;
+      const button = document.createElement("button");
+      button.className = "decor-pick-btn";
+      button.type = "button";
+      button.dataset.type = type;
+      const preview = document.createElement("span");
+      preview.className = "decor-pick-preview";
+      preview.dataset.type = type;
+      button.append(preview, document.createTextNode(DECOR_LABELS[type] || type));
+      pickerGrid.appendChild(button);
+    });
     this.els.pickerSheet.addEventListener("click", (e) => {
       const btn = e.target.closest(".decor-pick-btn");
       if (btn) this.addDecor(btn.dataset.type);
@@ -752,6 +765,10 @@ window.Customize = class {
       position: 50,
       width: defaults.width,
       height: defaults.height,
+      baseline: defaults.baseline,
+      topOffset: defaults.topOffset,
+      bookSpacing: defaults.bookSpacing,
+      facing: defaults.facing || "right",
       glow: (type === "candle" || type === "lamp") ? 60 : undefined,
       createdAt: Date.now(),
     };
