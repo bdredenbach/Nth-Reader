@@ -1,4 +1,12 @@
-# Nth Reader V-0.22.00
+# Nth Reader V-0.23.00
+
+## V-0.23: early native-install capture
+
+- Captures Chrome's one-shot `beforeinstallprompt` event in the document head, before the reader, shelf, format, and customization scripts load.
+- Preserves an early event until the visible installer is ready, eliminating a race that could leave Check Again waiting forever.
+- Starts service-worker registration during initial parsing rather than at the end of the load event.
+- Keeps late-event handling as a fallback and reports that the startup listener is armed.
+- Adds explicit manifest language and text-direction metadata.
 
 ## V-0.22: dependable guided installation
 
@@ -245,4 +253,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.22.00`.
+The service-worker cache key is `Nth-Reader-V-0.23.00`.

@@ -3,6 +3,8 @@
   "name": "Nth Reader",
   "short_name": "Nth Reader",
   "description": "A personal, offline-first bookshelf and multi-format ebook reader.",
+  "lang": "en-US",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
