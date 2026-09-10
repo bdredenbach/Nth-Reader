@@ -41,6 +41,7 @@ window.Reader = class {
 
     this.nativePageTurn = new LongboxNativePageTurn(this);
     this.epubPages = new EpubPageReader(this.els.flowInner, this);
+    this.voiceReader = new VoiceReader(this);
     this.turnPageMode = new LongboxPageMode({
       getIssue: () => this.comic,
       getPageUrl: (i) => this.getPageUrl(i),
@@ -56,6 +57,7 @@ window.Reader = class {
         this.updateSliderLabel();
         this.saveProgress();
         this.updateBookmarkFlag();
+        this.voiceReader.onPageChanged(i);
       },
       onState: () => { /* console.debug("turnjs:", s) if you need to trace init */ },
     });
@@ -72,7 +74,11 @@ window.Reader = class {
     window.addEventListener("resize", () => {
       if (this.content?.kind === "flow") {
         clearTimeout(this._flowResizeTimer);
-        this._flowResizeTimer = setTimeout(() => this.openFlowWithTurn(this.book.progress || 0), 180);
+        this._flowResizeTimer = setTimeout(async () => {
+          this.voiceReader.stop();
+          await this.openFlowWithTurn(this.book.progress || 0);
+          await this.voiceReader.open(this.book, this.content);
+        }, 180);
       }
     });
   }
@@ -103,6 +109,7 @@ window.Reader = class {
       await this.openFlowWithTurn(bookmark?.progress ?? book.progress ?? 0);
       await this.updateBookmarkFlag();
     }
+    await this.voiceReader.open(book, content);
   }
 
   async openFlowWithTurn(progress) {
@@ -131,6 +138,7 @@ window.Reader = class {
   }
 
   async close() {
+    this.voiceReader.close();
     this.saveProgress();
     await this.turnPageMode.destroy();
     await this.content?.dispose?.();
@@ -205,6 +213,7 @@ window.Reader = class {
     await this.renderFallback();
     this.saveProgress();
     this.updateBookmarkFlag();
+    this.voiceReader.onPageChanged(i);
   }
 
   // render()/getPageUrl() are the hooks both LongboxNativePageTurn and
@@ -227,15 +236,35 @@ window.Reader = class {
     else this.epubPages.prev();
   }
 
+  narrationNext() {
+    const count = this.comic?.pageCount || this.epubPages?.pages?.length || 0;
+    if (!count || this.index + 1 >= count) return false;
+    if (this.content?.kind === "paged") {
+      if (!this._usingFallback && this.turnPageMode?.book) this.turnPageMode.next();
+      else this.goToFallback(this.index + 1);
+    } else if (this._flowUsingTurn && this.turnPageMode?.book) {
+      this.turnPageMode.next();
+    } else {
+      this.epubPages.next();
+    }
+    return true;
+  }
+
   // ---------- shared chrome / progress ----------
   showChrome() {
     this.els.chrome.classList.add("visible");
+    this.voiceReader.setVisible(true);
     clearTimeout(this._chromeTimer);
-    this._chromeTimer = setTimeout(() => this.els.chrome.classList.remove("visible"), 2200);
+    this._chromeTimer = setTimeout(() => {
+      if (this.voiceReader.settingsOpen()) return;
+      this.els.chrome.classList.remove("visible");
+      this.voiceReader.setVisible(false);
+    }, 2200);
   }
   toggleChrome() {
     if (this.els.chrome.classList.contains("visible")) {
       this.els.chrome.classList.remove("visible");
+      this.voiceReader.setVisible(false);
       clearTimeout(this._chromeTimer);
     } else {
       this.showChrome();
