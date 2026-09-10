@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.27.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.28.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.27.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.28.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -241,6 +241,20 @@
     <img class="app-header-icon" src="assets/icons/icon-192.png" width="48" height="48" alt="Nth Reader" />
     <span aria-hidden="true"></span>
   </header>
+  <section id="voice-reader-bar" class="voice-reader-bar" hidden aria-label="Read aloud controls">
+    <div class="voice-reader-controls">
+      <button id="voice-prev-btn" class="voice-reader-btn" type="button" aria-label="Previous sentence">‹</button>
+      <button id="voice-play-btn" class="voice-reader-btn voice-reader-play" type="button" aria-label="Read this page aloud">▶ <span>Read</span></button>
+      <button id="voice-next-btn" class="voice-reader-btn" type="button" aria-label="Next sentence">›</button>
+      <button id="voice-rate-btn" class="voice-reader-btn voice-reader-rate" type="button" aria-label="Change reading speed">1.0×</button>
+      <button id="voice-settings-btn" class="voice-reader-btn" type="button" aria-label="Voice settings" aria-expanded="false">⚙</button>
+    </div>
+    <div id="voice-reader-status" class="voice-reader-status" aria-live="polite">Ready to read</div>
+    <div id="voice-reader-settings" class="voice-reader-settings" hidden>
+      <label>Voice<select id="voice-select" aria-label="Narrator voice"></select></label>
+      <label class="voice-auto-turn"><input id="voice-auto-turn" type="checkbox" checked /> Turn pages automatically</label>
+    </div>
+  </section>
   <div id="page-viewport" class="page-viewport"></div>
   <div id="flow-viewport" class="flow-viewport" hidden>
     <div id="flow-inner" class="flow-inner"></div>
@@ -262,6 +276,7 @@
 <script src="js/page-turn.js"></script>
 <script src="js/page-mode.js"></script>
 <script src="js/epub-page-reader.js"></script>
+<script src="js/voice-reader.js"></script>
 <script src="js/reader.js"></script>
 <script src="js/decor-art.js"></script>
 <script src="js/shelf.js"></script>
