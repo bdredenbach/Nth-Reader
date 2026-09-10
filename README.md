@@ -1,4 +1,12 @@
-# Nth Reader V-0.23.00
+# Nth Reader V-0.24.00
+
+## V-0.24: conservative Android manifest compatibility
+
+- Uses a conventional `manifest.json` as the single manifest linked by the page.
+- Keeps `manifest.webmanifest` as an identical fallback copy.
+- Uses explicit `/Nth-Reader/` identity, start, scope, and icon URLs instead of relative URL resolution.
+- Removes the optional `display_override` member, leaving the smallest conservative standalone-install configuration.
+- Caches both manifest filenames so either remains available offline.
 
 ## V-0.23: early native-install capture
 
@@ -253,4 +261,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.23.00`.
+The service-worker cache key is `Nth-Reader-V-0.24.00`.
