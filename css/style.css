@@ -327,6 +327,38 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   padding: var(--app-safe-top) 16px 0;
 }
 .reader-topbar .app-header-icon { justify-self: center; }
+.voice-reader-bar {
+  position:absolute; z-index:13; top:calc(var(--app-header-total) + 8px); left:50%;
+  width:min(410px,calc(100% - 28px)); padding:7px 9px 6px;
+  color:#f8ebd8; border:1px solid rgba(238,193,119,.3); border-radius:17px;
+  background:linear-gradient(150deg,rgba(61,35,19,.96),rgba(22,12,7,.96));
+  box-shadow:0 7px 24px rgba(0,0,0,.48),inset 0 1px rgba(255,232,194,.1);
+  opacity:0; pointer-events:none; transform:translate(-50%,-5px);
+  transition:opacity .2s ease,transform .2s ease;
+}
+.voice-reader-bar.visible { opacity:1; pointer-events:auto; transform:translate(-50%,0); }
+.voice-reader-controls { display:flex; align-items:center; justify-content:center; gap:6px; }
+.voice-reader-btn {
+  min-width:35px; height:34px; padding:0 9px; border:1px solid rgba(255,255,255,.17); border-radius:12px;
+  color:#f9ecda; background:rgba(255,255,255,.08); font:750 13px/1 system-ui,sans-serif; cursor:pointer;
+}
+.voice-reader-btn:active { transform:scale(.94); }
+.voice-reader-btn:disabled { opacity:.38; }
+.voice-reader-play { min-width:88px; color:#291708; border:0; background:linear-gradient(#ffd26a,#eaaa38); }
+.voice-reader-rate { min-width:51px; color:#f1c46e; }
+.voice-reader-status {
+  margin:5px 4px 0; min-height:15px; overflow:hidden; color:#cfbda3;
+  font-size:10px; line-height:1.35; text-align:center; text-overflow:ellipsis; white-space:nowrap;
+}
+.voice-reader-settings { display:grid; gap:8px; margin-top:7px; padding:8px 3px 2px; border-top:1px solid rgba(255,255,255,.1); }
+.voice-reader-settings label { color:#d8c5a8; font-size:11px; font-weight:700; }
+.voice-reader-settings select {
+  display:block; width:100%; margin-top:4px; padding:8px; border:1px solid rgba(255,255,255,.16); border-radius:9px;
+  color:#f8ead6; background:#28170d; font:600 12px system-ui,sans-serif; color-scheme:dark;
+}
+.voice-auto-turn { display:flex; align-items:center; gap:7px; }
+.voice-auto-turn input { accent-color:#eab447; }
+::highlight(nth-narration) { color:#190f08; background:#f3c968; }
 .page-viewport {
   position: absolute; inset: var(--app-header-total) 0 0;
   display: flex; align-items: center; justify-content: center;
