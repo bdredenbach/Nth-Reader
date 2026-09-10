@@ -506,6 +506,106 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   width: 34px; border: 0; background: transparent; color: #ff9d8a; cursor: pointer; font-size: 21px;
 }
 
+/* ===================== PHOTOGRAPHED BOOK-SPINE SCANNER ===================== */
+.scanner-overlay {
+  position:fixed; inset:0; z-index:520; opacity:0;
+  background:rgba(8,4,2,.78); backdrop-filter:blur(4px);
+  transition:opacity .18s ease;
+}
+.scanner-overlay.visible { opacity:1; }
+.spine-scanner {
+  position:fixed; z-index:521; left:50%; top:50%;
+  width:min(720px,calc(100% - 20px)); max-height:calc(100dvh - 20px);
+  overflow-y:auto; padding:18px; color:#f5e9d8;
+  border:1px solid rgba(236,187,105,.3); border-radius:20px;
+  background:linear-gradient(160deg,#382113,#160c06 72%);
+  box-shadow:0 24px 70px rgba(0,0,0,.75),inset 0 1px rgba(255,226,181,.12);
+  opacity:0; transform:translate(-50%,-48%) scale(.97);
+  transition:opacity .18s ease,transform .18s ease;
+  overscroll-behavior:contain;
+}
+.spine-scanner.visible { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.scanner-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.scanner-header h2 { margin:0; color:#ffe8ba; font:800 20px/1.2 Georgia,serif; }
+.scanner-header p { margin:5px 0 0; color:#cbb89d; font-size:12px; }
+.scanner-step { min-width:0; }
+.spine-canvas-wrap {
+  width:100%; min-height:300px; overflow:hidden; border-radius:14px;
+  border:1px solid rgba(255,255,255,.14); background:#080504;
+  box-shadow:inset 0 0 20px rgba(0,0,0,.8);
+}
+#spine-crop-canvas { display:block; width:100%; height:440px; max-height:52dvh; touch-action:none; }
+.scanner-tip { margin:9px 2px 13px; color:#d5c3a7; font-size:12px; line-height:1.4; }
+.scanner-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.scanner-actions-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.scanner-primary-btn,.scanner-secondary-btn {
+  min-height:44px; padding:10px 8px; border-radius:11px; cursor:pointer;
+  font:750 13px/1.15 system-ui,sans-serif;
+}
+.scanner-primary-btn { border:0; color:#2b1809; background:linear-gradient(#ffd36b,#eaaa38); }
+.scanner-secondary-btn { border:1px solid rgba(255,255,255,.2); color:#f5ead9; background:rgba(255,255,255,.08); }
+.scanner-primary-btn:disabled { opacity:.45; }
+.scanner-result-row { display:grid; grid-template-columns:96px minmax(0,1fr); gap:16px; align-items:stretch; }
+.scanner-spine-preview {
+  min-height:218px; display:flex; align-items:center; justify-content:center; padding:8px;
+  border-radius:12px; background:radial-gradient(circle,#4b2b17,#100906); border:1px solid rgba(255,255,255,.12);
+}
+.scanner-spine-preview img { display:block; max-width:78px; width:auto; height:202px; object-fit:fill; border-radius:2px; box-shadow:5px 7px 14px rgba(0,0,0,.65); }
+.scanner-fields { display:flex; flex-direction:column; gap:12px; }
+.scanner-fields label,.scanner-link-row { color:#ddc9aa; font-size:12px; font-weight:700; }
+.scanner-fields label span { opacity:.62; font-weight:500; }
+.scanner-fields input,.scanner-link-row select {
+  display:block; width:100%; margin-top:5px; padding:11px 12px; color:#fff4df;
+  border:1px solid rgba(255,255,255,.18); border-radius:10px; outline:none;
+  background:rgba(255,255,255,.07); font:600 14px system-ui,sans-serif;
+}
+.scanner-fields input:focus,.scanner-link-row select:focus { border-color:#e9b34a; box-shadow:0 0 0 2px rgba(233,179,74,.14); }
+.scanner-mode-choice {
+  display:grid; gap:9px; margin:14px 0; padding:12px; border:1px solid rgba(255,255,255,.13); border-radius:12px;
+}
+.scanner-mode-choice legend { padding:0 6px; color:#e9bb6d; font-size:12px; font-weight:800; }
+.scanner-mode-choice label { display:flex; gap:9px; align-items:center; font-size:13px; }
+.scanner-mode-choice input { accent-color:#eab447; }
+.scanner-link-row { display:block; margin:0 0 12px; }
+.scanner-link-row select { color-scheme:dark; }
+.scanner-save-status { min-height:20px; margin:4px 0 7px; color:#f0bf68; font-size:12px; }
+
+.physical-book-info {
+  position:fixed; z-index:522; left:50%; top:50%; width:min(340px,calc(100% - 34px));
+  padding:24px; text-align:center; border:1px solid rgba(237,189,106,.3); border-radius:20px;
+  color:#f5ead9; background:linear-gradient(155deg,#3a2315,#160c06 74%);
+  box-shadow:0 25px 70px rgba(0,0,0,.8);
+  opacity:0; transform:translate(-50%,-47%) scale(.96);
+  transition:opacity .18s ease,transform .18s ease;
+}
+.physical-book-info.visible { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.physical-book-close { position:absolute; top:12px; right:12px; }
+.physical-book-spine {
+  height:190px; margin:8px auto 15px; display:flex; justify-content:center; align-items:center;
+  border-radius:14px; background:radial-gradient(circle,rgba(130,77,36,.5),transparent 68%);
+}
+.physical-book-spine img { width:auto; max-width:92px; height:180px; object-fit:fill; box-shadow:6px 9px 18px rgba(0,0,0,.65); }
+.physical-book-kicker { color:#e9b85e; font:800 11px/1 system-ui,sans-serif; letter-spacing:.12em; text-transform:uppercase; }
+.physical-book-info h2 { margin:9px 0 4px; font:800 21px/1.25 Georgia,serif; }
+.physical-book-info p { margin:4px 0; color:#d6c2a4; }
+.physical-book-note { padding-top:10px; font-size:12px; opacity:.72; }
+
+.spine.scanned-book-spine { padding:0; overflow:hidden; border-color:rgba(255,237,202,.28); background:#1b1009; }
+.scanned-spine-art { display:block; width:100%; height:100%; object-fit:fill; pointer-events:none; user-select:none; }
+.physical-spine-badge {
+  position:absolute; right:2px; bottom:2px; width:13px; height:13px; display:grid; place-items:center;
+  border-radius:50%; color:#2a1708; background:#f1bd55; font:900 8px/1 system-ui,sans-serif;
+  box-shadow:0 1px 3px rgba(0,0,0,.55); pointer-events:none;
+}
+
+@media (max-width:480px) {
+  .spine-scanner { inset:0; left:0; top:0; width:100%; max-height:none; height:100dvh; border-radius:0; padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); transform:translateY(12px); }
+  .spine-scanner.visible { transform:translateY(0); }
+  .scanner-actions-three { grid-template-columns:1fr 1fr; }
+  .scanner-actions-three .scanner-primary-btn { grid-column:1 / -1; }
+  .scanner-result-row { grid-template-columns:82px minmax(0,1fr); gap:12px; }
+}
+
 /* Left panel (remove books) mirrors the right one */
 .menu-panel-left {
   left: 0; right: auto;
