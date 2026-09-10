@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.26.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.27.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.26.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.27.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -32,19 +32,8 @@
   };
   window.__nthEnsureManifestLink();
 
-  // Capture Chrome's one-shot install event before the larger reader scripts
-  // load. A previously active service worker can make this event arrive early.
-  window.__nthInstallPrompt = null;
-  window.__nthInstallPromptCapturedAt = 0;
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    window.__nthInstallPrompt = event;
-    window.__nthInstallPromptCapturedAt = Date.now();
-    window.dispatchEvent(new CustomEvent("nth:installprompt-ready"));
-  });
-
-  // Register immediately so first-time visitors can finish service-worker
-  // control with the install helper's single safe refresh.
+  // Register immediately so the reader remains available offline. Native PWA
+  // installation is intentionally left to the browser's own menu.
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js", {
       scope: "./",
@@ -132,6 +121,7 @@
   accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.pdb,.prc,.fb2,.docx,.odt,.txt,.text,.log,.html,.htm,.xhtml,.md,.markdown,.json,.xml,.opf,.csv,.tsv,.jpg,.jpeg,.png,.gif,.webp,.avif,.bmp,.svg,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
 <input type="file" id="decor-photo-input" accept="image/*" hidden />
 <input type="file" id="spine-photo-input" accept="image/*" hidden />
+<input type="file" id="cover-photo-input" accept="image/*" hidden />
 
 <!-- ===================== PHYSICAL SPINE SCANNER ===================== -->
 <div id="spine-scanner-overlay" class="scanner-overlay" hidden></div>
@@ -147,7 +137,7 @@
     <div class="spine-canvas-wrap">
       <canvas id="spine-crop-canvas" aria-label="Photograph with four adjustable crop corners"></canvas>
     </div>
-    <div class="scanner-tip">Move the numbered corners around only the spine. Angled photographs will be straightened.</div>
+    <div id="spine-crop-tip" class="scanner-tip">Move the numbered corners around only the spine. Angled photographs will be straightened.</div>
     <div class="scanner-actions scanner-actions-three">
       <button id="spine-rotate-btn" class="scanner-secondary-btn" type="button">↻ Rotate</button>
       <button id="spine-reset-btn" class="scanner-secondary-btn" type="button">Reset Corners</button>
@@ -162,6 +152,22 @@
         <label>Author <span>(optional)</span><input id="spine-book-author" type="text" maxlength="180" autocomplete="off" /></label>
       </div>
     </div>
+    <section class="scanner-cover-section" aria-labelledby="scanner-cover-heading">
+      <div class="scanner-cover-heading-row">
+        <div>
+          <h3 id="scanner-cover-heading">Front Cover <span>(optional)</span></h3>
+          <p>Add the full cover for Face-Out display and physical-book details.</p>
+        </div>
+        <div id="scanner-cover-preview" class="scanner-cover-preview" hidden>
+          <img id="cover-result-preview" alt="Corrected front cover preview" />
+        </div>
+      </div>
+      <div class="scanner-cover-actions">
+        <button id="cover-photo-btn" class="scanner-secondary-btn" type="button">+ Add Cover Photo</button>
+        <button id="cover-adjust-btn" class="scanner-secondary-btn" type="button" hidden>Adjust Cover Crop</button>
+        <button id="cover-clear-btn" class="scanner-secondary-btn scanner-remove-btn" type="button" hidden>Remove Cover</button>
+      </div>
+    </section>
     <fieldset class="scanner-mode-choice">
       <legend>What should this photograph become?</legend>
       <label><input type="radio" name="spine-mode" value="physical" checked /> A physical book on my shelf</label>
@@ -173,7 +179,7 @@
     </label>
     <div id="spine-save-status" class="scanner-save-status" aria-live="polite"></div>
     <div class="scanner-actions">
-      <button id="spine-back-btn" class="scanner-secondary-btn" type="button">‹ Adjust Crop</button>
+      <button id="spine-back-btn" class="scanner-secondary-btn" type="button">‹ Adjust Spine Crop</button>
       <button id="spine-save-btn" class="scanner-primary-btn" type="button">Add to Shelf</button>
     </div>
   </div>
@@ -182,7 +188,7 @@
 <div id="physical-book-overlay" class="scanner-overlay" hidden></div>
 <section id="physical-book-info" class="physical-book-info" hidden role="dialog" aria-modal="true" aria-labelledby="physical-book-title">
   <button id="physical-book-close" class="icon-btn physical-book-close" type="button" aria-label="Close physical book details">✕</button>
-  <div class="physical-book-spine"><img id="physical-book-spine" alt="Photographed book spine" /></div>
+  <div class="physical-book-art"><img id="physical-book-spine" alt="Photographed physical book" /></div>
   <div class="physical-book-kicker">Physical Book</div>
   <h2 id="physical-book-title"></h2>
   <p id="physical-book-author"></p>
@@ -219,7 +225,6 @@
   </div>
   <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
   <button id="menu-scan-btn" class="menu-action-btn menu-action-btn-secondary" type="button">📷 Scan Physical Book</button>
-  <button id="menu-install-btn" class="menu-action-btn menu-action-btn-install" type="button">⬇ Install Nth Reader</button>
   <button id="menu-customize-btn" class="menu-action-btn menu-action-btn-secondary" type="button">🎨 Customize Shelf</button>
   <div class="menu-section-label reading-section-label">Currently Reading</div>
   <div id="currently-reading" class="currently-reading"></div>
@@ -228,17 +233,6 @@
   </button>
   <div id="menu-bookmark-list" class="menu-bookmark-list" hidden></div>
 </aside>
-
-<!-- ===================== PWA INSTALL HELP ===================== -->
-<div id="install-overlay" class="install-overlay" hidden></div>
-<section id="install-panel" class="install-panel" hidden role="dialog" aria-modal="true" aria-labelledby="install-title">
-  <div class="install-panel-icon"><img src="assets/icons/icon-192.png" alt="" /></div>
-  <h2 id="install-title">Install Nth Reader</h2>
-  <p id="install-message">Checking whether Chrome is ready…</p>
-  <div id="install-readiness" class="install-readiness" aria-live="polite"></div>
-  <button id="install-primary-btn" class="menu-action-btn" type="button">Check Again</button>
-  <button id="install-close-btn" class="menu-action-btn menu-action-btn-secondary" type="button">Not Now</button>
-</section>
 
 <!-- ===================== READER ===================== -->
 <section id="reader-view" hidden>
@@ -277,6 +271,5 @@
 <script src="js/menu.js"></script>
 <script src="js/remove-panel.js"></script>
 <script src="js/app.js"></script>
-<script src="js/pwa-install.js"></script>
 </body>
 </html>
