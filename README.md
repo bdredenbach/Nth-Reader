@@ -1,4 +1,12 @@
-# Nth Reader V-0.26.00
+# Nth Reader V-0.27.00
+
+## V-0.27.00: photographed covers and native browser installation
+
+- Adds an optional front-cover photograph to the physical-book scanner, using the same four-corner perspective correction as spine photographs.
+- Keeps the spine and cover as independently adjustable crops within one scan session.
+- Uses the corrected cover for Face-Out display and the physical-book information card.
+- Can apply both a photographed spine and cover to an existing digital book without changing its readable source, progress, arrangement, or bookmarks.
+- Removes the in-app Install button, install guide, and install-event interception. The manifest, service worker, icons, and offline reader remain active, while installation is handled through the browser menu.
 
 ## V-0.26.00: photograph real book spines
 
@@ -326,4 +334,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.26.00`.
+The service-worker cache key is `Nth-Reader-V-0.27.00`.
