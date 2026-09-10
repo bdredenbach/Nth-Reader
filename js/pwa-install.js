@@ -8,7 +8,7 @@
   const primary = document.getElementById("install-primary-btn");
   const close = document.getElementById("install-close-btn");
   const startedAt = Date.now();
-  let installPrompt = null;
+  let installPrompt = window.__nthInstallPrompt || null;
   let timer = null;
 
   const standalone = () =>
@@ -62,6 +62,7 @@
       (remaining
         ? `<span class="install-waiting">○ Keep this page open for ${remaining} more second${remaining === 1 ? "" : "s"}</span>`
         : '<span class="install-ready">✓ 30-second visit completed</span>') +
+      '<br>✓ Install listener active since page startup' +
       '<br>✓ Tap or use the shelf at least once' +
       '<br><small>If an older Nth Reader shortcut already exists, remove it before trying again.</small>';
     primary.textContent = controlled ? "Check Again" : "Finish Setup";
@@ -74,6 +75,7 @@
       await installPrompt.prompt();
       await installPrompt.userChoice;
       installPrompt = null;
+      window.__nthInstallPrompt = null;
       primary.disabled = false;
       updateGuide();
       return;
@@ -90,16 +92,26 @@
     updateGuide();
   }
 
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    installPrompt = event;
+  function captureInstallPrompt(event) {
+    const captured = event || window.__nthInstallPrompt;
+    if (!captured) return;
+    captured.preventDefault?.();
+    installPrompt = captured;
+    window.__nthInstallPrompt = captured;
     installButton.hidden = false;
     installButton.textContent = "⬇ Install Nth Reader";
     if (!panel.hidden) updateGuide();
-  });
+  }
+
+  // The head listener catches early events; these cover later events and the
+  // custom notification dispatched by that listener.
+  window.addEventListener("beforeinstallprompt", captureInstallPrompt);
+  window.addEventListener("nth:installprompt-ready", () => captureInstallPrompt());
+  captureInstallPrompt();
 
   window.addEventListener("appinstalled", () => {
     installPrompt = null;
+    window.__nthInstallPrompt = null;
     installButton.hidden = true;
     setOpen(false);
   });
