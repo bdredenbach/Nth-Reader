@@ -140,6 +140,7 @@ window.EpubPageReader = class {
     this.owner.index = this.index;
     this.owner.updateSliderLabel();
     this.owner.updateBookmarkFlag();
+    this.owner.voiceReader?.onPageChanged(this.index);
   }
 
   next() { this.turn(1); }
