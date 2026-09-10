@@ -1,4 +1,9 @@
-# Nth Reader V-0.25.01
+# Nth Reader V-0.25.02
+
+## V-0.25.02: compact carousel crown
+
+- Right-aligns the carousel title block beside the centered app icon.
+- Shortens the helper text to **Swipe Any Direction** so it fits comfortably on mobile.
 
 ## V-0.25.01: Android carousel gesture fallback
 
@@ -304,4 +309,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.25.01`.
+The service-worker cache key is `Nth-Reader-V-0.25.02`.

@@ -762,7 +762,7 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
   margin:0 -14px;
   padding:var(--app-safe-top) 16px 0;
 }
-.carousel-topline > div { justify-self:start; min-width:0; }
+.carousel-topline > div { justify-self:end; min-width:0; padding-right:6px; text-align:right; }
 .carousel-topline .app-header-icon { justify-self:center; }
 .carousel-topline .carousel-close-btn { justify-self:end; }
 .carousel-topline strong { display:block; font-size:20px; }
