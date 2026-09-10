@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.24.03" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.24.04" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.24.03";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.24.04";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -76,11 +76,11 @@
 
 <!-- ===================== SHELF (home) ===================== -->
 <main id="shelf-view" class="view active">
-  <header class="shelf-header">
+  <header class="shelf-header ornate-bookcase-header">
     <button id="remove-open-btn" class="icon-btn" type="button" aria-label="Remove books">
       <span class="hamburger-icon"><span></span><span></span><span></span></span>
     </button>
-    <h1>Nth Reader</h1>
+    <img class="app-header-icon" src="assets/icons/icon-192.png" width="48" height="48" alt="Nth Reader" />
     <button id="menu-open-btn" class="icon-btn" type="button" aria-label="Menu">
       <span class="hamburger-icon"><span></span><span></span><span></span></span>
     </button>
@@ -92,11 +92,12 @@
   </button>
 
   <section id="bookcase-carousel" class="bookcase-carousel" hidden aria-label="Bookcase carousel">
-    <div class="carousel-topline">
+    <div class="carousel-topline ornate-bookcase-header">
       <div>
         <strong>Your Bookcases</strong>
         <span>Swipe or scroll to rotate</span>
       </div>
+      <img class="app-header-icon" src="assets/icons/icon-192.png" width="48" height="48" alt="Nth Reader" />
       <button id="carousel-close-btn" class="carousel-close-btn" type="button" aria-label="Close carousel">✕</button>
     </div>
     <div id="carousel-stage" class="carousel-stage">
@@ -111,8 +112,9 @@
   </section>
 
   <!-- Customize mode chrome -->
-  <div id="customize-topbar" class="customize-topbar" hidden>
+  <div id="customize-topbar" class="customize-topbar ornate-bookcase-header" hidden>
     <span class="customize-title">Customize Shelf</span>
+    <img class="app-header-icon" src="assets/icons/icon-192.png" width="48" height="48" alt="Nth Reader" />
     <button id="customize-done-btn" class="customize-done-btn" type="button">Done</button>
   </div>
   <div id="customize-panel" class="customize-panel" hidden></div>
@@ -182,6 +184,11 @@
 
 <!-- ===================== READER ===================== -->
 <section id="reader-view" hidden>
+  <header class="reader-topbar ornate-bookcase-header">
+    <span aria-hidden="true"></span>
+    <img class="app-header-icon" src="assets/icons/icon-192.png" width="48" height="48" alt="Nth Reader" />
+    <span aria-hidden="true"></span>
+  </header>
   <div id="page-viewport" class="page-viewport"></div>
   <div id="flow-viewport" class="flow-viewport" hidden>
     <div id="flow-inner" class="flow-inner"></div>

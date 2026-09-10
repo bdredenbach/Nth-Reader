@@ -1,4 +1,12 @@
-# Nth Reader V-0.24.03
+# Nth Reader V-0.24.04
+
+## V-0.24.04: ornate persistent bookcase crown
+
+- Replaces the plain Nth Reader title with a centered 48×48 app icon in a 62px carved-wood bookcase crown.
+- Keeps the crown visible on the shelf, customization screen, carousel, and reader.
+- Reserves the device safe area above the crown content so iPhone status indicators no longer overlap controls.
+- Preserves the existing shelf menus, Customize title and Done button, carousel controls, and reader navigation.
+- Adds safe-area padding to both slide-out drawers.
 
 ## V-0.24.03: self-repairing manifest link
 
@@ -282,4 +290,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.24.03`.
+The service-worker cache key is `Nth-Reader-V-0.24.04`.
