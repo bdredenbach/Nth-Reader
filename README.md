@@ -1,4 +1,15 @@
-# Nth Reader V-0.27.00
+# Nth Reader V-0.28.00
+
+## V-0.28.00: native read-aloud with automatic page turns
+
+- Adds a compact read-aloud toolbar beneath the Nth logo for reflowable books and text-bearing PDFs.
+- Uses the voices exposed by the phone or browser, preferring on-device voices and never sending book text to an Nth Reader service.
+- Includes play/pause, previous/next sentence, five reading speeds, voice selection, and a remembered automatic-page-turn preference.
+- Extracts only words physically visible inside the current CSS-column page instead of narrating hidden text from the rest of the chapter.
+- Highlights the active sentence where the browser supports the CSS Highlight API and always mirrors it in the narration status line.
+- Turns the real Turn.js page at page end and resumes narration after the next page has landed.
+- Hides narration for comics, images, and PDFs without extractable text, without changing their existing reader behavior.
+- Fades the narration toolbar with the normal navigation and cancels speech safely when the reader closes or relayouts.
 
 ## V-0.27.00: photographed covers and native browser installation
 
@@ -334,4 +345,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.27.00`.
+The service-worker cache key is `Nth-Reader-V-0.28.00`.
