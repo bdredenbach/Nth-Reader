@@ -1,4 +1,11 @@
-# Nth Reader V-0.25.02
+# Nth Reader V-0.25.03
+
+## V-0.25.03: continuous carousel motion
+
+- Continues the bookcase turn from the exact finger-release pose instead of snapping back to center first.
+- Crossfades outgoing and incoming cabinets simultaneously, removing the empty midpoint between them.
+- Prepares the neighboring bookcases during idle time so shelf packing and photo-frame layout do not interrupt the next swipe.
+- Keeps the preview cache limited to the current carousel session and discards it on close.
 
 ## V-0.25.02: compact carousel crown
 
@@ -309,4 +316,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.25.02`.
+The service-worker cache key is `Nth-Reader-V-0.25.03`.

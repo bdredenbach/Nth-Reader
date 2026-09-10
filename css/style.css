@@ -750,7 +750,9 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
   background:
     radial-gradient(circle at 50% 43%,rgba(183,111,48,.22),transparent 45%),
     linear-gradient(180deg,rgba(12,7,4,.96),rgba(25,12,5,.985));
-  backdrop-filter: blur(10px); transition: opacity .22s ease;
+  /* The surface is already effectively opaque. A full-screen backdrop blur
+     forced Android to repaint the page behind every carousel frame. */
+  backdrop-filter:none; transition: opacity .22s ease;
   touch-action: none;
 }
 .bookcase-carousel.visible { opacity: 1; }
@@ -781,8 +783,14 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
   padding:0; border:5px solid #5e351b; border-radius:10px; color:inherit;
   background:#211108; box-shadow:0 28px 55px rgba(0,0,0,.7),inset 0 0 0 2px rgba(255,218,158,.18);
   transform-style:preserve-3d; cursor:grab; touch-action:none; will-change:transform,opacity;
+  contain:layout paint;
 }
 .carousel-card-dragging { cursor:grabbing; }
+.carousel-card-transition-clone {
+  position:absolute; z-index:4; margin:0; pointer-events:none;
+  will-change:transform,opacity;
+}
+.carousel-prewarm-preview { visibility:hidden !important; pointer-events:none !important; }
 .carousel-card::before,.carousel-card::after {
   content:""; position:absolute; top:0; bottom:0; width:12px; z-index:20; pointer-events:none;
   background:linear-gradient(90deg,#8d5730,#3a1d0d); box-shadow:0 0 10px rgba(0,0,0,.7);

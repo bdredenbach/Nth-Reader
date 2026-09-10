@@ -23,6 +23,8 @@ window.BookcaseCarousel = class {
     this.wheelLocked = false;
     this.closeTimer = 0;
     this.suppressTimer = 0;
+    this.previewCache = new Map();
+    this.previewGeneration = 0;
 
     this.openButton.addEventListener("click", () => this.open());
     this.closeButton.addEventListener("click", () => this.close());
@@ -148,12 +150,20 @@ window.BookcaseCarousel = class {
     const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
     const moved = this.pointerStart.moved;
     this.pointerStart = null;
-    this.resetDragPreview();
-    if (!moved) return;
+    if (!moved) {
+      this.resetDragPreview();
+      return;
+    }
     this.suppressCardClick = true;
     clearTimeout(this.suppressTimer);
     this.suppressTimer = setTimeout(() => { this.suppressCardClick = false; }, 450);
-    if (Math.abs(travel) >= 28) this.navigate(travel < 0 ? 1 : -1);
+    if (Math.abs(travel) >= 28) {
+      // Keep the released transform in place. navigate() clones that exact
+      // pose so the cabinet never snaps back before completing its turn.
+      this.navigate(travel < 0 ? 1 : -1, { continueFromDrag: true });
+    } else {
+      this.resetDragPreview();
+    }
   }
 
   cancelDrag() {
@@ -171,6 +181,8 @@ window.BookcaseCarousel = class {
     if (document.body.classList.contains("customizing")) return;
     clearTimeout(this.closeTimer);
     this.shelf.bookcaseScrollPositions.set(this.shelf.activeBookcase, this.shelf.root.scrollTop);
+    this.previewCache.clear();
+    this.previewGeneration += 1;
     this.overlay.hidden = false;
     document.body.classList.add("carousel-active");
     this.renderSelected();
@@ -178,6 +190,8 @@ window.BookcaseCarousel = class {
   }
 
   close() {
+    this.previewGeneration += 1;
+    this.previewCache.clear();
     this.overlay.classList.remove("visible");
     document.body.classList.remove("carousel-active");
     this.shelf.render();
@@ -187,37 +201,74 @@ window.BookcaseCarousel = class {
     }, 230);
   }
 
-  async navigate(direction) {
+  async navigate(direction, { continueFromDrag = false } = {}) {
     if (this.busy) return;
     const count = this.shelf.bookcaseCount;
     if (count <= 1) return;
     // Deliberately wrap at both ends: the carousel has no first or last stop.
     const target = (this.shelf.activeBookcase + direction + count) % count;
     this.busy = true;
-    const outgoing = direction > 0
-      ? [{ transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }, { transform: "translateX(-34%) rotateY(34deg) scale(.82)", opacity: 0 }]
-      : [{ transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }, { transform: "translateX(34%) rotateY(-34deg) scale(.82)", opacity: 0 }];
-    const outgoingAnimation = this.card.animate(outgoing, { duration: 210, easing: "ease-in", fill: "forwards" });
-    await outgoingAnimation.finished.catch(() => {});
-    // Remove the outgoing transform before measuring the next cabinet. A
-    // transformed ancestor would otherwise distort getBoundingClientRect().
-    outgoingAnimation.cancel();
-    this.shelf.setActiveBookcase(target, { render: false });
-    this.renderSelected();
-    const incoming = direction > 0
-      ? [{ transform: "translateX(34%) rotateY(-34deg) scale(.82)", opacity: 0 }, { transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }]
-      : [{ transform: "translateX(-34%) rotateY(34deg) scale(.82)", opacity: 0 }, { transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }];
-    await this.card.animate(incoming, { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" }).finished.catch(() => {});
-    this.card.getAnimations().forEach((animation) => animation.cancel());
-    this.busy = false;
+    const outgoingCard = this.transitionClone();
+    const outgoingStart = continueFromDrag && outgoingCard.style.transform
+      ? outgoingCard.style.transform
+      : "translateX(0) rotateY(0deg) scale(1)";
+    const outgoingOpacity = continueFromDrag && outgoingCard.style.opacity
+      ? Number(outgoingCard.style.opacity)
+      : 1;
+    this.resetDragPreview();
+
+    try {
+      // The old cabinet remains in the transition clone while the prepared
+      // target is installed underneath it. Both then move simultaneously,
+      // eliminating the empty midpoint from the former two-stage animation.
+      this.shelf.setActiveBookcase(target, { render: false });
+      this.renderSelected();
+      const outgoingEnd = direction > 0
+        ? "translateX(-42%) rotateY(38deg) scale(.80)"
+        : "translateX(42%) rotateY(-38deg) scale(.80)";
+      const incomingStart = direction > 0
+        ? "translateX(42%) rotateY(-38deg) scale(.80)"
+        : "translateX(-42%) rotateY(38deg) scale(.80)";
+      const outgoingAnimation = outgoingCard.animate([
+        { transform: outgoingStart, opacity: outgoingOpacity },
+        { transform: outgoingEnd, opacity: 0 }
+      ], { duration: 250, easing: "cubic-bezier(.4,0,.7,1)", fill: "forwards" });
+      const incomingAnimation = this.card.animate([
+        { transform: incomingStart, opacity: 0 },
+        { transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }
+      ], { duration: 300, easing: "cubic-bezier(.16,.78,.22,1)", fill: "forwards" });
+      await Promise.all([
+        outgoingAnimation.finished.catch(() => {}),
+        incomingAnimation.finished.catch(() => {})
+      ]);
+    } finally {
+      outgoingCard.remove();
+      this.card.getAnimations().forEach((animation) => animation.cancel());
+      this.resetDragPreview();
+      this.busy = false;
+    }
+  }
+
+  transitionClone() {
+    const clone = this.card.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    clone.classList.remove("carousel-card-dragging");
+    clone.classList.add("carousel-card-transition-clone");
+    clone.setAttribute("aria-hidden", "true");
+    clone.style.left = `${this.card.offsetLeft}px`;
+    clone.style.top = `${this.card.offsetTop}px`;
+    clone.style.width = `${this.card.offsetWidth}px`;
+    clone.style.height = `${this.card.offsetHeight}px`;
+    this.stage.appendChild(clone);
+    return clone;
   }
 
   renderSelected() {
-    const natural = this.shelf.renderBookcasePreview(this.preview, this.shelf.activeBookcase);
-    const availableWidth = Math.max(1, this.card.clientWidth - 24);
-    const availableHeight = Math.max(1, this.card.clientHeight - 12);
-    const scale = Math.min(1, availableWidth / natural.width, availableHeight / natural.height);
-    this.preview.style.setProperty("--carousel-scale", String(scale));
+    const index = this.shelf.activeBookcase;
+    const cached = this.previewCache.get(index);
+    if (cached) this.restorePreview(cached);
+    else this.capturePreview(this.preview, index);
     if (window.syncDecorClocks) window.syncDecorClocks();
     const current = this.shelf.activeBookcase + 1;
     const empty = this.shelf.isBookcaseEmpty(this.shelf.activeBookcase);
@@ -227,6 +278,52 @@ window.BookcaseCarousel = class {
     this.prev.disabled = !canRotate;
     this.next.disabled = !canRotate;
     this.updateButton();
+    this.prewarmNeighbors(index);
+  }
+
+  capturePreview(container, index) {
+    const natural = this.shelf.renderBookcasePreview(container, index);
+    const availableWidth = Math.max(1, this.card.clientWidth - 24);
+    const availableHeight = Math.max(1, this.card.clientHeight - 12);
+    const scale = Math.min(1, availableWidth / natural.width, availableHeight / natural.height);
+    container.style.setProperty("--carousel-scale", String(scale));
+    this.previewCache.set(index, {
+      html: container.innerHTML,
+      width: container.style.width,
+      scale,
+      backdrop: container.dataset.backdrop,
+      shelfTheme: container.dataset.shelfTheme
+    });
+  }
+
+  restorePreview(snapshot) {
+    this.preview.innerHTML = snapshot.html;
+    this.preview.style.width = snapshot.width;
+    this.preview.style.setProperty("--carousel-scale", String(snapshot.scale));
+    this.preview.dataset.backdrop = snapshot.backdrop;
+    this.preview.dataset.shelfTheme = snapshot.shelfTheme;
+  }
+
+  prewarmNeighbors(index) {
+    const count = this.shelf.bookcaseCount;
+    if (count <= 1) return;
+    const generation = this.previewGeneration;
+    const candidates = [...new Set([(index + 1) % count, (index - 1 + count) % count])]
+      .filter((candidate) => !this.previewCache.has(candidate));
+    const schedule = window.requestIdleCallback
+      ? (callback) => window.requestIdleCallback(callback, { timeout: 180 })
+      : (callback) => setTimeout(callback, 24);
+    const prepareNext = () => {
+      if (generation !== this.previewGeneration || this.overlay.hidden || !candidates.length) return;
+      const candidate = candidates.shift();
+      const staging = document.createElement("div");
+      staging.className = "carousel-bookcase-content shelf-root carousel-prewarm-preview";
+      this.card.appendChild(staging);
+      this.capturePreview(staging, candidate);
+      staging.remove();
+      if (candidates.length) schedule(prepareNext);
+    };
+    if (candidates.length) schedule(prepareNext);
   }
 
   updateButton() {
