@@ -8,6 +8,7 @@ window.SpineScanner = class {
     this.onCreate = onCreate;
     this.onLink = onLink;
     this.input = document.getElementById("spine-photo-input");
+    this.coverInput = document.getElementById("cover-photo-input");
     this.overlay = document.getElementById("spine-scanner-overlay");
     this.panel = document.getElementById("spine-scanner");
     this.cropStep = document.getElementById("spine-crop-step");
@@ -15,6 +16,11 @@ window.SpineScanner = class {
     this.canvas = document.getElementById("spine-crop-canvas");
     this.ctx = this.canvas.getContext("2d");
     this.preview = document.getElementById("spine-result-preview");
+    this.coverPreviewWrap = document.getElementById("scanner-cover-preview");
+    this.coverPreview = document.getElementById("cover-result-preview");
+    this.coverPhotoButton = document.getElementById("cover-photo-btn");
+    this.coverAdjustButton = document.getElementById("cover-adjust-btn");
+    this.coverClearButton = document.getElementById("cover-clear-btn");
     this.title = document.getElementById("spine-book-title");
     this.author = document.getElementById("spine-book-author");
     this.linkRow = document.getElementById("spine-link-row");
@@ -26,15 +32,23 @@ window.SpineScanner = class {
     this.view = null;
     this.dragCorner = -1;
     this.result = null;
+    this.coverResult = null;
+    this.scanKind = "spine";
+    this.spineState = null;
+    this.coverState = null;
     this.fileBaseName = "";
 
     document.getElementById("spine-scanner-close").addEventListener("click", () => this.close());
     this.overlay.addEventListener("click", () => this.close());
-    this.input.addEventListener("change", () => this.loadSelection());
+    this.input.addEventListener("change", () => this.loadSelection(this.input, "spine"));
+    this.coverInput.addEventListener("change", () => this.loadSelection(this.coverInput, "cover"));
     document.getElementById("spine-rotate-btn").addEventListener("click", () => this.rotateSource());
     document.getElementById("spine-reset-btn").addEventListener("click", () => { this.resetCorners(); this.draw(); });
     document.getElementById("spine-crop-btn").addEventListener("click", () => this.makeCorrectedSpine());
-    document.getElementById("spine-back-btn").addEventListener("click", () => this.showStep("crop"));
+    document.getElementById("spine-back-btn").addEventListener("click", () => this.adjustCrop("spine"));
+    this.coverPhotoButton.addEventListener("click", () => this.chooseCoverPhoto());
+    this.coverAdjustButton.addEventListener("click", () => this.adjustCrop("cover"));
+    this.coverClearButton.addEventListener("click", () => this.clearCover());
     this.saveButton.addEventListener("click", () => this.save());
     document.querySelectorAll('input[name="spine-mode"]').forEach((radio) => {
       radio.addEventListener("change", () => this.syncMode());
@@ -59,12 +73,17 @@ window.SpineScanner = class {
     this.input.click();
   }
 
-  async loadSelection() {
-    const file = this.input.files?.[0];
-    this.input.value = "";
+  chooseCoverPhoto() {
+    this.coverInput.value = "";
+    this.coverInput.click();
+  }
+
+  async loadSelection(input, kind) {
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
-    this.fileBaseName = file.name.replace(/\.[^.]+$/, "");
+    if (kind === "spine") this.fileBaseName = file.name.replace(/\.[^.]+$/, "");
     try {
       const image = await this.decodeImage(file);
       const longest = Math.max(image.width, image.height);
@@ -75,10 +94,17 @@ window.SpineScanner = class {
       source.getContext("2d", { alpha: false }).drawImage(image, 0, 0, source.width, source.height);
       image.close?.();
       this.sourceCanvas = source;
-      this.result = null;
-      this.title.value = this.fileBaseName;
-      this.author.value = "";
-      document.querySelector('input[name="spine-mode"][value="physical"]').checked = true;
+      this.scanKind = kind;
+      if (kind === "spine") {
+        this.result = null;
+        this.spineState = null;
+        this.clearCover();
+        this.title.value = this.fileBaseName;
+        this.author.value = "";
+        document.querySelector('input[name="spine-mode"][value="physical"]').checked = true;
+      } else {
+        this.coverState = null;
+      }
       this.resetCorners();
       this.showStep("crop");
       this.open();
@@ -86,6 +112,25 @@ window.SpineScanner = class {
     } catch (error) {
       alert(`That photograph could not be opened: ${error.message || error}`);
     }
+  }
+
+  adjustCrop(kind) {
+    const state = kind === "cover" ? this.coverState : this.spineState;
+    if (!state?.sourceCanvas) return;
+    this.scanKind = kind;
+    this.sourceCanvas = state.sourceCanvas;
+    this.points = state.points.map((point) => ({ ...point }));
+    this.showStep("crop");
+  }
+
+  clearCover() {
+    this.coverResult = null;
+    this.coverState = null;
+    if (this.coverPreview) this.coverPreview.removeAttribute("src");
+    if (this.coverPreviewWrap) this.coverPreviewWrap.hidden = true;
+    if (this.coverPhotoButton) this.coverPhotoButton.textContent = "+ Add Cover Photo";
+    if (this.coverAdjustButton) this.coverAdjustButton.hidden = true;
+    if (this.coverClearButton) this.coverClearButton.hidden = true;
   }
 
   async decodeImage(file) {
@@ -124,9 +169,15 @@ window.SpineScanner = class {
     const crop = step === "crop";
     this.cropStep.hidden = !crop;
     this.detailsStep.hidden = crop;
+    const isCover = this.scanKind === "cover";
+    document.getElementById("spine-scanner-title").textContent = crop && isCover ? "Add a Front Cover" : "Scan a Book Spine";
     document.getElementById("spine-scanner-subtitle").textContent = crop
-      ? "Drag each corner onto the photographed spine."
+      ? `Drag each corner onto the photographed ${isCover ? "front cover" : "spine"}.`
       : "Save it as a physical book or apply it to an ebook.";
+    document.getElementById("spine-crop-tip").textContent = isCover
+      ? "Move the numbered corners around only the cover. Perspective and camera angle will be corrected."
+      : "Move the numbered corners around only the spine. Angled photographs will be straightened.";
+    document.getElementById("spine-crop-btn").textContent = isCover ? "Correct Cover ›" : "Straighten Spine ›";
     if (crop) requestAnimationFrame(() => this.resizeCanvas());
   }
 
@@ -263,9 +314,11 @@ window.SpineScanner = class {
 
   async makeCorrectedSpine() {
     if (!this.sourceCanvas || this.points.length !== 4) return;
+    const kind = this.scanKind;
+    const isCover = kind === "cover";
     const straightenButton = document.getElementById("spine-crop-btn");
     straightenButton.disabled = true;
-    straightenButton.textContent = "Straightening…";
+    straightenButton.textContent = isCover ? "Correcting Cover…" : "Straightening Spine…";
     // Let the busy label paint before the pixel correction begins.
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
     try {
@@ -274,28 +327,46 @@ window.SpineScanner = class {
       const bottom = Math.hypot(br.x - bl.x, br.y - bl.y);
       const left = Math.hypot(bl.x - tl.x, bl.y - tl.y);
       const right = Math.hypot(br.x - tr.x, br.y - tr.y);
-      const ratio = Math.max(.055, Math.min(.45, ((top + bottom) / 2) / Math.max(1, (left + right) / 2)));
-      const outHeight = 720;
-      const outWidth = Math.max(40, Math.min(480, Math.round(outHeight * ratio)));
+      const measuredRatio = ((top + bottom) / 2) / Math.max(1, (left + right) / 2);
+      const ratio = isCover
+        ? Math.max(.35, Math.min(1.25, measuredRatio))
+        : Math.max(.055, Math.min(.45, measuredRatio));
+      const outHeight = isCover ? 900 : 720;
+      const outWidth = Math.max(isCover ? 315 : 40, Math.min(isCover ? 1125 : 480, Math.round(outHeight * ratio)));
       const output = this.warpQuadrilateral(this.sourceCanvas, this.points, outWidth, outHeight);
       let data = output.toDataURL("image/webp", .88);
       if (!data.startsWith("data:image/webp")) data = output.toDataURL("image/jpeg", .88);
-      this.result = {
-        data,
-        width: outWidth,
-        height: outHeight,
-        spineWidth: Math.max(18, Math.min(56, Math.round(116 * outWidth / outHeight))),
-        spineHeight: 116
+      const state = {
+        sourceCanvas: this.sourceCanvas,
+        points: this.points.map((point) => ({ ...point })),
       };
-      this.preview.src = data;
-      await this.populateBooks();
-      this.syncMode();
+      if (isCover) {
+        this.coverResult = { data, width: outWidth, height: outHeight };
+        this.coverState = state;
+        this.coverPreview.src = data;
+        this.coverPreviewWrap.hidden = false;
+        this.coverPhotoButton.textContent = "Change Cover Photo";
+        this.coverAdjustButton.hidden = false;
+        this.coverClearButton.hidden = false;
+      } else {
+        this.result = {
+          data,
+          width: outWidth,
+          height: outHeight,
+          spineWidth: Math.max(18, Math.min(56, Math.round(116 * outWidth / outHeight))),
+          spineHeight: 116
+        };
+        this.spineState = state;
+        this.preview.src = data;
+        await this.populateBooks();
+        this.syncMode();
+      }
       this.showStep("details");
     } catch (error) {
-      alert(`The spine could not be straightened: ${error.message || error}`);
+      alert(`The ${isCover ? "cover" : "spine"} could not be corrected: ${error.message || error}`);
     } finally {
       straightenButton.disabled = false;
-      straightenButton.textContent = "Straighten ›";
+      straightenButton.textContent = isCover ? "Correct Cover ›" : "Straighten Spine ›";
     }
   }
 
@@ -371,6 +442,10 @@ window.SpineScanner = class {
     this.status.textContent = this.mode() === "link" ? "Applying photographed spine…" : "Saving physical book…";
     try {
       const payload = { title, author, ...this.result };
+      if (this.coverResult?.data) {
+        payload.coverThumb = this.coverResult.data;
+        payload.faceCover = this.coverResult.data;
+      }
       if (this.mode() === "link") await this.onLink(this.linkSelect.value, payload);
       else await this.onCreate(payload);
       this.status.textContent = "Saved.";
@@ -382,7 +457,12 @@ window.SpineScanner = class {
   }
 
   showBook(book) {
-    document.getElementById("physical-book-spine").src = book.scannedSpine || "";
+    const artwork = document.getElementById("physical-book-spine");
+    const artWrap = artwork.closest(".physical-book-art");
+    const hasCover = Boolean(book.faceCover || book.coverThumb);
+    artwork.src = book.faceCover || book.coverThumb || book.scannedSpine || "";
+    artwork.alt = hasCover ? `Front cover of ${book.title || "physical book"}` : `Spine of ${book.title || "physical book"}`;
+    artWrap?.classList.toggle("spine-only", !hasCover);
     document.getElementById("physical-book-title").textContent = book.title || "Untitled Physical Book";
     const author = document.getElementById("physical-book-author");
     author.textContent = book.author || "Author not recorded";
