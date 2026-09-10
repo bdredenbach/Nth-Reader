@@ -117,7 +117,7 @@
     <button id="menu-close-btn" class="icon-btn" type="button" aria-label="Close menu">✕</button>
   </div>
   <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
-  <button id="menu-install-btn" class="menu-action-btn menu-action-btn-install" type="button" hidden>⬇ Install Nth Reader</button>
+  <button id="menu-install-btn" class="menu-action-btn menu-action-btn-install" type="button">⬇ Install Nth Reader</button>
   <button id="menu-customize-btn" class="menu-action-btn menu-action-btn-secondary" type="button">🎨 Customize Shelf</button>
   <div class="menu-section-label reading-section-label">Currently Reading</div>
   <div id="currently-reading" class="currently-reading"></div>
@@ -126,6 +126,17 @@
   </button>
   <div id="menu-bookmark-list" class="menu-bookmark-list" hidden></div>
 </aside>
+
+<!-- ===================== PWA INSTALL HELP ===================== -->
+<div id="install-overlay" class="install-overlay" hidden></div>
+<section id="install-panel" class="install-panel" hidden role="dialog" aria-modal="true" aria-labelledby="install-title">
+  <div class="install-panel-icon"><img src="assets/icons/icon-192.png" alt="" /></div>
+  <h2 id="install-title">Install Nth Reader</h2>
+  <p id="install-message">Checking whether Chrome is ready…</p>
+  <div id="install-readiness" class="install-readiness" aria-live="polite"></div>
+  <button id="install-primary-btn" class="menu-action-btn" type="button">Check Again</button>
+  <button id="install-close-btn" class="menu-action-btn menu-action-btn-secondary" type="button">Not Now</button>
+</section>
 
 <!-- ===================== READER ===================== -->
 <section id="reader-view" hidden>
@@ -158,32 +169,8 @@
 <script src="js/menu.js"></script>
 <script src="js/remove-panel.js"></script>
 <script src="js/app.js"></script>
+<script src="js/pwa-install.js"></script>
 <script>
-  let nthInstallPrompt = null;
-  const nthInstallButton = document.getElementById("menu-install-btn");
-  const nthStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    nthInstallPrompt = event;
-    if (!nthStandalone) nthInstallButton.hidden = false;
-  });
-
-  nthInstallButton.addEventListener("click", async () => {
-    if (!nthInstallPrompt) return;
-    nthInstallButton.disabled = true;
-    await nthInstallPrompt.prompt();
-    await nthInstallPrompt.userChoice;
-    nthInstallPrompt = null;
-    nthInstallButton.hidden = true;
-    nthInstallButton.disabled = false;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    nthInstallPrompt = null;
-    nthInstallButton.hidden = true;
-  });
-
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch((err) => {

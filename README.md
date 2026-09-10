@@ -1,4 +1,12 @@
-# Nth Reader V-0.21.00
+# Nth Reader V-0.22.00
+
+## V-0.22: dependable guided installation
+
+- The Install Nth Reader action is always visible in the right drawer until the app is installed.
+- The app now reports live install readiness instead of silently hiding its button while Chrome's engagement requirement is pending.
+- A first visit can finish service-worker control with a safe, user-requested refresh and return directly to the install guide.
+- Once Chrome exposes its native prompt, the same button launches the real installed PWA flow rather than creating a browser shortcut.
+- Android guidance explains Chrome's one-tap and 30-second engagement requirement; iPhone/iPad guidance points to Share → Add to Home Screen.
 
 ## V-0.21: installable PWA and Nth app icon
 
@@ -237,4 +245,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.21.00`.
+The service-worker cache key is `Nth-Reader-V-0.22.00`.

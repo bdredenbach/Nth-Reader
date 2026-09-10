@@ -1,6 +1,6 @@
-// NTH READER — V-0.21.00
+// NTH READER — V-0.22.00
 
-const SW_VERSION = "Nth-Reader-V-0.21.00";
+const SW_VERSION = "Nth-Reader-V-0.22.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
@@ -26,6 +26,7 @@ const SHELL_FILES = [
   "./js/menu.js",
   "./js/remove-panel.js",
   "./js/app.js",
+  "./js/pwa-install.js",
   "./js/turn.js",
   "./assets/decor/bust.webp",
   "./assets/decor/globe.webp",

@@ -11,6 +11,7 @@
   "background_color": "#160b06",
   "theme_color": "#1b120b",
   "categories": ["books", "education", "entertainment"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "assets/icons/icon-192.png",
