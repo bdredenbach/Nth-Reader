@@ -369,6 +369,11 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 18px;
 }
 .menu-action-btn:active { filter: brightness(.92); }
+.menu-action-btn-install {
+  color: #fff8e9;
+  background: linear-gradient(135deg, #8c4e20, #c98b31);
+  box-shadow: inset 0 1px rgba(255,255,255,.18), 0 5px 15px rgba(0,0,0,.22);
+}
 
 .menu-section-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
