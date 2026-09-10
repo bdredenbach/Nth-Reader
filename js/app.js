@@ -172,6 +172,8 @@
       format: "physical",
       physicalOnly: true,
       scannedSpine: payload.data,
+      coverThumb: payload.coverThumb || null,
+      faceCover: payload.faceCover || null,
       spineWidth: payload.spineWidth,
       spineHeight: payload.spineHeight,
       addedAt: Date.now(),
@@ -196,6 +198,8 @@
     book.scannedSpine = payload.data;
     book.spineWidth = payload.spineWidth;
     book.spineHeight = payload.spineHeight;
+    if (payload.coverThumb) book.coverThumb = payload.coverThumb;
+    if (payload.faceCover) book.faceCover = payload.faceCover;
     if (payload.author && !book.author) book.author = payload.author;
     await NthDB.put(book);
     shelf.setActiveBookcase(Math.floor((Number(book.shelfIndex) || 0) / 5), { render: false });
