@@ -10,7 +10,7 @@
   let installPrompt = window.__nthInstallPrompt || null;
   let diagnostic = null;
   let diagnosticPromise = null;
-  const manifestUrl = window.__nthManifestUrl || "./manifest.webmanifest?v=0.24.04";
+  const manifestUrl = window.__nthManifestUrl || "./manifest.webmanifest?v=0.25.00";
 
   function ensureManifestLink() {
     if (typeof window.__nthEnsureManifestLink === "function") {

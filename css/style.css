@@ -751,7 +751,7 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
     radial-gradient(circle at 50% 43%,rgba(183,111,48,.22),transparent 45%),
     linear-gradient(180deg,rgba(12,7,4,.96),rgba(25,12,5,.985));
   backdrop-filter: blur(10px); transition: opacity .22s ease;
-  touch-action: pan-x;
+  touch-action: none;
 }
 .bookcase-carousel.visible { opacity: 1; }
 .carousel-topline {
@@ -774,14 +774,15 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 .carousel-stage {
   position: relative; display:grid; grid-template-columns:48px minmax(0,430px) 48px;
   align-items:center; justify-content:center; gap:4px; height:calc(100dvh - var(--app-header-total) - 145px);
-  min-height:430px; perspective:1100px;
+  min-height:430px; perspective:1100px; touch-action:none; overscroll-behavior:contain;
 }
 .carousel-card {
   position:relative; width:100%; height:min(72dvh,650px); min-height:430px; overflow:hidden;
   padding:0; border:5px solid #5e351b; border-radius:10px; color:inherit;
   background:#211108; box-shadow:0 28px 55px rgba(0,0,0,.7),inset 0 0 0 2px rgba(255,218,158,.18);
-  transform-style:preserve-3d; cursor:pointer;
+  transform-style:preserve-3d; cursor:grab; touch-action:none; will-change:transform,opacity;
 }
+.carousel-card-dragging { cursor:grabbing; }
 .carousel-card::before,.carousel-card::after {
   content:""; position:absolute; top:0; bottom:0; width:12px; z-index:20; pointer-events:none;
   background:linear-gradient(90deg,#8d5730,#3a1d0d); box-shadow:0 0 10px rgba(0,0,0,.7);

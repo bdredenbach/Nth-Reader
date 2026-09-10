@@ -1,4 +1,12 @@
-# Nth Reader V-0.24.04
+# Nth Reader V-0.25.00
+
+## V-0.25.00: circular, touch-responsive bookcase carousel
+
+- Makes vertical swipes rotate the carousel as naturally as horizontal swipes and mouse-wheel scrolling.
+- Gives the selected bookcase a live tilt and slide response while it follows the user's finger.
+- Wraps continuously in both directions from the last bookcase to the first and vice versa.
+- Keeps the arrow buttons and tap-to-open controls for users who prefer them.
+- Preserves each bookcase's saved shelf position when opening it from the carousel.
 
 ## V-0.24.04: ornate persistent bookcase crown
 
@@ -290,4 +298,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.24.04`.
+The service-worker cache key is `Nth-Reader-V-0.25.00`.

@@ -22,6 +22,7 @@ window.BookcaseCarousel = class {
     this.suppressCardClick = false;
     this.wheelLocked = false;
     this.closeTimer = 0;
+    this.suppressTimer = 0;
 
     this.openButton.addEventListener("click", () => this.open());
     this.closeButton.addEventListener("click", () => this.close());
@@ -32,20 +33,10 @@ window.BookcaseCarousel = class {
     });
     this.prev.addEventListener("click", () => this.navigate(-1));
     this.next.addEventListener("click", () => this.navigate(1));
-    this.stage.addEventListener("pointerdown", (event) => {
-      this.pointerStart = { x: event.clientX, y: event.clientY };
-    });
-    this.stage.addEventListener("pointerup", (event) => {
-      if (!this.pointerStart) return;
-      const dx = event.clientX - this.pointerStart.x;
-      const dy = event.clientY - this.pointerStart.y;
-      this.pointerStart = null;
-      if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(dy)) {
-        this.suppressCardClick = true;
-        this.navigate(dx < 0 ? 1 : -1);
-      }
-    });
-    this.stage.addEventListener("pointercancel", () => { this.pointerStart = null; });
+    this.stage.addEventListener("pointerdown", (event) => this.beginDrag(event));
+    this.stage.addEventListener("pointermove", (event) => this.updateDrag(event));
+    this.stage.addEventListener("pointerup", (event) => this.endDrag(event));
+    this.stage.addEventListener("pointercancel", () => this.cancelDrag());
     this.overlay.addEventListener("wheel", (event) => {
       event.preventDefault();
       if (this.wheelLocked) return;
@@ -70,6 +61,64 @@ window.BookcaseCarousel = class {
     this.updateButtonVisibility();
   }
 
+  beginDrag(event) {
+    if (this.busy || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (event.target.closest(".carousel-arrow, .carousel-close-btn, .carousel-enter-btn")) return;
+    this.pointerStart = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      moved: false
+    };
+    this.stage.setPointerCapture?.(event.pointerId);
+    this.card.classList.add("carousel-card-dragging");
+  }
+
+  updateDrag(event) {
+    if (!this.pointerStart || event.pointerId !== this.pointerStart.id) return;
+    const dx = event.clientX - this.pointerStart.x;
+    const dy = event.clientY - this.pointerStart.y;
+    const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+    if (Math.abs(travel) > 6) {
+      this.pointerStart.moved = true;
+      event.preventDefault();
+    }
+    const limit = Math.min(120, Math.max(54, this.stage.clientWidth * .24));
+    const clamped = Math.max(-limit, Math.min(limit, travel));
+    const progress = clamped / limit;
+    this.card.style.transform = `translateX(${clamped * .28}px) rotateY(${-progress * 13}deg) scale(${1 - Math.abs(progress) * .045})`;
+    this.card.style.opacity = String(1 - Math.abs(progress) * .16);
+  }
+
+  endDrag(event) {
+    if (!this.pointerStart || event.pointerId !== this.pointerStart.id) return;
+    const dx = event.clientX - this.pointerStart.x;
+    const dy = event.clientY - this.pointerStart.y;
+    const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+    const moved = this.pointerStart.moved;
+    this.pointerStart = null;
+    if (this.stage.hasPointerCapture?.(event.pointerId)) {
+      this.stage.releasePointerCapture(event.pointerId);
+    }
+    this.resetDragPreview();
+    if (!moved) return;
+    this.suppressCardClick = true;
+    clearTimeout(this.suppressTimer);
+    this.suppressTimer = setTimeout(() => { this.suppressCardClick = false; }, 450);
+    if (Math.abs(travel) >= 42) this.navigate(travel < 0 ? 1 : -1);
+  }
+
+  cancelDrag() {
+    this.pointerStart = null;
+    this.resetDragPreview();
+  }
+
+  resetDragPreview() {
+    this.card.classList.remove("carousel-card-dragging");
+    this.card.style.removeProperty("transform");
+    this.card.style.removeProperty("opacity");
+  }
+
   open() {
     if (document.body.classList.contains("customizing")) return;
     clearTimeout(this.closeTimer);
@@ -92,8 +141,10 @@ window.BookcaseCarousel = class {
 
   async navigate(direction) {
     if (this.busy) return;
-    const target = this.shelf.activeBookcase + direction;
-    if (target < 0 || target >= this.shelf.bookcaseCount) return;
+    const count = this.shelf.bookcaseCount;
+    if (count <= 1) return;
+    // Deliberately wrap at both ends: the carousel has no first or last stop.
+    const target = (this.shelf.activeBookcase + direction + count) % count;
     this.busy = true;
     const outgoing = direction > 0
       ? [{ transform: "translateX(0) rotateY(0deg) scale(1)", opacity: 1 }, { transform: "translateX(-34%) rotateY(34deg) scale(.82)", opacity: 0 }]
@@ -124,8 +175,9 @@ window.BookcaseCarousel = class {
     const empty = this.shelf.isBookcaseEmpty(this.shelf.activeBookcase);
     this.position.textContent = `Bookcase ${current} of ${this.shelf.bookcaseCount}${empty ? " · Empty" : ""}`;
     this.enter.textContent = empty ? "Open Empty Bookcase" : "Open Bookcase";
-    this.prev.disabled = current === 1;
-    this.next.disabled = current === this.shelf.bookcaseCount;
+    const canRotate = this.shelf.bookcaseCount > 1;
+    this.prev.disabled = !canRotate;
+    this.next.disabled = !canRotate;
     this.updateButton();
   }
 
