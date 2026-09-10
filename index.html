@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.25.03" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.26.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.25.03";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.26.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -131,6 +131,63 @@
 <input type="file" id="file-input" multiple hidden
   accept=".cbz,.zip,.cbt,.pdf,.epub,.rtf,.mobi,.pdb,.prc,.fb2,.docx,.odt,.txt,.text,.log,.html,.htm,.xhtml,.md,.markdown,.json,.xml,.opf,.csv,.tsv,.jpg,.jpeg,.png,.gif,.webp,.avif,.bmp,.svg,.cbr,.cb7,.7z,.rar,.iba,.azw,.azw3" />
 <input type="file" id="decor-photo-input" accept="image/*" hidden />
+<input type="file" id="spine-photo-input" accept="image/*" hidden />
+
+<!-- ===================== PHYSICAL SPINE SCANNER ===================== -->
+<div id="spine-scanner-overlay" class="scanner-overlay" hidden></div>
+<section id="spine-scanner" class="spine-scanner" hidden role="dialog" aria-modal="true" aria-labelledby="spine-scanner-title">
+  <header class="scanner-header">
+    <div>
+      <h2 id="spine-scanner-title">Scan a Book Spine</h2>
+      <p id="spine-scanner-subtitle">Drag each corner onto the photographed spine.</p>
+    </div>
+    <button id="spine-scanner-close" class="icon-btn" type="button" aria-label="Close spine scanner">✕</button>
+  </header>
+  <div id="spine-crop-step" class="scanner-step">
+    <div class="spine-canvas-wrap">
+      <canvas id="spine-crop-canvas" aria-label="Photograph with four adjustable crop corners"></canvas>
+    </div>
+    <div class="scanner-tip">Move the numbered corners around only the spine. Angled photographs will be straightened.</div>
+    <div class="scanner-actions scanner-actions-three">
+      <button id="spine-rotate-btn" class="scanner-secondary-btn" type="button">↻ Rotate</button>
+      <button id="spine-reset-btn" class="scanner-secondary-btn" type="button">Reset Corners</button>
+      <button id="spine-crop-btn" class="scanner-primary-btn" type="button">Straighten ›</button>
+    </div>
+  </div>
+  <div id="spine-details-step" class="scanner-step scanner-details-step" hidden>
+    <div class="scanner-result-row">
+      <div class="scanner-spine-preview"><img id="spine-result-preview" alt="Corrected book spine preview" /></div>
+      <div class="scanner-fields">
+        <label>Title<input id="spine-book-title" type="text" maxlength="180" autocomplete="off" /></label>
+        <label>Author <span>(optional)</span><input id="spine-book-author" type="text" maxlength="180" autocomplete="off" /></label>
+      </div>
+    </div>
+    <fieldset class="scanner-mode-choice">
+      <legend>What should this photograph become?</legend>
+      <label><input type="radio" name="spine-mode" value="physical" checked /> A physical book on my shelf</label>
+      <label><input type="radio" name="spine-mode" value="link" /> The new spine for an existing ebook</label>
+    </fieldset>
+    <label id="spine-link-row" class="scanner-link-row" hidden>
+      Choose the digital book
+      <select id="spine-link-book"></select>
+    </label>
+    <div id="spine-save-status" class="scanner-save-status" aria-live="polite"></div>
+    <div class="scanner-actions">
+      <button id="spine-back-btn" class="scanner-secondary-btn" type="button">‹ Adjust Crop</button>
+      <button id="spine-save-btn" class="scanner-primary-btn" type="button">Add to Shelf</button>
+    </div>
+  </div>
+</section>
+
+<div id="physical-book-overlay" class="scanner-overlay" hidden></div>
+<section id="physical-book-info" class="physical-book-info" hidden role="dialog" aria-modal="true" aria-labelledby="physical-book-title">
+  <button id="physical-book-close" class="icon-btn physical-book-close" type="button" aria-label="Close physical book details">✕</button>
+  <div class="physical-book-spine"><img id="physical-book-spine" alt="Photographed book spine" /></div>
+  <div class="physical-book-kicker">Physical Book</div>
+  <h2 id="physical-book-title"></h2>
+  <p id="physical-book-author"></p>
+  <p class="physical-book-note">This shelf entry represents a book in your real collection.</p>
+</section>
 
 <!-- ===================== DECOR PICKER SHEET ===================== -->
 <div id="decor-picker-sheet" class="decor-picker-sheet" hidden>
@@ -161,6 +218,7 @@
     <button id="menu-close-btn" class="icon-btn" type="button" aria-label="Close menu">✕</button>
   </div>
   <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
+  <button id="menu-scan-btn" class="menu-action-btn menu-action-btn-secondary" type="button">📷 Scan Physical Book</button>
   <button id="menu-install-btn" class="menu-action-btn menu-action-btn-install" type="button">⬇ Install Nth Reader</button>
   <button id="menu-customize-btn" class="menu-action-btn menu-action-btn-secondary" type="button">🎨 Customize Shelf</button>
   <div class="menu-section-label reading-section-label">Currently Reading</div>
@@ -214,6 +272,7 @@
 <script src="js/decor-art.js"></script>
 <script src="js/shelf.js"></script>
 <script src="js/carousel.js"></script>
+<script src="js/spine-scanner.js"></script>
 <script src="js/customize.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/remove-panel.js"></script>
