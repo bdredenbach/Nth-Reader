@@ -1,4 +1,14 @@
-# Nth Reader V-0.25.03
+# Nth Reader V-0.26.00
+
+## V-0.26.00: photograph real book spines
+
+- Adds **Scan Physical Book** to the main menu with camera and gallery support supplied by the phone's image picker.
+- Provides a touch-friendly, numbered four-corner crop so skewed or trapezoidal spine photographs can be straightened.
+- Rotates photographs, resets crop corners, previews the corrected result, and records a title plus optional author.
+- Saves a photographed spine as a lightweight physical-only shelf book on the next empty shelf.
+- Opens a physical-only entry as a collection information card instead of reporting a missing reader source.
+- Can instead apply the photographed spine to an existing EPUB, comic, PDF, or other digital book while preserving its source, progress, shelf position, and bookmarks.
+- Compresses corrected artwork to WebP where supported and performs all image processing locally on the device.
 
 ## V-0.25.03: continuous carousel motion
 
@@ -316,4 +326,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.25.03`.
+The service-worker cache key is `Nth-Reader-V-0.26.00`.
