@@ -1,13 +1,13 @@
-// NTH READER — V-0.24.01
+// NTH READER — V-0.24.02
 
-const SW_VERSION = "Nth-Reader-V-0.24.01";
+const SW_VERSION = "Nth-Reader-V-0.24.02";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./manifest.webmanifest?v=0.24.01",
+  "./manifest.webmanifest?v=0.24.02",
   "./css/style.css",
   "./assets/icons/favicon-32.png",
   "./assets/icons/apple-touch-icon.png",
@@ -142,6 +142,16 @@ self.addEventListener("fetch", (event) => {
   const sameOrigin = url.origin === self.location.origin;
   const allowedCdn = ALLOWED_CDN_HOSTS.includes(url.hostname);
   if (!sameOrigin && !allowedCdn) return;
+
+  // Chrome's installability evaluator must receive the current manifest
+  // directly from GitHub Pages. Do not let an older cached manifest response
+  // mask a newly deployed identity, scope, icon, or display setting.
+  const manifestRequest = sameOrigin && (
+    req.destination === "manifest" ||
+    url.pathname.endsWith("/manifest.webmanifest") ||
+    url.pathname.endsWith("/manifest.json")
+  );
+  if (manifestRequest) return;
 
   const shellCode = sameOrigin && (req.mode === "navigate" || ["script", "style"].includes(req.destination));
   if (shellCode) {

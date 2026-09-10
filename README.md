@@ -1,4 +1,11 @@
-# Nth Reader V-0.24.01
+# Nth Reader V-0.24.02
+
+## V-0.24.02: field-by-field Chrome install audit
+
+- Reports the live manifest HTTP status, MIME type, JSON parsing, app name, start URL, display mode, related-app preference, and both required icon fetches.
+- Bypasses service-worker interception for manifest requests so Chrome evaluates the current GitHub Pages response directly.
+- Registers the service worker with an explicit app scope and `updateViaCache: "none"`.
+- Advances both the manifest URL and offline shell version together to prevent stale install metadata.
 
 ## V-0.24.01: truthful PWA install diagnostics
 
@@ -269,4 +276,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.24.01`.
+The service-worker cache key is `Nth-Reader-V-0.24.02`.

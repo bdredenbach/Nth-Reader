@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.24.01" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.24.02" />
 <script>
   // Capture Chrome's one-shot install event before the larger reader scripts
   // load. A previously active service worker can make this event arrive early.
@@ -29,7 +29,10 @@
   // Register immediately so first-time visitors can finish service-worker
   // control with the install helper's single safe refresh.
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch((error) => {
+    navigator.serviceWorker.register("./sw.js", {
+      scope: "./",
+      updateViaCache: "none",
+    }).catch((error) => {
       console.warn("Service worker registration failed:", error);
     });
   }

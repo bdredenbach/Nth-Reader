@@ -29,12 +29,45 @@
     return `<span class="${ok ? "install-ready" : "install-waiting"}">${ok ? "✓" : "○"} ${ok ? readyText : waitingText}</span>`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  async function inspectIcon(manifest, manifestUrl, wantedSize) {
+    const declaration = (manifest?.icons || []).find((icon) =>
+      String(icon.sizes || "").split(/\s+/).includes(wantedSize)
+    );
+    const result = {
+      declared: Boolean(declaration?.src),
+      status: 0,
+      contentType: "",
+      ok: false,
+    };
+    if (!declaration?.src) return result;
+    try {
+      const iconUrl = new URL(declaration.src, manifestUrl);
+      const response = await fetch(iconUrl, { cache: "no-store" });
+      result.status = response.status;
+      result.contentType = response.headers.get("content-type") || "";
+      result.ok = response.ok && result.contentType.toLowerCase().startsWith("image/");
+    } catch (error) {
+      result.error = error?.message || String(error);
+    }
+    return result;
+  }
+
   async function runDiagnostics(force = false) {
     if (diagnosticPromise && !force) return diagnosticPromise;
     diagnosticPromise = (async () => {
       const result = {
         manifestOk: false,
         manifestUrl: "",
+        manifest: null,
         controlled: Boolean(navigator.serviceWorker?.controller),
         workerState: "not registered",
         workerVersion: "unknown",
@@ -42,23 +75,57 @@
 
       const manifestLink = document.querySelector('link[rel="manifest"]');
       if (manifestLink) {
-        result.manifestUrl = new URL(manifestLink.href, location.href).pathname;
+        result.manifestUrl = new URL(manifestLink.href, location.href).href;
         try {
           const response = await fetch(manifestLink.href, { cache: "no-store" });
-          const manifest = response.ok ? await response.json() : null;
-          const iconSizes = new Set((manifest?.icons || []).flatMap((icon) => String(icon.sizes || "").split(/\s+/)));
+          const contentType = response.headers.get("content-type") || "";
+          let manifest = null;
+          let parseError = "";
+          try {
+            manifest = await response.json();
+          } catch (error) {
+            parseError = error?.message || String(error);
+          }
+          const [icon192, icon512] = manifest
+            ? await Promise.all([
+              inspectIcon(manifest, manifestLink.href, "192x192"),
+              inspectIcon(manifest, manifestLink.href, "512x512"),
+            ])
+            : [{ ok: false }, { ok: false }];
+          const details = {
+            status: response.status,
+            responseOk: response.ok,
+            contentType,
+            contentTypeOk: /(?:application\/(?:manifest\+json|json)|text\/json)/i.test(contentType),
+            parsed: Boolean(manifest),
+            parseError,
+            name: manifest?.name || manifest?.short_name || "",
+            nameOk: Boolean(manifest?.name || manifest?.short_name),
+            startUrl: manifest?.start_url || "",
+            startUrlOk: Boolean(manifest?.start_url),
+            display: manifest?.display || "",
+            displayOk: ["fullscreen", "standalone", "minimal-ui", "window-controls-overlay"].includes(manifest?.display),
+            relatedOk: manifest?.prefer_related_applications !== true,
+            icon192,
+            icon512,
+          };
+          result.manifest = details;
           result.manifestOk = Boolean(
-            response.ok &&
-            (manifest?.name || manifest?.short_name) &&
-            manifest?.start_url &&
-            ["fullscreen", "standalone", "minimal-ui", "window-controls-overlay"].includes(manifest?.display) &&
-            iconSizes.has("192x192") &&
-            iconSizes.has("512x512") &&
-            manifest?.prefer_related_applications !== true
+            details.responseOk &&
+            details.contentTypeOk &&
+            details.parsed &&
+            details.nameOk &&
+            details.startUrlOk &&
+            details.displayOk &&
+            details.relatedOk &&
+            details.icon192.ok &&
+            details.icon512.ok
           );
         } catch (error) {
           result.manifestError = error?.message || String(error);
         }
+      } else {
+        result.manifestError = "No rel=manifest link was found in the page.";
       }
 
       if ("serviceWorker" in navigator) {
@@ -79,6 +146,33 @@
       diagnosticPromise = null;
     });
     return diagnosticPromise;
+  }
+
+  function manifestReport() {
+    if (!diagnostic) return statusLine(false, "", "Running manifest checks");
+    if (!diagnostic.manifest) {
+      return statusLine(false, "", `Manifest request failed: ${escapeHtml(diagnostic.manifestError || "unknown error")}`);
+    }
+    const item = diagnostic.manifest;
+    const iconSummary = (icon, size) => {
+      const detail = icon?.status
+        ? `${size} icon: HTTP ${icon.status} ${icon.contentType || "unknown type"}`
+        : `${size} icon is not declared or could not be fetched${icon?.error ? `: ${icon.error}` : ""}`;
+      return statusLine(Boolean(icon?.ok), escapeHtml(detail), escapeHtml(detail));
+    };
+    const rows = [
+      statusLine(item.responseOk, `Manifest HTTP ${item.status}`, `Manifest HTTP ${item.status || "failed"}`),
+      statusLine(item.contentTypeOk, `Manifest type: ${escapeHtml(item.contentType)}`, `Unexpected manifest type: ${escapeHtml(item.contentType || "missing")}`),
+      statusLine(item.parsed, "Manifest JSON parsed", `Manifest JSON failed${item.parseError ? `: ${escapeHtml(item.parseError)}` : ""}`),
+      statusLine(item.nameOk, `App name: ${escapeHtml(item.name)}`, "App name is missing"),
+      statusLine(item.startUrlOk, `Start URL: ${escapeHtml(item.startUrl)}`, "Start URL is missing"),
+      statusLine(item.displayOk, `Display: ${escapeHtml(item.display)}`, `Unsupported display: ${escapeHtml(item.display || "missing")}`),
+      statusLine(item.relatedOk, "Related-app preference allows PWA installation", "prefer_related_applications blocks PWA installation"),
+      iconSummary(item.icon192, "192×192"),
+      iconSummary(item.icon512, "512×512"),
+    ];
+    rows.unshift(statusLine(diagnostic.manifestOk, "Manifest passed every app-side check", "Manifest failed one or more checks"));
+    return rows.join("<br>");
   }
 
   function getWorkerVersion() {
@@ -113,7 +207,7 @@
       message.textContent = "Everything is ready. Install Nth Reader as its own app.";
       readiness.innerHTML = statusLine(true, "Chrome installation prompt received", "") +
         "<br>" + statusLine(Boolean(diagnostic?.controlled), "Offline reader is controlling this page", "Offline reader is not controlling this page yet") +
-        "<br>" + statusLine(Boolean(diagnostic?.manifestOk), "Manifest and required icons validated", "Manifest validation is still running");
+        "<br>" + manifestReport();
       primary.textContent = "Install Now";
       primary.hidden = false;
       return;
@@ -129,7 +223,7 @@
     const controlled = Boolean(diagnostic?.controlled);
     message.textContent = "Chrome has not offered native app installation on this visit.";
     readiness.innerHTML =
-      statusLine(Boolean(diagnostic?.manifestOk), "Manifest and required icons validated", "Checking the web app manifest") +
+      manifestReport() +
       "<br>" + statusLine(controlled, "Offline reader is controlling this page", "Offline reader is not controlling this page yet") +
       `<br><small>Worker: ${diagnostic?.workerVersion || "checking…"} (${diagnostic?.workerState || "checking…"})</small>` +
       "<br>" + statusLine(false, "", "Native installation prompt not received") +
