@@ -321,12 +321,30 @@ window.Shelf = class {
       if (group[0]?.id === book.id) el.style.marginLeft = `${book.leanOffset ?? 0}px`;
     }
 
-    const label = document.createElement("span");
-    label.className = "spine-label";
-    label.textContent = book.title;
-    el.appendChild(label);
+    if (book.scannedSpine) {
+      el.classList.add("scanned-book-spine");
+      el.setAttribute("aria-label", `${book.title}${book.format === "physical" ? ", physical book" : ""}`);
+      const scan = document.createElement("img");
+      scan.className = "scanned-spine-art";
+      scan.src = book.scannedSpine;
+      scan.alt = "";
+      scan.draggable = false;
+      el.appendChild(scan);
+      if (book.format === "physical") {
+        const badge = document.createElement("span");
+        badge.className = "physical-spine-badge";
+        badge.textContent = "⌂";
+        badge.setAttribute("aria-hidden", "true");
+        el.appendChild(badge);
+      }
+    } else {
+      const label = document.createElement("span");
+      label.className = "spine-label";
+      label.textContent = book.title;
+      el.appendChild(label);
+    }
 
-    if (book.coverThumb) {
+    if (book.coverThumb && !book.scannedSpine) {
       el.classList.add("has-cover");
       const plate = document.createElement("span");
       plate.className = "spine-cover-plate";
