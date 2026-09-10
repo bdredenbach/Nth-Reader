@@ -1,4 +1,12 @@
-# Nth Reader V-0.20.00
+# Nth Reader V-0.21.00
+
+## V-0.21: installable PWA and Nth app icon
+
+- Adds a complete web app manifest with standalone display, theme colors, identity, scope, and book-app metadata.
+- Adds a purpose-built Nth Reader icon family for browser tabs, iPhone home screens, Android launchers, and adaptive masks.
+- A native Install Nth Reader action appears in the right drawer when the browser exposes its install prompt.
+- The manifest and every icon size are included in the versioned offline shell cache.
+- Once installed, Nth Reader opens in its own app window while retaining the existing offline-first shelf and reader behavior.
 
 ## V-0.20: perspective-correct wooden photo frame
 
@@ -229,4 +237,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.20.00`.
+The service-worker cache key is `Nth-Reader-V-0.21.00`.
