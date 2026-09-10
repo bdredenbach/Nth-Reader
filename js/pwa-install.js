@@ -10,6 +10,25 @@
   let installPrompt = window.__nthInstallPrompt || null;
   let diagnostic = null;
   let diagnosticPromise = null;
+  const manifestUrl = window.__nthManifestUrl || "./manifest.webmanifest?v=0.24.03";
+
+  function ensureManifestLink() {
+    if (typeof window.__nthEnsureManifestLink === "function") {
+      return window.__nthEnsureManifestLink();
+    }
+    let link = document.querySelector('link[rel~="manifest"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "manifest";
+      document.head.appendChild(link);
+      window.__nthManifestLinkWasRepaired = true;
+    }
+    const wanted = new URL(manifestUrl, location.href).href;
+    if (link.href !== wanted) link.href = wanted;
+    return link;
+  }
+
+  ensureManifestLink();
 
   const standalone = () =>
     window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -68,12 +87,13 @@
         manifestOk: false,
         manifestUrl: "",
         manifest: null,
+        manifestLinkRepaired: Boolean(window.__nthManifestLinkWasRepaired),
         controlled: Boolean(navigator.serviceWorker?.controller),
         workerState: "not registered",
         workerVersion: "unknown",
       };
 
-      const manifestLink = document.querySelector('link[rel="manifest"]');
+      const manifestLink = ensureManifestLink();
       if (manifestLink) {
         result.manifestUrl = new URL(manifestLink.href, location.href).href;
         try {
@@ -161,6 +181,7 @@
       return statusLine(Boolean(icon?.ok), escapeHtml(detail), escapeHtml(detail));
     };
     const rows = [
+      statusLine(true, diagnostic.manifestLinkRepaired ? "Manifest link repaired during page load" : "Manifest link present in page", ""),
       statusLine(item.responseOk, `Manifest HTTP ${item.status}`, `Manifest HTTP ${item.status || "failed"}`),
       statusLine(item.contentTypeOk, `Manifest type: ${escapeHtml(item.contentType)}`, `Unexpected manifest type: ${escapeHtml(item.contentType || "missing")}`),
       statusLine(item.parsed, "Manifest JSON parsed", `Manifest JSON failed${item.parseError ? `: ${escapeHtml(item.parseError)}` : ""}`),

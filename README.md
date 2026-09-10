@@ -1,4 +1,10 @@
-# Nth Reader V-0.24.02
+# Nth Reader V-0.24.03
+
+## V-0.24.03: self-repairing manifest link
+
+- Recreates the page's `rel=manifest` link during the earliest head script if a cached document shell lacks it.
+- Repeats the repair from the installer script, allowing a freshly updated script to repair an older cached HTML document.
+- Points both repair paths to a newly versioned manifest URL and reports whether the link had to be restored.
 
 ## V-0.24.02: field-by-field Chrome install audit
 
@@ -276,4 +282,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.24.02`.
+The service-worker cache key is `Nth-Reader-V-0.24.03`.

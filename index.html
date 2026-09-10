@@ -13,8 +13,25 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.24.02" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.24.03" />
 <script>
+  // Repair the manifest relationship immediately if Chrome restored a stale
+  // cached document shell without its link element.
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.24.03";
+  window.__nthEnsureManifestLink = function () {
+    let link = document.querySelector('link[rel~="manifest"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "manifest";
+      document.head.appendChild(link);
+      window.__nthManifestLinkWasRepaired = true;
+    }
+    const wanted = new URL(window.__nthManifestUrl, location.href).href;
+    if (link.href !== wanted) link.href = wanted;
+    return link;
+  };
+  window.__nthEnsureManifestLink();
+
   // Capture Chrome's one-shot install event before the larger reader scripts
   // load. A previously active service worker can make this event arrive early.
   window.__nthInstallPrompt = null;
