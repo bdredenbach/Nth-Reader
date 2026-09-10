@@ -1,4 +1,10 @@
-# Nth Reader V-0.25.00
+# Nth Reader V-0.25.01
+
+## V-0.25.01: Android carousel gesture fallback
+
+- Uses Android's native touch stream for finger swipes when a browser cancels Pointer Events over the bookcase preview button.
+- Keeps Pointer Events for mouse and pen input without double-turning on touchscreens.
+- Lowers the swipe threshold slightly so comfortable drags rotate reliably while taps still open normally.
 
 ## V-0.25.00: circular, touch-responsive bookcase carousel
 
@@ -298,4 +304,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.25.00`.
+The service-worker cache key is `Nth-Reader-V-0.25.01`.

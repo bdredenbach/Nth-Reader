@@ -37,6 +37,13 @@ window.BookcaseCarousel = class {
     this.stage.addEventListener("pointermove", (event) => this.updateDrag(event));
     this.stage.addEventListener("pointerup", (event) => this.endDrag(event));
     this.stage.addEventListener("pointercancel", () => this.cancelDrag());
+    // Some Android Chromium/WebView combinations cancel pointer sequences on
+    // a large button before pointerup. Use the native touch stream for fingers
+    // and keep Pointer Events for mouse/pen input.
+    this.stage.addEventListener("touchstart", (event) => this.beginTouch(event), { passive: true });
+    this.stage.addEventListener("touchmove", (event) => this.updateTouch(event), { passive: false });
+    this.stage.addEventListener("touchend", (event) => this.endTouch(event), { passive: false });
+    this.stage.addEventListener("touchcancel", () => this.cancelDrag(), { passive: true });
     this.overlay.addEventListener("wheel", (event) => {
       event.preventDefault();
       if (this.wheelLocked) return;
@@ -62,6 +69,7 @@ window.BookcaseCarousel = class {
   }
 
   beginDrag(event) {
+    if (event.pointerType === "touch") return;
     if (this.busy || (event.pointerType === "mouse" && event.button !== 0)) return;
     if (event.target.closest(".carousel-arrow, .carousel-close-btn, .carousel-enter-btn")) return;
     this.pointerStart = {
@@ -75,9 +83,15 @@ window.BookcaseCarousel = class {
   }
 
   updateDrag(event) {
+    if (event.pointerType === "touch") return;
     if (!this.pointerStart || event.pointerId !== this.pointerStart.id) return;
-    const dx = event.clientX - this.pointerStart.x;
-    const dy = event.clientY - this.pointerStart.y;
+    this.updateGesture(event.clientX, event.clientY, event);
+  }
+
+  updateGesture(clientX, clientY, event) {
+    if (!this.pointerStart) return;
+    const dx = clientX - this.pointerStart.x;
+    const dy = clientY - this.pointerStart.y;
     const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
     if (Math.abs(travel) > 6) {
       this.pointerStart.moved = true;
@@ -91,21 +105,55 @@ window.BookcaseCarousel = class {
   }
 
   endDrag(event) {
+    if (event.pointerType === "touch") return;
     if (!this.pointerStart || event.pointerId !== this.pointerStart.id) return;
-    const dx = event.clientX - this.pointerStart.x;
-    const dy = event.clientY - this.pointerStart.y;
-    const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
-    const moved = this.pointerStart.moved;
-    this.pointerStart = null;
     if (this.stage.hasPointerCapture?.(event.pointerId)) {
       this.stage.releasePointerCapture(event.pointerId);
     }
+    this.finishGesture(event.clientX, event.clientY);
+  }
+
+  beginTouch(event) {
+    if (this.busy || this.pointerStart || event.touches.length !== 1) return;
+    if (event.target.closest(".carousel-arrow, .carousel-close-btn, .carousel-enter-btn")) return;
+    const touch = event.touches[0];
+    this.pointerStart = {
+      id: `touch-${touch.identifier}`,
+      x: touch.clientX,
+      y: touch.clientY,
+      moved: false
+    };
+    this.card.classList.add("carousel-card-dragging");
+  }
+
+  updateTouch(event) {
+    if (!this.pointerStart || !String(this.pointerStart.id).startsWith("touch-")) return;
+    const identifier = Number(String(this.pointerStart.id).slice(6));
+    const touch = Array.from(event.touches).find((item) => item.identifier === identifier);
+    if (touch) this.updateGesture(touch.clientX, touch.clientY, event);
+  }
+
+  endTouch(event) {
+    if (!this.pointerStart || !String(this.pointerStart.id).startsWith("touch-")) return;
+    const identifier = Number(String(this.pointerStart.id).slice(6));
+    const touch = Array.from(event.changedTouches).find((item) => item.identifier === identifier);
+    if (!touch) return;
+    if (this.pointerStart.moved) event.preventDefault();
+    this.finishGesture(touch.clientX, touch.clientY);
+  }
+
+  finishGesture(clientX, clientY) {
+    const dx = clientX - this.pointerStart.x;
+    const dy = clientY - this.pointerStart.y;
+    const travel = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+    const moved = this.pointerStart.moved;
+    this.pointerStart = null;
     this.resetDragPreview();
     if (!moved) return;
     this.suppressCardClick = true;
     clearTimeout(this.suppressTimer);
     this.suppressTimer = setTimeout(() => { this.suppressCardClick = false; }, 450);
-    if (Math.abs(travel) >= 42) this.navigate(travel < 0 ? 1 : -1);
+    if (Math.abs(travel) >= 28) this.navigate(travel < 0 ? 1 : -1);
   }
 
   cancelDrag() {
