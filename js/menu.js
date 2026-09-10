@@ -1,7 +1,8 @@
 /* Right drawer: imports, customization, current book and bookmarks. */
 window.Menu = class {
-  constructor({ onAdd, onCustomize, onOpenBook }) {
+  constructor({ onAdd, onScan, onCustomize, onOpenBook }) {
     this.onAdd = onAdd;
+    this.onScan = onScan;
     this.onCustomize = onCustomize;
     this.onOpenBook = onOpenBook;
     this.els = {
@@ -10,6 +11,7 @@ window.Menu = class {
       overlay: document.getElementById("menu-overlay"),
       panel: document.getElementById("menu-panel"),
       addBtn: document.getElementById("menu-add-btn"),
+      scanBtn: document.getElementById("menu-scan-btn"),
       customizeBtn: document.getElementById("menu-customize-btn"),
       current: document.getElementById("currently-reading"),
       bookmarksBtn: document.getElementById("menu-bookmarks-btn"),
@@ -21,6 +23,7 @@ window.Menu = class {
     this.els.closeBtn.addEventListener("click", () => this.close());
     this.els.overlay.addEventListener("click", () => this.close());
     this.els.addBtn.addEventListener("click", () => { this.close(); this.onAdd(); });
+    this.els.scanBtn.addEventListener("click", () => { this.close(); this.onScan(); });
     this.els.customizeBtn.addEventListener("click", () => { this.close(); this.onCustomize(); });
     this.els.bookmarksBtn.addEventListener("click", () => {
       this.els.bookmarkList.hidden = !this.els.bookmarkList.hidden;
