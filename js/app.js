@@ -28,8 +28,15 @@
     if (customize.active) customize.showMoveToast(book, previous);
   };
 
+  const spineScanner = new SpineScanner({
+    getBooks: () => NthDB.all(),
+    onCreate: (payload) => createPhysicalBook(payload),
+    onLink: (bookId, payload) => applyScannedSpine(bookId, payload),
+  });
+
   const menu = new Menu({
     onAdd: () => fileInput.click(),
+    onScan: () => spineScanner.choosePhoto(),
     onCustomize: () => customize.enter(),
     onOpenBook: (id, bookmark) => openBook(id, bookmark),
   });
@@ -80,10 +87,16 @@
   });
 
   async function openBook(id, bookmark = null) {
-    const [book, sourceFile] = await Promise.all([NthDB.get(id), NthDB.getFile(id)]);
+    const book = await NthDB.get(id);
     if (!book) return;
     try {
       shelf.setActiveBookcase(Math.floor((Number(book.shelfIndex) || 0) / 5));
+      if (book.format === "physical") {
+        if (book.linkedBookId) return openBook(book.linkedBookId, bookmark);
+        spineScanner.showBook(book);
+        return;
+      }
+      const sourceFile = await NthDB.getFile(id);
       if (!sourceFile) {
         pendingRepairBookId = id;
         throw new Error(`The shelf entry is safe, but its source file is missing. Use Add Books and select "${book.fileName || book.title}" to repair it in place; your shelf arrangement and progress will be preserved.`);
@@ -147,6 +160,48 @@
       // holding the complete source archive in RAM while the shelf is open.
       await content?.dispose?.();
     }
+  }
+
+  async function createPhysicalBook(payload) {
+    NthDB.requestPersistence();
+    const shelfIndex = await firstEmptyShelfIndex();
+    const book = {
+      id: `physical-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: payload.title,
+      author: payload.author || "",
+      format: "physical",
+      physicalOnly: true,
+      scannedSpine: payload.data,
+      spineWidth: payload.spineWidth,
+      spineHeight: payload.spineHeight,
+      addedAt: Date.now(),
+      shelfIndex,
+      slot: Date.now(),
+      progress: 0,
+    };
+    await NthDB.put(book);
+    const targetBookcase = Math.floor(shelfIndex / 5);
+    shelf.bookcaseCount = Math.max(shelf.bookcaseCount, targetBookcase + 2);
+    shelf.shelfCount = shelf.bookcaseCount * 5;
+    shelf.setActiveBookcase(targetBookcase, { render: false });
+    await refresh();
+    showStatus(`Added physical book “${book.title}”.`);
+    return book;
+  }
+
+  async function applyScannedSpine(bookId, payload) {
+    NthDB.requestPersistence();
+    const book = await NthDB.get(bookId);
+    if (!book || book.format === "physical") throw new Error("Choose an existing digital book.");
+    book.scannedSpine = payload.data;
+    book.spineWidth = payload.spineWidth;
+    book.spineHeight = payload.spineHeight;
+    if (payload.author && !book.author) book.author = payload.author;
+    await NthDB.put(book);
+    shelf.setActiveBookcase(Math.floor((Number(book.shelfIndex) || 0) / 5), { render: false });
+    await refresh();
+    showStatus(`Applied the photographed spine to “${book.title}”.`);
+    return book;
   }
 
   async function repairMissingBook(file, existingBooks) {
