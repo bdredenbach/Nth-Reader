@@ -1,4 +1,12 @@
-# Nth Reader V-0.24.00
+# Nth Reader V-0.24.01
+
+## V-0.24.01: truthful PWA install diagnostics
+
+- Makes `manifest.webmanifest` the primary linked manifest and versions its URL to bypass a stale Chrome manifest cache.
+- Validates the live manifest requirements and reports the active service-worker state and version in the install panel.
+- Shows **Install Now** only after Chrome actually supplies its native install event.
+- Replaces the artificial countdown and indefinite “preparing” message with accurate Android installation guidance.
+- Keeps `manifest.json` as an identical compatibility copy and offline-cache entry.
 
 ## V-0.24: conservative Android manifest compatibility
 
@@ -261,4 +269,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.24.00`.
+The service-worker cache key is `Nth-Reader-V-0.24.01`.
