@@ -375,6 +375,34 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   box-shadow: inset 0 1px rgba(255,255,255,.18), 0 5px 15px rgba(0,0,0,.22);
 }
 
+.install-overlay {
+  position: fixed; inset: 0; z-index: 260;
+  background: rgba(7,3,1,.72); backdrop-filter: blur(3px);
+}
+.install-panel {
+  position: fixed; z-index: 261; left: 50%; top: 50%;
+  width: min(calc(100vw - 36px), 380px); max-height: calc(100dvh - 48px);
+  overflow-y: auto; transform: translate(-50%,-50%);
+  padding: 24px 20px 18px; border-radius: 20px; text-align: center;
+  color: #f7eddd; background: linear-gradient(160deg,#342011,#1b1008 72%);
+  border: 1px solid rgba(255,211,137,.22);
+  box-shadow: 0 24px 65px rgba(0,0,0,.65);
+}
+.install-panel-icon img {
+  width: 76px; height: 76px; border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.45);
+}
+.install-panel h2 { margin: 12px 0 8px; font-size: 22px; }
+.install-panel p { margin: 0 0 14px; color: #d9cab8; line-height: 1.45; font-size: 14px; }
+.install-readiness {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(255,255,255,.06); text-align: left;
+  font-size: 13px; line-height: 1.55;
+}
+.install-ready { color: #bfe7a7; }
+.install-waiting { color: #f0c66d; }
+.install-panel .menu-action-btn { width: 100%; margin-bottom: 9px; }
+
 .menu-section-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
   opacity: .6; margin-bottom: 8px;
