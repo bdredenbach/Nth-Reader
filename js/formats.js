@@ -112,6 +112,7 @@ window.NthFormats = (function () {
     const buf = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const urlCache = new Array(pdf.numPages).fill(null);
+    const textCache = new Array(pdf.numPages).fill(undefined);
 
     async function renderPage(i) {
       const page = await pdf.getPage(i + 1);
@@ -129,6 +130,13 @@ window.NthFormats = (function () {
       urlCache[i] = url;
       return url;
     }
+    async function getPageText(i) {
+      if (textCache[i] !== undefined) return textCache[i];
+      const page = await pdf.getPage(i + 1);
+      const content = await page.getTextContent();
+      textCache[i] = content.items.map((item) => `${item.str || ""}${item.hasEOL ? "\n" : " "}`).join("").trim();
+      return textCache[i];
+    }
     function releasePageUrl(i) {
       if (!urlCache[i]) return;
       URL.revokeObjectURL(urlCache[i]);
@@ -136,12 +144,14 @@ window.NthFormats = (function () {
     }
     async function dispose() {
       urlCache.forEach((url, index) => { if (url) releasePageUrl(index); });
+      textCache.fill(undefined);
       try { await pdf.destroy(); } catch (_) { /* already released */ }
     }
     return {
       kind: "paged",
       pageCount: pdf.numPages,
       getPageUrl,
+      getPageText,
       releasePageUrl,
       dispose,
       async coverUrl() { return getPageUrl(0); },
