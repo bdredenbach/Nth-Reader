@@ -1,3 +1,19 @@
+@font-face { font-family:"Nth Alegreya"; src:url("../assets/fonts/alegreya.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Atkinson"; src:url("../assets/fonts/atkinson.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Cormorant"; src:url("../assets/fonts/cormorant.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Crimson Pro"; src:url("../assets/fonts/crimson-pro.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth EB Garamond"; src:url("../assets/fonts/eb-garamond.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Lexend"; src:url("../assets/fonts/lexend.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Libre Baskerville"; src:url("../assets/fonts/libre-baskerville.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Literata"; src:url("../assets/fonts/literata.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Lora"; src:url("../assets/fonts/lora.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Merriweather"; src:url("../assets/fonts/merriweather.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Noto Sans"; src:url("../assets/fonts/noto-sans.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Nunito Sans"; src:url("../assets/fonts/nunito-sans.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Roboto Slab"; src:url("../assets/fonts/roboto-slab.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Source Serif"; src:url("../assets/fonts/source-serif.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+@font-face { font-family:"Nth Vollkorn"; src:url("../assets/fonts/vollkorn.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
+
 :root {
   --wood-dark: #2a1a10;
   --wood-mid: #3d2615;

@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.29.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.30.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.29.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.30.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -270,10 +270,31 @@
     <div id="reading-style-panel" class="reading-style-panel" hidden>
       <label class="reading-style-field">Font
         <select id="reading-font">
-          <option value="book">Book</option>
-          <option value="classic">Classic</option>
-          <option value="modern">Modern</option>
-          <option value="clear">Clear</option>
+          <optgroup label="Built in">
+            <option value="book">Book</option>
+            <option value="classic">Classic</option>
+            <option value="modern">Modern</option>
+            <option value="clear">Clear</option>
+          </optgroup>
+          <optgroup label="Literary &amp; serif">
+            <option value="alegreya">Alegreya</option>
+            <option value="cormorant">Cormorant Garamond</option>
+            <option value="crimson-pro">Crimson Pro</option>
+            <option value="eb-garamond">EB Garamond</option>
+            <option value="libre-baskerville">Libre Baskerville</option>
+            <option value="literata">Literata</option>
+            <option value="lora">Lora</option>
+            <option value="merriweather">Merriweather</option>
+            <option value="roboto-slab">Roboto Slab</option>
+            <option value="source-serif">Source Serif</option>
+            <option value="vollkorn">Vollkorn</option>
+          </optgroup>
+          <optgroup label="Modern &amp; accessible">
+            <option value="atkinson">Atkinson Hyperlegible</option>
+            <option value="lexend">Lexend</option>
+            <option value="noto-sans">Noto Sans</option>
+            <option value="nunito-sans">Nunito Sans</option>
+          </optgroup>
         </select>
       </label>
       <label class="reading-style-field">Font size <output id="reading-font-size-value">17px</output>

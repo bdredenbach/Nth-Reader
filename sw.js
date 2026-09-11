@@ -1,19 +1,34 @@
-// NTH READER — V-0.29.00
+// NTH READER — V-0.30.00
 
-const SW_VERSION = "Nth-Reader-V-0.29.00";
+const SW_VERSION = "Nth-Reader-V-0.30.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./manifest.webmanifest?v=0.29.00",
+  "./manifest.webmanifest?v=0.30.00",
   "./css/style.css",
   "./assets/icons/favicon-32.png",
   "./assets/icons/apple-touch-icon.png",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./assets/icons/icon-maskable-512.png",
+  "./assets/fonts/alegreya.woff",
+  "./assets/fonts/atkinson.woff",
+  "./assets/fonts/cormorant.woff",
+  "./assets/fonts/crimson-pro.woff",
+  "./assets/fonts/eb-garamond.woff",
+  "./assets/fonts/lexend.woff",
+  "./assets/fonts/libre-baskerville.woff",
+  "./assets/fonts/literata.woff",
+  "./assets/fonts/lora.woff",
+  "./assets/fonts/merriweather.woff",
+  "./assets/fonts/noto-sans.woff",
+  "./assets/fonts/nunito-sans.woff",
+  "./assets/fonts/roboto-slab.woff",
+  "./assets/fonts/source-serif.woff",
+  "./assets/fonts/vollkorn.woff",
   "./js/db.js",
   "./js/formats.js",
   "./js/page-turn.js",

@@ -1,4 +1,12 @@
-# Nth Reader V-0.29.00
+# Nth Reader V-0.30.00
+
+## V-0.30.00: expanded offline font library
+
+- Adds fifteen genuine bundled reading fonts: Alegreya, Atkinson Hyperlegible, Cormorant Garamond, Crimson Pro, EB Garamond, Lexend, Libre Baskerville, Literata, Lora, Merriweather, Noto Sans, Nunito Sans, Roboto Slab, Source Serif, and Vollkorn.
+- Organizes the font menu into Built in, Literary & serif, and Modern & accessible sections.
+- Subsets the new fonts to broad Latin, punctuation, symbols, and accented characters, keeping all fifteen to roughly 1.1 MB combined.
+- Waits for a selected bundled font to load before repaginating, preventing fallback-font measurements from clipping or shifting finished pages.
+- Caches every font for fully offline PWA reading. License texts are preserved in `assets/fonts/licenses/` (SIL Open Font License or Apache License, as applicable).
 
 ## V-0.29.00: personalized reading styles
 
@@ -355,4 +363,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.29.00`.
+The service-worker cache key is `Nth-Reader-V-0.30.00`.

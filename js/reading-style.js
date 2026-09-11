@@ -15,8 +15,35 @@ window.ReadingStyleController = class {
       classic: 'Baskerville,"Palatino Linotype",Palatino,serif',
       modern: '-apple-system,"Segoe UI",Roboto,Arial,sans-serif',
       clear: 'Verdana,Tahoma,Arial,sans-serif',
+      alegreya: '"Nth Alegreya",Georgia,serif',
+      atkinson: '"Nth Atkinson",Verdana,sans-serif',
+      cormorant: '"Nth Cormorant",Georgia,serif',
+      "crimson-pro": '"Nth Crimson Pro",Georgia,serif',
+      "eb-garamond": '"Nth EB Garamond",Georgia,serif',
+      lexend: '"Nth Lexend",Verdana,sans-serif',
+      "libre-baskerville": '"Nth Libre Baskerville",Georgia,serif',
+      literata: '"Nth Literata",Georgia,serif',
+      lora: '"Nth Lora",Georgia,serif',
+      merriweather: '"Nth Merriweather",Georgia,serif',
+      "noto-sans": '"Nth Noto Sans",Arial,sans-serif',
+      "nunito-sans": '"Nth Nunito Sans",Arial,sans-serif',
+      "roboto-slab": '"Nth Roboto Slab",Georgia,serif',
+      "source-serif": '"Nth Source Serif",Georgia,serif',
+      vollkorn: '"Nth Vollkorn",Georgia,serif',
     };
-    this.fontNames = { book: "Book", classic: "Classic", modern: "Modern", clear: "Clear" };
+    this.fontNames = {
+      book:"Book", classic:"Classic", modern:"Modern", clear:"Clear",
+      alegreya:"Alegreya", atkinson:"Atkinson", cormorant:"Cormorant", "crimson-pro":"Crimson Pro",
+      "eb-garamond":"EB Garamond", lexend:"Lexend", "libre-baskerville":"Libre Baskerville",
+      literata:"Literata", lora:"Lora", merriweather:"Merriweather", "noto-sans":"Noto Sans",
+      "nunito-sans":"Nunito Sans", "roboto-slab":"Roboto Slab", "source-serif":"Source Serif", vollkorn:"Vollkorn",
+    };
+    this.webFontNames = {
+      alegreya:"Nth Alegreya", atkinson:"Nth Atkinson", cormorant:"Nth Cormorant", "crimson-pro":"Nth Crimson Pro",
+      "eb-garamond":"Nth EB Garamond", lexend:"Nth Lexend", "libre-baskerville":"Nth Libre Baskerville",
+      literata:"Nth Literata", lora:"Nth Lora", merriweather:"Nth Merriweather", "noto-sans":"Nth Noto Sans",
+      "nunito-sans":"Nth Nunito Sans", "roboto-slab":"Nth Roboto Slab", "source-serif":"Nth Source Serif", vollkorn:"Nth Vollkorn",
+    };
     this.themeNames = { paper: "Paper", sepia: "Sepia", night: "Night" };
     this.settings = { ...this.defaults };
     this.loaded = false;
@@ -63,7 +90,10 @@ window.ReadingStyleController = class {
     this.els.bar.hidden = !available;
     this.els.panel.hidden = true;
     this.els.toggle.setAttribute("aria-expanded", "false");
-    if (available) this.setVisible(true);
+    if (available) {
+      await this.ensureFontLoaded();
+      this.setVisible(true);
+    }
   }
 
   close() {
@@ -163,7 +193,8 @@ window.ReadingStyleController = class {
     this.els.summary.textContent = "Updating pages…";
     this.reflowTimer = setTimeout(() => {
       this.reflowTimer = null;
-      this.reader.applyReadingStyle()
+      this.ensureFontLoaded()
+        .then(() => this.reader.applyReadingStyle())
         .then(() => this.updateUI())
         .catch(() => { this.els.summary.textContent = "Could not update pages"; });
     }, 320);
@@ -175,6 +206,15 @@ window.ReadingStyleController = class {
       this.saveTimer = null;
       NthDB.settings.set("readingStyle", this.settings).catch(() => {});
     }, 180);
+  }
+
+  async ensureFontLoaded() {
+    const family = this.webFontNames[this.settings.font];
+    if (!family || !document.fonts?.load) return;
+    await Promise.race([
+      document.fonts.load(`${this.settings.size}px "${family}"`),
+      new Promise((resolve) => setTimeout(resolve, 1800)),
+    ]);
   }
 
   setVisible(visible) {
