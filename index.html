@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.28.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.29.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.28.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.29.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -259,6 +259,43 @@
   <div id="flow-viewport" class="flow-viewport" hidden>
     <div id="flow-inner" class="flow-inner"></div>
   </div>
+  <section id="reading-style-bar" class="reading-style-bar" hidden aria-label="Reading style controls">
+    <div class="reading-style-quick">
+      <button id="reading-style-toggle" class="reading-style-btn reading-style-aa" type="button" aria-label="Open reading style settings" aria-expanded="false">Aa</button>
+      <button id="reading-style-smaller" class="reading-style-btn" type="button" aria-label="Make text smaller">A−</button>
+      <span id="reading-style-summary" class="reading-style-summary">Book · 17px</span>
+      <button id="reading-style-larger" class="reading-style-btn" type="button" aria-label="Make text larger">A+</button>
+      <button id="reading-style-theme-quick" class="reading-style-btn reading-style-theme-quick" type="button" aria-label="Change page theme">☀</button>
+    </div>
+    <div id="reading-style-panel" class="reading-style-panel" hidden>
+      <label class="reading-style-field">Font
+        <select id="reading-font">
+          <option value="book">Book</option>
+          <option value="classic">Classic</option>
+          <option value="modern">Modern</option>
+          <option value="clear">Clear</option>
+        </select>
+      </label>
+      <label class="reading-style-field">Font size <output id="reading-font-size-value">17px</output>
+        <input id="reading-font-size" type="range" min="14" max="26" step="1" value="17" />
+      </label>
+      <label class="reading-style-field">Line spacing <output id="reading-line-height-value">1.55</output>
+        <input id="reading-line-height" type="range" min="130" max="200" step="5" value="155" />
+      </label>
+      <label class="reading-style-field">Paragraph spacing <output id="reading-paragraph-gap-value">85%</output>
+        <input id="reading-paragraph-gap" type="range" min="40" max="140" step="5" value="85" />
+      </label>
+      <div class="reading-style-themes" aria-label="Page theme">
+        <button type="button" data-reading-theme-choice="paper" aria-pressed="true">Paper</button>
+        <button type="button" data-reading-theme-choice="sepia" aria-pressed="false">Sepia</button>
+        <button type="button" data-reading-theme-choice="night" aria-pressed="false">Night</button>
+      </div>
+      <div class="reading-style-actions">
+        <button id="reading-align-toggle" type="button">Left aligned</button>
+        <button id="reading-style-reset" type="button">Reset</button>
+      </div>
+    </div>
+  </section>
   <div id="reader-chrome" class="reader-chrome visible">
     <button id="reader-prev-btn" class="reader-nav-arrow" type="button" aria-label="Previous page">‹</button>
     <button id="reader-bookmark-btn" class="reader-bookmark-btn" type="button" aria-label="Bookmark this page" aria-pressed="false">♡</button>
@@ -275,6 +312,7 @@
 <script src="js/formats.js"></script>
 <script src="js/page-turn.js"></script>
 <script src="js/page-mode.js"></script>
+<script src="js/reading-style.js"></script>
 <script src="js/epub-page-reader.js"></script>
 <script src="js/voice-reader.js"></script>
 <script src="js/reader.js"></script>
