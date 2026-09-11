@@ -1,4 +1,11 @@
-# Nth Reader V-0.31.02
+# Nth Reader V-0.31.03
+
+## V-0.31.03: seamless photographic reading page
+
+- Replaces the separate digital page gradient with the precisely aligned right-page region from each physical book asset.
+- Removes the live page's rectangular border and outer drop shadow, eliminating the ledge effect along its top and bottom.
+- Keeps the inner-gutter contact shadow and lets Turn.js flip the complete photographic page texture.
+- Uses one shared theme image for the live page and stationary book, keeping Paper, Sepia, and Night edges continuous.
 
 ## V-0.31.02: seated page and deeper book block
 
@@ -383,4 +390,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.31.02`.
+The service-worker cache key is `Nth-Reader-V-0.31.03`.

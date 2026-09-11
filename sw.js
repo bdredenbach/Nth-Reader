@@ -1,13 +1,13 @@
-// NTH READER — V-0.31.02
+// NTH READER — V-0.31.03
 
-const SW_VERSION = "Nth-Reader-V-0.31.02";
+const SW_VERSION = "Nth-Reader-V-0.31.03";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./manifest.webmanifest?v=0.31.02",
+  "./manifest.webmanifest?v=0.31.03",
   "./css/style.css",
   "./assets/icons/favicon-32.png",
   "./assets/icons/apple-touch-icon.png",
