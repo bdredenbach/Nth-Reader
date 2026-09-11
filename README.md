@@ -1,4 +1,10 @@
-# Nth Reader V-0.31.01
+# Nth Reader V-0.31.02
+
+## V-0.31.02: seated page and deeper book block
+
+- Adds a theme-matched inner-gutter shadow so the live reading page appears seated inside the physical binding.
+- Lengthens the generated book slightly beneath the reader, revealing more of the layered lower page block while preserving the fitted top seam.
+- Applies the gutter treatment to both the Turn.js reader and its CSS fallback without changing the readable area or pagination.
 
 ## V-0.31.01: fitted lower book edge
 
@@ -377,4 +383,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.31.01`.
+The service-worker cache key is `Nth-Reader-V-0.31.02`.
