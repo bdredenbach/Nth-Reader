@@ -38,8 +38,12 @@ window.Reader = class {
     this.index = 0;
     this._chromeTimer = null;
     this._scrollSaveTimer = null;
+    this._flowLayoutRevision = 0;
+    this._styleReflowing = false;
+    this._styleReflowRequested = false;
 
     this.nativePageTurn = new LongboxNativePageTurn(this);
+    this.readingStyle = new ReadingStyleController(this);
     this.epubPages = new EpubPageReader(this.els.flowInner, this);
     this.voiceReader = new VoiceReader(this);
     this.turnPageMode = new LongboxPageMode({
@@ -86,6 +90,7 @@ window.Reader = class {
   async open(book, content, bookmark = null) {
     this.book = book;
     this.content = content;
+    await this.readingStyle.open(content);
     this.els.title.textContent = book.title;
     this.els.root.hidden = false;
     this.showChrome();
@@ -120,7 +125,7 @@ window.Reader = class {
     await this.epubPages.prepare(this.content.html, progress);
     this.comic = {
       pageCount: this.epubPages.pages.length,
-      id: `${this.book.id}-reflow-${this.els.flow.clientWidth}x${this.els.flow.clientHeight}`,
+      id: `${this.book.id}-reflow-${this.els.flow.clientWidth}x${this.els.flow.clientHeight}-style-${this._flowLayoutRevision}`,
       title: this.book.title,
     };
     this.index = this.epubPages.index;
@@ -139,6 +144,7 @@ window.Reader = class {
 
   async close() {
     this.voiceReader.close();
+    this.readingStyle.close();
     this.saveProgress();
     await this.turnPageMode.destroy();
     await this.content?.dispose?.();
@@ -250,21 +256,48 @@ window.Reader = class {
     return true;
   }
 
+  async applyReadingStyle() {
+    if (this.content?.kind !== "flow" || !this.book) return;
+    if (this._styleReflowing) {
+      this._styleReflowRequested = true;
+      return;
+    }
+    this._styleReflowing = true;
+    try {
+      do {
+        this._styleReflowRequested = false;
+        const total = Math.max(1, (this.epubPages.pages?.length || 1) - 1);
+        const progress = this.index / total;
+        this.book.progress = progress;
+        this.voiceReader.stop();
+        this._flowLayoutRevision++;
+        await this.openFlowWithTurn(progress);
+        await this.voiceReader.open(this.book, this.content);
+      } while (this._styleReflowRequested && this.book && this.content?.kind === "flow");
+    } finally {
+      this._styleReflowing = false;
+      this.showChrome();
+    }
+  }
+
   // ---------- shared chrome / progress ----------
   showChrome() {
     this.els.chrome.classList.add("visible");
     this.voiceReader.setVisible(true);
+    this.readingStyle.setVisible(true);
     clearTimeout(this._chromeTimer);
     this._chromeTimer = setTimeout(() => {
-      if (this.voiceReader.settingsOpen()) return;
+      if (this.voiceReader.settingsOpen() || this.readingStyle.panelOpen()) return;
       this.els.chrome.classList.remove("visible");
       this.voiceReader.setVisible(false);
+      this.readingStyle.setVisible(false);
     }, 2200);
   }
   toggleChrome() {
     if (this.els.chrome.classList.contains("visible")) {
       this.els.chrome.classList.remove("visible");
       this.voiceReader.setVisible(false);
+      this.readingStyle.setVisible(false);
       clearTimeout(this._chromeTimer);
     } else {
       this.showChrome();
