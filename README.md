@@ -1,4 +1,14 @@
-# Nth Reader V-0.28.00
+# Nth Reader V-0.29.00
+
+## V-0.29.00: personalized reading styles
+
+- Adds a matching **Aa** toolbar immediately above the bottom reader navigation for every reflowable book.
+- Includes quick smaller/larger text buttons and a one-tap Paper, Sepia, or Night theme cycle.
+- The expanded style tray provides Book, Classic, Modern, and Clear device-safe fonts; 14–26px type; line spacing; paragraph spacing; and left/justified alignment.
+- Typography changes repaginate the live HTML book while preserving the reader's current percentage rather than returning to the beginning.
+- Reading choices are saved in IndexedDB and restored across books, refreshes, and PWA launches.
+- The style toolbar fades with narration and navigation, but remains available while its settings tray is open.
+- Comics, images, and fixed-layout PDF pages remain visually untouched because their typography is baked into the page artwork.
 
 ## V-0.28.00: native read-aloud with automatic page turns
 
@@ -345,4 +355,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.28.00`.
+The service-worker cache key is `Nth-Reader-V-0.29.00`.
