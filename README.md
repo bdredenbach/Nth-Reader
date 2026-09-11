@@ -1,4 +1,10 @@
-# Nth Reader V-0.31.00
+# Nth Reader V-0.31.01
+
+## V-0.31.01: fitted lower book edge
+
+- Brings the physical book's lower page block up against the readable page and exposes its layered edge across the full width.
+- Keeps the generated top seam aligned while allowing the binding and bottom pages to extend naturally beneath the reader.
+- Uses the same photorealistic Paper, Sepia, and Night artwork as the side curl, so the side and lower edges remain perfectly matched.
 
 ## V-0.31.00: physical open-book reader
 
@@ -371,4 +377,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.31.00`.
+The service-worker cache key is `Nth-Reader-V-0.31.01`.

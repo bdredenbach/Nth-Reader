@@ -439,8 +439,8 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   position:absolute; z-index:3; pointer-events:none; overflow:visible;
 }
 .reader-book-underlay::before, .epub-fallback-book-underlay {
-  content:""; position:absolute; left:-31%; top:-7%;
-  width:132%; height:110%;
+  content:""; position:absolute; left:-31%; top:-7.4%;
+  width:132%; height:114%;
   background:url("../assets/reader/physical-book-paper.webp") center / 100% 100% no-repeat;
   filter:drop-shadow(0 10px 9px rgba(0,0,0,.58));
 }
