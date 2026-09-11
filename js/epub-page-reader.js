@@ -70,6 +70,7 @@ window.EpubPageReader = class {
   makeTurnSource(index) {
     return {
       lazy: true,
+      reflow: true,
       eager: index === 0,
       render: () => this.makeTurnPage(index),
     };
@@ -115,7 +116,7 @@ window.EpubPageReader = class {
     book.className = "epub-book";
     book.style.width = `${pageW}px`;
     book.style.height = `${pageH}px`;
-    book.innerHTML = '<div class="epub-sheet sheet-three"></div><div class="epub-sheet sheet-two"></div><div class="epub-sheet sheet-one"></div>';
+    book.innerHTML = '<div class="epub-fallback-book-underlay" aria-hidden="true"></div><div class="epub-sheet sheet-three"></div><div class="epub-sheet sheet-two"></div><div class="epub-sheet sheet-one"></div>';
 
     const paper = document.createElement("article");
     paper.className = "epub-page-paper";

@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.30.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.31.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.30.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.31.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -255,6 +255,7 @@
       <label class="voice-auto-turn"><input id="voice-auto-turn" type="checkbox" checked /> Turn pages automatically</label>
     </div>
   </section>
+  <div id="reader-book-underlay" class="reader-book-underlay" hidden aria-hidden="true"></div>
   <div id="page-viewport" class="page-viewport"></div>
   <div id="flow-viewport" class="flow-viewport" hidden>
     <div id="flow-inner" class="flow-inner"></div>

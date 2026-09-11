@@ -17,6 +17,7 @@ window.Reader = class {
   constructor() {
     this.els = {
       root: document.getElementById("reader-view"),
+      bookUnderlay: document.getElementById("reader-book-underlay"),
       viewport: document.getElementById("page-viewport"),
       flow: document.getElementById("flow-viewport"),
       flowInner: document.getElementById("flow-inner"),
@@ -96,6 +97,7 @@ window.Reader = class {
     this.showChrome();
 
     if (content.kind === "paged") {
+      this.hideBookUnderlay();
       this._flowUsingTurn = false;
       this.comic = {
         pageCount: content.pageCount, id: book.id, title: book.title,
@@ -120,6 +122,7 @@ window.Reader = class {
   async openFlowWithTurn(progress) {
     // The flow host is briefly visible while chapters are measured at the
     // actual device size, then the resulting live-HTML pages move to Turn.js.
+    this.hideBookUnderlay();
     this.els.viewport.hidden = true;
     this.els.flow.hidden = false;
     await this.epubPages.prepare(this.content.html, progress);
@@ -135,16 +138,61 @@ window.Reader = class {
     this._flowUsingTurn = !!ok;
     this._usingFallback = !ok;
     if (!ok) {
+      this.hideBookUnderlay();
       this.els.viewport.hidden = true;
       this.els.flow.hidden = false;
       this.epubPages.render();
+    } else {
+      this.showBookUnderlay();
     }
     this.updateSliderLabel();
+  }
+
+  showBookUnderlay() {
+    const underlay = this.els.bookUnderlay;
+    if (!underlay) return;
+    underlay.hidden = false;
+    const position = () => this.positionBookUnderlay();
+    requestAnimationFrame(() => requestAnimationFrame(position));
+    setTimeout(position, 140);
+  }
+
+  hideBookUnderlay() {
+    const underlay = this.els.bookUnderlay;
+    if (!underlay) return;
+    underlay.hidden = true;
+    underlay.removeAttribute("style");
+  }
+
+  positionBookUnderlay() {
+    const underlay = this.els.bookUnderlay;
+    if (!underlay || underlay.hidden || !this._flowUsingTurn) return;
+    const viewportRect = this.els.viewport.getBoundingClientRect();
+    const candidates = Array.from(this.els.viewport.querySelectorAll(".epub-turn-paper"))
+      .map((node) => ({ node, rect: node.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 20 && rect.height > 20);
+    if (!candidates.length) return;
+    const centerX = viewportRect.left + viewportRect.width / 2;
+    const centerY = viewportRect.top + viewportRect.height / 2;
+    candidates.sort((a, b) => {
+      const da = Math.abs(a.rect.left + a.rect.width / 2 - centerX) + Math.abs(a.rect.top + a.rect.height / 2 - centerY);
+      const db = Math.abs(b.rect.left + b.rect.width / 2 - centerX) + Math.abs(b.rect.top + b.rect.height / 2 - centerY);
+      return da - db;
+    });
+    const rect = candidates[0].rect;
+    const rootRect = this.els.root.getBoundingClientRect();
+    Object.assign(underlay.style, {
+      left: `${rect.left - rootRect.left}px`,
+      top: `${rect.top - rootRect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
   }
 
   async close() {
     this.voiceReader.close();
     this.readingStyle.close();
+    this.hideBookUnderlay();
     this.saveProgress();
     await this.turnPageMode.destroy();
     await this.content?.dispose?.();

@@ -1,4 +1,12 @@
-# Nth Reader V-0.30.00
+# Nth Reader V-0.31.00
+
+## V-0.31.00: physical open-book reader
+
+- Adds three coordinated, high-resolution WebP book underlays for Paper, Sepia, and Night reading themes.
+- Places the live HTML page over a stationary photorealistic open book, exposing a raised left leaf, central binding, and layered page block along the bottom.
+- Keeps the physical book stationary while Turn.js curls only the readable page.
+- Aligns the underlay to the live page after pagination and device resizing without changing text layout, gestures, bookmarks, narration, or page count.
+- Preserves the existing lightweight CSS fallback and keeps comics, images, and fixed-layout PDF pages unchanged.
 
 ## V-0.30.00: expanded offline font library
 
@@ -363,4 +371,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.30.00`.
+The service-worker cache key is `Nth-Reader-V-0.31.00`.

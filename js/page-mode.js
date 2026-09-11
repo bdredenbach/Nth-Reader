@@ -91,6 +91,7 @@ window.LongboxPageMode = (() => {
         page.appendChild(img);
       } else if (source?.lazy && typeof source.render === "function") {
         page.classList.add("longbox-lazy-page");
+        if (source.reflow) page.classList.add("longbox-reflow-page");
         this._lazySources.set(index, source);
         if (source.eager) {
           page.appendChild(source.render());
@@ -141,6 +142,7 @@ window.LongboxPageMode = (() => {
         img.decoding = "async";
         page.replaceChildren(img);
       } else if (actual?.lazy && typeof actual.render === "function") {
+        if (actual.reflow) page.classList.add("longbox-reflow-page");
         page.replaceChildren(actual.render());
       } else {
         const node = actual?.node || actual;
