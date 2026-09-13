@@ -19,6 +19,8 @@ window.VoiceReader = class {
       prev: document.getElementById("voice-prev-btn"),
       next: document.getElementById("voice-next-btn"),
       rate: document.getElementById("voice-rate-btn"),
+      rateSlider: document.getElementById("voice-rate-slider"),
+      rateValue: document.getElementById("voice-rate-value"),
       settingsButton: document.getElementById("voice-settings-btn"),
       settings: document.getElementById("voice-reader-settings"),
       voice: document.getElementById("voice-select"),
@@ -35,6 +37,7 @@ window.VoiceReader = class {
     this.generation = 0;
     this.rateValue = 1;
     this.voiceUri = "";
+    this.nativeVoiceName = "";
     this.voices = [];
     this.settingsLoaded = false;
     this.available = false;
@@ -46,10 +49,17 @@ window.VoiceReader = class {
     this.els.rate.addEventListener("click", () => this.cycleRate());
     this.els.settingsButton.addEventListener("click", () => this.toggleSettings());
     this.els.voice.addEventListener("change", () => {
-      this.voiceUri = this.els.voice.value;
+      if (this.nativeAvailable) {
+        this.nativeVoiceName = this.els.voice.value;
+        this.native.setVoice(this.nativeVoiceName);
+      } else {
+        this.voiceUri = this.els.voice.value;
+      }
       this.saveSettings();
-      if (this.playing || this.paused) this.restartSentence();
+      if (!this.nativeAvailable && (this.playing || this.paused)) this.restartSentence();
     });
+    this.els.rateSlider.addEventListener("input", () => this.showRate(Number(this.els.rateSlider.value)));
+    this.els.rateSlider.addEventListener("change", () => this.setRate(Number(this.els.rateSlider.value)));
     this.els.autoTurn.addEventListener("change", () => this.saveSettings());
 
     window.addEventListener("nth-native-narration", (event) => this.onNativeState(event.detail));
@@ -60,7 +70,7 @@ window.VoiceReader = class {
     if (this.nativeAvailable) {
       const option = document.createElement("option");
       option.value = "android-system";
-      option.textContent = "Android system voice · device";
+      option.textContent = "Loading Android voices…";
       this.els.voice.replaceChildren(option);
       this.els.voice.disabled = true;
     } else if (this.supported) {
@@ -106,21 +116,24 @@ window.VoiceReader = class {
     catch (_) { /* narration settings must never prevent a book from opening */ }
     this.rateValue = this.validRate(saved.rate) ? Number(saved.rate) : 1;
     this.voiceUri = String(saved.voiceUri || "");
+    this.nativeVoiceName = String(saved.nativeVoiceName || "");
     this.els.autoTurn.checked = saved.autoTurn !== false;
-    this.els.rate.textContent = `${this.rateValue.toFixed(1)}×`;
+    this.showRate(this.rateValue);
     this.settingsLoaded = true;
-    this.populateVoices();
+    if (this.nativeAvailable) this.populateNativeVoices();
+    else this.populateVoices();
   }
 
   validRate(value) {
     const number = Number(value);
-    return Number.isFinite(number) && number >= .6 && number <= 1.6;
+    return Number.isFinite(number) && number >= .5 && number <= 2;
   }
 
   saveSettings() {
     NthDB.settings.set("narrationSettings", {
       rate: this.rateValue,
       voiceUri: this.voiceUri,
+      nativeVoiceName: this.nativeVoiceName,
       autoTurn: this.els.autoTurn.checked,
     });
   }
@@ -153,6 +166,23 @@ window.VoiceReader = class {
 
   selectedVoice() {
     return this.voices.find((voice) => voice.voiceURI === this.voiceUri) || null;
+  }
+
+  populateNativeVoices(voices = this.native?.getVoices() || []) {
+    if (!this.nativeAvailable || !Array.isArray(voices) || !voices.length) return;
+    const previous = this.nativeVoiceName;
+    this.els.voice.replaceChildren(...voices.map((voice) => {
+      const option = document.createElement("option");
+      option.value = voice.name;
+      option.textContent = `${voice.label}${voice.local ? " · device" : " · online"}`;
+      return option;
+    }));
+    const selected = voices.find((voice) => voice.name === previous)
+      || voices.find((voice) => voice.local)
+      || voices[0];
+    this.nativeVoiceName = selected?.name || "";
+    this.els.voice.value = this.nativeVoiceName;
+    this.els.voice.disabled = false;
   }
 
   setVisible(visible) {
@@ -427,14 +457,27 @@ window.VoiceReader = class {
   }
 
   cycleRate() {
-    const rates = [.8, 1, 1.2, 1.4, 1.6];
+    const rates = [.8, 1, 1.2, 1.4, 1.6, 1.8, 2];
     const current = rates.findIndex((rate) => Math.abs(rate - this.rateValue) < .01);
-    this.rateValue = rates[(current + 1) % rates.length];
+    this.setRate(rates[(current + 1) % rates.length]);
+    this.reader.showChrome();
+  }
+
+  showRate(rate) {
+    const text = `${Number(rate).toFixed(1)}×`;
+    this.els.rate.textContent = text;
+    this.els.rateValue.textContent = text;
+    this.els.rateSlider.value = String(rate);
+  }
+
+  setRate(rate) {
+    if (!this.validRate(rate)) return;
+    this.rateValue = Number(rate);
+    this.showRate(this.rateValue);
     this.saveSettings();
     if (this.nativeAvailable && this.nativeActive) this.native.setRate(this.rateValue);
     else if (this.playing || this.paused) this.restartSentence();
     else this.updateControls();
-    this.reader.showChrome();
   }
 
   restartSentence() {
@@ -512,6 +555,7 @@ window.VoiceReader = class {
         title: this.book?.title || "Nth Reader",
         author: this.book?.author || "",
         rate: this.rateValue,
+        voiceName: this.nativeVoiceName,
       }, units, startIndex);
       this.nativePreparing = false;
       this.updateControls();
@@ -557,6 +601,7 @@ window.VoiceReader = class {
 
   onNativeState(state) {
     if (!this.nativeAvailable || !state || !this.book) return;
+    if (Array.isArray(state.voices)) this.populateNativeVoices(state.voices);
     if (state.bookId && String(state.bookId) !== String(this.book.id)) return;
     this.nativeActive = Boolean(state.active);
     this.playing = Boolean(state.playing);

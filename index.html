@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.32.01" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.32.02" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.32.01";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.32.02";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -252,6 +252,9 @@
     <div id="voice-reader-status" class="voice-reader-status" aria-live="polite">Ready to read</div>
     <div id="voice-reader-settings" class="voice-reader-settings" hidden>
       <label>Voice<select id="voice-select" aria-label="Narrator voice"></select></label>
+      <label>Speed <output id="voice-rate-value">1.0×</output>
+        <input id="voice-rate-slider" type="range" min="0.5" max="2" step="0.1" value="1" />
+      </label>
       <label class="voice-auto-turn"><input id="voice-auto-turn" type="checkbox" checked /> Turn pages automatically</label>
     </div>
   </section>
@@ -260,6 +263,21 @@
   <div id="flow-viewport" class="flow-viewport" hidden>
     <div id="flow-inner" class="flow-inner"></div>
   </div>
+  <section id="reader-page-jump" class="reader-page-jump" hidden role="dialog" aria-modal="true" aria-labelledby="reader-page-jump-title">
+    <div class="reader-page-jump-card">
+      <h2 id="reader-page-jump-title">Go to page</h2>
+      <div id="reader-page-jump-book" class="reader-page-jump-book"></div>
+      <label>Page
+        <input id="reader-page-jump-number" type="number" min="1" inputmode="numeric" />
+      </label>
+      <input id="reader-page-jump-range" type="range" min="1" step="1" aria-label="Choose page" />
+      <div id="reader-page-jump-position" class="reader-page-jump-position"></div>
+      <div class="reader-page-jump-actions">
+        <button id="reader-page-jump-cancel" type="button">Cancel</button>
+        <button id="reader-page-jump-go" type="button">Go to Page</button>
+      </div>
+    </div>
+  </section>
   <section id="reading-style-bar" class="reading-style-bar" hidden aria-label="Reading style controls">
     <div class="reading-style-quick">
       <button id="reading-style-toggle" class="reading-style-btn reading-style-aa" type="button" aria-label="Open reading style settings" aria-expanded="false">Aa</button>

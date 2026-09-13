@@ -3,10 +3,41 @@ package com.nthreader.app;
 import android.content.Context;
 import android.content.Intent;
 import android.webkit.JavascriptInterface;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public final class NarrationBridge {
     private final Context context;
-    NarrationBridge(Context context) { this.context = context.getApplicationContext(); }
+    private TextToSpeech voiceProbe;
+    NarrationBridge(Context context) {
+        this.context = context.getApplicationContext();
+        voiceProbe = new TextToSpeech(this.context, status -> {
+            if (status != TextToSpeech.SUCCESS || voiceProbe == null) return;
+            if (voiceProbe.getVoices() == null) return;
+            List<Voice> voices = new ArrayList<>(voiceProbe.getVoices());
+            voices.sort(Comparator.comparing(Voice::isNetworkConnectionRequired)
+                    .thenComparing(voice -> voice.getLocale().getDisplayName())
+                    .thenComparing(Voice::getName));
+            JSONArray options = new JSONArray();
+            for (Voice voice : voices) {
+                try {
+                    options.put(new JSONObject().put("name", voice.getName())
+                            .put("label", voice.getLocale().getDisplayName() + " · " + voice.getName())
+                            .put("language", voice.getLocale().toLanguageTag())
+                            .put("local", !voice.isNetworkConnectionRequired()));
+                } catch (Exception ignored) {}
+            }
+            NarrationStore.setVoiceOptions(options);
+            NarrationEvents.send(NarrationStore.stateJsonWithVoices());
+            voiceProbe.shutdown();
+            voiceProbe = null;
+        });
+    }
 
     @JavascriptInterface public boolean isAvailable() { return true; }
 
@@ -50,6 +81,13 @@ public final class NarrationBridge {
         Intent intent = new Intent(context, NarrationService.class)
                 .setAction(NarrationService.ACTION_RATE).putExtra("rate", rate);
         context.startForegroundService(intent);
+    }
+    @JavascriptInterface public String getVoices() { return NarrationStore.voicesJson(); }
+    @JavascriptInterface public void setVoice(String name) {
+        NarrationStore.voiceName = name == null ? "" : name;
+        NarrationStore.saveProgress(context);
+        if (NarrationStore.active) command(NarrationService.ACTION_VOICE);
+        else NarrationEvents.send(NarrationStore.stateJsonWithVoices());
     }
     @JavascriptInterface public String getState() { return NarrationStore.stateJson(); }
 

@@ -4,12 +4,13 @@
  */
 window.LongboxPageMode = (() => {
   class PageMode {
-    constructor({ getIssue, getPageUrl, getIndex, setIndex, onPageChanged, onState }) {
+    constructor({ getIssue, getPageUrl, getIndex, setIndex, onPageChanged, onPageNumber, onState }) {
       this.getIssue = getIssue;
       this.getPageUrl = getPageUrl;
       this.getIndex = getIndex;
       this.setIndex = setIndex;
       this.onPageChanged = onPageChanged || (() => {});
+      this.onPageNumber = onPageNumber || (() => {});
       this.onState = onState || (() => {});
       this.host = null;
       this._hostStyle = null;
@@ -372,6 +373,15 @@ window.LongboxPageMode = (() => {
     }
 
     _cornerTouchStart(e) {
+      if (e.target?.closest?.(".epub-page-number")) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        this._cornerGesture = null;
+        this._cornerTapCount = 0;
+        this.onPageNumber();
+        return;
+      }
       const info = this._cornerInfo(e);
       if (!info) return;
 

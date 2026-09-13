@@ -17,6 +17,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
 import java.util.Locale;
 
 public final class NarrationService extends Service implements TextToSpeech.OnInitListener {
@@ -26,6 +27,7 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
     public static final String ACTION_SKIP = "com.nthreader.SKIP";
     public static final String ACTION_SEEK = "com.nthreader.SEEK";
     public static final String ACTION_RATE = "com.nthreader.RATE";
+    public static final String ACTION_VOICE = "com.nthreader.VOICE";
     private static final String CHANNEL = "nth_narration";
     private static final int NOTIFICATION_ID = 32;
 
@@ -56,13 +58,19 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
         else if (ACTION_STOP.equals(action)) stopNarration();
         else if (ACTION_SKIP.equals(action)) {
             NarrationStore.move(intent.getIntExtra("delta", 0));
+            NarrationStore.saveProgress(this);
             if (NarrationStore.playing) speakCurrent(); else publish();
         } else if (ACTION_SEEK.equals(action)) {
             NarrationStore.seek(intent.getDoubleExtra("progress", 0));
+            NarrationStore.saveProgress(this);
             if (NarrationStore.playing) speakCurrent(); else publish();
         } else if (ACTION_RATE.equals(action)) {
-            NarrationStore.rate = (float) Math.max(.6, Math.min(1.6, intent.getDoubleExtra("rate", 1)));
-            NarrationStore.save(this);
+            NarrationStore.rate = (float) Math.max(.5, Math.min(2, intent.getDoubleExtra("rate", 1)));
+            NarrationStore.saveProgress(this);
+            if (NarrationStore.playing) speakCurrent(); else publish();
+        } else if (ACTION_VOICE.equals(action)) {
+            applySelectedVoice();
+            NarrationStore.saveProgress(this);
             if (NarrationStore.playing) speakCurrent(); else publish();
         } else playNarration();
         return START_STICKY;
@@ -76,9 +84,9 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
             publish();
             return;
         }
-        int language = tts.setLanguage(Locale.getDefault());
-        if (language == TextToSpeech.LANG_MISSING_DATA || language == TextToSpeech.LANG_NOT_SUPPORTED) {
-            tts.setLanguage(Locale.US);
+        if (!applySelectedVoice()) {
+            int language = tts.setLanguage(Locale.getDefault());
+            if (language == TextToSpeech.LANG_MISSING_DATA || language == TextToSpeech.LANG_NOT_SUPPORTED) tts.setLanguage(Locale.US);
         }
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) { publish(); }
@@ -103,6 +111,7 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
         NarrationStore.finished = false;
         NarrationStore.error = "";
         pendingPlay = !ready;
+        requestAudioFocus();
         if (ready) speakCurrent(); else publish();
     }
 
@@ -110,11 +119,10 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
         NarrationStore.Unit unit = NarrationStore.current();
         if (!ready || unit == null || !NarrationStore.playing) return;
         pendingPlay = false;
-        requestAudioFocus();
         if (!wakeLock.isHeld()) wakeLock.acquire(60 * 60 * 1000L);
         tts.setSpeechRate(NarrationStore.rate);
         tts.speak(unit.text, TextToSpeech.QUEUE_FLUSH, new Bundle(), "nth-" + NarrationStore.index);
-        NarrationStore.save(this);
+        NarrationStore.saveProgress(this);
         publish();
     }
 
@@ -225,6 +233,7 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
     }
 
     private void requestAudioFocus() {
+        if (focusRequest != null) return;
         AudioAttributes attributes = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
         focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -237,6 +246,16 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
     private void releaseAudio() {
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (audioManager != null && focusRequest != null) audioManager.abandonAudioFocusRequest(focusRequest);
+        focusRequest = null;
+    }
+
+    private boolean applySelectedVoice() {
+        if (!ready || tts == null || NarrationStore.voiceName == null || NarrationStore.voiceName.isEmpty()) return false;
+        if (tts.getVoices() == null) return false;
+        for (Voice voice : tts.getVoices()) {
+            if (NarrationStore.voiceName.equals(voice.getName())) return tts.setVoice(voice) == TextToSpeech.SUCCESS;
+        }
+        return false;
     }
 
     @Override public void onDestroy() {

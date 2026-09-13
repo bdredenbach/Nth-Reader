@@ -28,6 +28,13 @@ window.Reader = class {
       prevBtn: document.getElementById("reader-prev-btn"),
       nextBtn: document.getElementById("reader-next-btn"),
       bookmarkBtn: document.getElementById("reader-bookmark-btn"),
+      pageJump: document.getElementById("reader-page-jump"),
+      pageJumpBook: document.getElementById("reader-page-jump-book"),
+      pageJumpNumber: document.getElementById("reader-page-jump-number"),
+      pageJumpRange: document.getElementById("reader-page-jump-range"),
+      pageJumpPosition: document.getElementById("reader-page-jump-position"),
+      pageJumpCancel: document.getElementById("reader-page-jump-cancel"),
+      pageJumpGo: document.getElementById("reader-page-jump-go"),
     };
 
     this.mode = "single";
@@ -64,6 +71,7 @@ window.Reader = class {
         this.updateBookmarkFlag();
         this.voiceReader.onPageChanged(i);
       },
+      onPageNumber: () => this.openPageJump(),
       onState: () => { /* console.debug("turnjs:", s) if you need to trace init */ },
     });
 
@@ -71,6 +79,27 @@ window.Reader = class {
     this.els.prevBtn.addEventListener("click", () => this.onPrevBtn());
     this.els.nextBtn.addEventListener("click", () => this.onNextBtn());
     this.els.bookmarkBtn.addEventListener("click", () => this.toggleBookmark());
+    this.els.pageLabel.setAttribute("role", "button");
+    this.els.pageLabel.tabIndex = 0;
+    this.els.pageLabel.setAttribute("aria-label", "Choose page");
+    this.els.pageLabel.addEventListener("click", () => this.openPageJump());
+    this.els.pageLabel.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this.openPageJump(); }
+    });
+    this.els.pageJumpCancel.addEventListener("click", () => this.closePageJump());
+    this.els.pageJumpGo.addEventListener("click", () => this.confirmPageJump());
+    this.els.pageJump.addEventListener("click", (event) => {
+      if (event.target === this.els.pageJump) this.closePageJump();
+    });
+    const syncJumpValue = (source, destination) => {
+      destination.value = source.value;
+      this.updatePageJumpPosition();
+    };
+    this.els.pageJumpNumber.addEventListener("input", () => syncJumpValue(this.els.pageJumpNumber, this.els.pageJumpRange));
+    this.els.pageJumpRange.addEventListener("input", () => syncJumpValue(this.els.pageJumpRange, this.els.pageJumpNumber));
+    this.els.pageJumpNumber.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") this.confirmPageJump();
+    });
     // A plain tap anywhere on the page toggles the nav bar. This has to be
     // bound unconditionally (not just for the fallback engine) — Turn.js's
     // own gestures handle page-turning via drag, so nothing else was ever
@@ -190,6 +219,7 @@ window.Reader = class {
   }
 
   async close() {
+    this.closePageJump();
     this.voiceReader.close();
     this.readingStyle.close();
     this.hideBookUnderlay();
@@ -216,6 +246,12 @@ window.Reader = class {
   }
 
   onViewportTap(e) {
+    if (e.target.closest(".epub-page-number")) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openPageJump();
+      return;
+    }
     if (this._usingFallback) {
       const rect = this.els.viewport.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -302,6 +338,56 @@ window.Reader = class {
       this.epubPages.next();
     }
     return true;
+  }
+
+  pageCount() { return Math.max(1, this.comic?.pageCount || this.epubPages?.pages?.length || 1); }
+
+  openPageJump() {
+    if (!this.book || !this.content) return;
+    const count = this.pageCount();
+    const page = Math.max(1, Math.min(count, this.index + 1));
+    this.els.pageJumpBook.textContent = this.book.title || "Current book";
+    for (const input of [this.els.pageJumpNumber, this.els.pageJumpRange]) {
+      input.min = "1"; input.max = String(count); input.value = String(page);
+    }
+    this.updatePageJumpPosition();
+    this.els.pageJump.hidden = false;
+    this.els.pageJumpNumber.focus();
+    this.els.pageJumpNumber.select();
+    clearTimeout(this._chromeTimer);
+  }
+
+  closePageJump() { this.els.pageJump.hidden = true; }
+
+  updatePageJumpPosition() {
+    const count = this.pageCount();
+    const value = Math.max(1, Math.min(count, Number(this.els.pageJumpNumber.value) || 1));
+    this.els.pageJumpPosition.textContent = `Page ${value} of ${count}`;
+  }
+
+  confirmPageJump() {
+    const count = this.pageCount();
+    const target = Math.max(0, Math.min(count - 1, (Number(this.els.pageJumpNumber.value) || 1) - 1));
+    this.closePageJump();
+    this.jumpToPage(target);
+  }
+
+  jumpToPage(target) {
+    if (target === this.index) { this.showChrome(); return; }
+    if (!this._usingFallback && this.turnPageMode?.book) {
+      try { this.turnPageMode.book.turn("page", target + 1); }
+      catch (_) { /* fall through to the active fallback below */ }
+      return;
+    }
+    if (this.content?.kind === "flow") {
+      this.epubPages.index = target;
+      this.index = target;
+      this.epubPages.render();
+      this.saveProgress();
+    } else {
+      this.goToFallback(target);
+    }
+    this.showChrome();
   }
 
   syncNativeNarration(state) {

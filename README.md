@@ -1,4 +1,14 @@
-# Nth Reader V-0.32.01
+# Nth Reader V-0.32.02
+
+## V-0.32.02: continuous narration, voices, and page chooser
+
+- Removes the full-book disk rewrite and repeated Android audio-focus request between sentences, fixing the unwanted pause/stop at sentence boundaries.
+- Loads the Android device's installed Text-to-Speech voices into the existing narration settings and remembers the selected voice.
+- Keeps the quick speed button and adds a precise 0.5×–2.0× speed slider inside narration settings.
+- Turns every reflowable page number into a touch target that opens a themed page chooser with numeric and slider input.
+- Makes the bottom navigation page count open the same chooser for EPUB, PDF, comic, and image-based books.
+
+## V-0.32.01: exact narrated-page tracking
 
 ## V-0.32.01: exact narrated-page tracking
 
@@ -416,4 +426,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.32.01`.
+The service-worker cache key is `Nth-Reader-V-0.32.02`.

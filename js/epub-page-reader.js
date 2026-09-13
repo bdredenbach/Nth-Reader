@@ -122,7 +122,7 @@ window.EpubPageReader = class {
     });
     windowEl.appendChild(columns);
     paper.appendChild(windowEl);
-    paper.insertAdjacentHTML("beforeend", `<span class="epub-page-number">${index + 1}</span><span class="epub-corner-cue" aria-hidden="true"></span>`);
+    paper.insertAdjacentHTML("beforeend", `<button type="button" class="epub-page-number" aria-label="Go to page ${index + 1}">${index + 1}</button><span class="epub-corner-cue" aria-hidden="true"></span>`);
     return paper;
   }
 
@@ -160,7 +160,7 @@ window.EpubPageReader = class {
     });
     windowEl.appendChild(columns);
     paper.appendChild(windowEl);
-    paper.insertAdjacentHTML("beforeend", '<span class="epub-page-number"></span><span class="epub-corner-cue" aria-hidden="true"></span>');
+    paper.insertAdjacentHTML("beforeend", '<button type="button" class="epub-page-number" aria-label="Choose page"></button><span class="epub-corner-cue" aria-hidden="true"></span>');
     paper.querySelector(".epub-page-number").textContent = String(this.index + 1);
     book.appendChild(paper);
     this.host.appendChild(book);

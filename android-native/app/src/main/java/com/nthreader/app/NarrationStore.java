@@ -27,6 +27,8 @@ public final class NarrationStore {
 
     private static final List<Unit> units = new ArrayList<>();
     public static String bookId = "", title = "Nth Reader", author = "", error = "";
+    public static String voiceName = "";
+    private static JSONArray voiceOptions = new JSONArray();
     public static float rate = 1f;
     public static int index = 0;
     public static boolean active = false, playing = false, paused = false, finished = false;
@@ -39,7 +41,8 @@ public final class NarrationStore {
         bookId = json.optString("bookId", "");
         title = json.optString("title", "Nth Reader");
         author = json.optString("author", "");
-        rate = (float) Math.max(.6, Math.min(1.6, json.optDouble("rate", 1)));
+        voiceName = json.optString("voiceName", voiceName);
+        rate = (float) Math.max(.5, Math.min(2, json.optDouble("rate", 1)));
         index = 0; active = false; playing = false; paused = false; finished = false; error = "";
     }
 
@@ -87,6 +90,7 @@ public final class NarrationStore {
             json.put("bookId", bookId).put("title", title).put("active", active)
                     .put("playing", playing).put("paused", paused).put("finished", finished)
                     .put("index", index).put("count", units.size()).put("rate", rate)
+                    .put("voiceName", voiceName)
                     .put("error", error).put("text", unit == null ? "" : unit.text)
                     .put("progress", unit == null ? 0 : unit.progress)
                     .put("pageIndex", unit == null ? -1 : unit.pageIndex);
@@ -94,16 +98,35 @@ public final class NarrationStore {
         return json.toString();
     }
 
+    public static synchronized String stateJsonWithVoices() {
+        try {
+            JSONObject json = new JSONObject(stateJson());
+            json.put("voices", voiceOptions);
+            return json.toString();
+        } catch (Exception ignored) { return stateJson(); }
+    }
+
+    public static synchronized void setVoiceOptions(JSONArray options) {
+        voiceOptions = options == null ? new JSONArray() : options;
+    }
+
+    public static synchronized String voicesJson() { return voiceOptions.toString(); }
+
     public static synchronized void save(Context context) {
         JSONObject root = new JSONObject();
         JSONArray items = new JSONArray();
         try {
             root.put("bookId", bookId).put("title", title).put("author", author)
-                    .put("rate", rate).put("index", index).put("units", items);
+                    .put("rate", rate).put("voiceName", voiceName).put("index", index).put("units", items);
             for (Unit unit : units) items.put(unit.json());
             Files.write(new File(context.getFilesDir(), FILE_NAME).toPath(),
                     root.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception ignored) { /* narration still works in memory */ }
+    }
+
+    public static synchronized void saveProgress(Context context) {
+        context.getSharedPreferences("narration-progress", Context.MODE_PRIVATE).edit()
+                .putInt("index", index).putFloat("rate", rate).putString("voiceName", voiceName).apply();
     }
 
     public static synchronized void load(Context context) {
@@ -114,7 +137,10 @@ public final class NarrationStore {
             JSONObject root = new JSONObject(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
             begin(root.toString());
             append(root.optJSONArray("units") == null ? "[]" : root.getJSONArray("units").toString());
-            index = Math.max(0, Math.min(root.optInt("index", 0), Math.max(0, units.size() - 1)));
+            android.content.SharedPreferences progress = context.getSharedPreferences("narration-progress", Context.MODE_PRIVATE);
+            index = Math.max(0, Math.min(progress.getInt("index", root.optInt("index", 0)), Math.max(0, units.size() - 1)));
+            rate = progress.getFloat("rate", rate);
+            voiceName = progress.getString("voiceName", voiceName);
         } catch (Exception ignored) { units.clear(); }
     }
 
@@ -122,5 +148,6 @@ public final class NarrationStore {
         units.clear(); active = false; playing = false; paused = false; finished = false; error = "";
         try { Files.deleteIfExists(new File(context.getFilesDir(), FILE_NAME).toPath()); }
         catch (Exception ignored) {}
+        context.getSharedPreferences("narration-progress", Context.MODE_PRIVATE).edit().clear().apply();
     }
 }

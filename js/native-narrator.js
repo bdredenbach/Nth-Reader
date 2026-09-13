@@ -28,6 +28,11 @@ window.NthNativeNarrator = new (class {
   skip(delta) { window.NthNativeSpeech?.skip(delta | 0); }
   seekProgress(progress) { window.NthNativeSpeech?.seekProgress(Math.max(0, Math.min(1, Number(progress) || 0))); }
   setRate(rate) { window.NthNativeSpeech?.setRate(Number(rate) || 1); }
+  setVoice(name) { window.NthNativeSpeech?.setVoice(String(name || "")); }
+  getVoices() {
+    try { return JSON.parse(window.NthNativeSpeech?.getVoices() || "[]"); }
+    catch (_) { return []; }
+  }
 
   getState() {
     try { this._receive(window.NthNativeSpeech?.getState() || "{}"); }
