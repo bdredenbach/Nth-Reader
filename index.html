@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.34.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.35.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.34.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.35.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -136,6 +136,7 @@
     <span id="transfer-detail">Please keep Nth Reader open.</span>
     <strong id="transfer-percent">0%</strong>
   </div>
+  <div class="transfer-warmth">(Device may get warm during transfer).</div>
   <button id="transfer-action" class="transfer-action" type="button">Cancel</button>
 </section>
 
@@ -377,6 +378,7 @@
 <script src="js/reading-style.js"></script>
 <script src="js/epub-page-reader.js"></script>
 <script src="js/native-narrator.js"></script>
+<script src="js/native-widget.js"></script>
 <script src="js/voice-reader.js"></script>
 <script src="js/reader.js"></script>
 <script src="js/decor-art.js"></script>

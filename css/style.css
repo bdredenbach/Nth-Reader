@@ -604,6 +604,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 @keyframes nth-transfer { from { transform:translateX(-115%); } to { transform:translateX(260%); } }
 .transfer-progress-row { display:flex; justify-content:space-between; gap:12px; min-height:34px; padding:8px 2px 0; color:#bca98e; font-size:11px; text-align:left; }
 .transfer-progress-row strong { color:#efbd64; flex-shrink:0; }
+.transfer-warmth { margin:2px 0 5px; color:#a99479; font-size:11px; text-align:center; }
 .transfer-action { width:100%; min-height:46px; margin-top:8px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:rgba(255,255,255,.07); color:#f7ead8; font-weight:750; }
 .currently-reading { margin-bottom: 14px; }
 .current-book-card {

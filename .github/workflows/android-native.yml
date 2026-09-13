@@ -7,8 +7,11 @@ on:
     paths:
       - "android-native/**"
       - "js/native-narrator.js"
+      - "js/native-widget.js"
       - "js/voice-reader.js"
       - "js/reader.js"
+      - "js/app.js"
+      - "sw.js"
       - "index.html"
 
 jobs:

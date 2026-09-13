@@ -15,6 +15,7 @@
   shelf.onBookcaseChanged = (index, scrollPositions) => {
     NthDB.settings.set("activeBookcase", index);
     NthDB.settings.set("bookcaseScrollPositions", scrollPositions);
+    window.NthNativeWidget?.update(shelf);
   };
   shelf.onBookcaseScrollChanged = (scrollPositions) => {
     NthDB.settings.set("bookcaseScrollPositions", scrollPositions);
@@ -289,6 +290,7 @@
     if (token !== refreshToken) return;
     shelf.setAll(books, decorItems, stacks);
     carousel.updateButton();
+    window.NthNativeWidget?.update(shelf);
     shelfRoot.classList.remove("shelf-loading");
   }
 

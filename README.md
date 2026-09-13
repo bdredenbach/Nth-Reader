@@ -1,4 +1,12 @@
-# Nth Reader V-0.34.00
+# Nth Reader V-0.35.00
+
+## V-0.35.00: resizable Android bookshelf widget
+
+- Adds a native Android home-screen widget that mirrors the active Nth Reader bookcase.
+- Resizing the widget vertically reveals from one to five shelves; wider sizes give covers, spines, and decor more room.
+- Uses real cover and photographed-spine artwork where available, along with the active shelf wood theme and bookcase number.
+- Tapping the widget opens Nth Reader, and arranging books or changing bookcases refreshes the launcher view automatically.
+- Adds the transfer note “(Device may get warm during transfer).” to backup, restore, and original-book downloads.
 
 ## V-0.34.00: visible transfers and original-file downloads
 
@@ -442,4 +450,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.34.00`.
+The service-worker cache key is `Nth-Reader-V-0.35.00`.

@@ -44,6 +44,7 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
 
         webView.addJavascriptInterface(new NarrationBridge(this), "NthNativeSpeech");
         webView.addJavascriptInterface(new BackupBridge(this), "NthNativeBackup");
+        webView.addJavascriptInterface(new WidgetBridge(this), "NthWidgetBridge");
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -167,6 +168,7 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
         if (webView != null) {
             webView.removeJavascriptInterface("NthNativeSpeech");
             webView.removeJavascriptInterface("NthNativeBackup");
+            webView.removeJavascriptInterface("NthWidgetBridge");
             webView.destroy();
         }
         super.onDestroy();
