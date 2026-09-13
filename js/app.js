@@ -50,6 +50,7 @@
 
   const removePanel = new RemovePanel({
     onRemoved: refresh,
+    onDownload: (book) => backup.downloadBook(book),
   });
 
   window.addEventListener("nth:reader-closed", refresh);

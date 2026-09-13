@@ -4,8 +4,9 @@
  * free for adding books and shelf customization.
  */
 window.RemovePanel = class {
-  constructor({ onRemoved }) {
+  constructor({ onRemoved, onDownload }) {
     this.onRemoved = onRemoved;
+    this.onDownload = onDownload;
     this.els = {
       openBtn: document.getElementById("remove-open-btn"),
       closeBtn: document.getElementById("remove-close-btn"),
@@ -79,6 +80,18 @@ window.RemovePanel = class {
     title.textContent = book.title;
     row.appendChild(title);
 
+    const actions = document.createElement("span");
+    actions.className = "menu-book-actions";
+    const downloadBtn = document.createElement("button");
+    downloadBtn.className = "menu-download-btn";
+    downloadBtn.type = "button";
+    downloadBtn.disabled = book.format === "physical";
+    downloadBtn.setAttribute("aria-label", book.format === "physical" ? `${book.title} has no digital source file` : `Download original file for ${book.title}`);
+    downloadBtn.title = book.format === "physical" ? "Physical shelf entry" : "Download original file";
+    downloadBtn.textContent = "⇩";
+    downloadBtn.addEventListener("click", () => { this.close(); this.onDownload?.(book); });
+    actions.appendChild(downloadBtn);
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "menu-remove-btn";
     removeBtn.type = "button";
@@ -112,7 +125,8 @@ window.RemovePanel = class {
       window.dispatchEvent(new CustomEvent("nth:bookmarks-changed"));
       this.onRemoved();
     });
-    row.appendChild(removeBtn);
+    actions.appendChild(removeBtn);
+    row.appendChild(actions);
 
     return row;
   }

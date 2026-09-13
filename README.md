@@ -1,4 +1,13 @@
-# Nth Reader V-0.33.00
+# Nth Reader V-0.34.00
+
+## V-0.34.00: visible transfers and original-file downloads
+
+- Replaces the hidden backup workload with a prominent in-app progress dialog showing the current stage, book, percentage, completion, and errors.
+- Adds safe cancellation between file operations.
+- Stops recompressing EPUB, PDF, comic, and other already-compressed sources inside backups, greatly reducing CPU use, heat, and waiting time.
+- Restores books one at a time instead of retaining every extracted source in memory.
+- Adds an original-file download button beside Remove for every digital book in the left drawer, using the same transfer dialog and Android Save picker.
+- Keeps Restore's file-picker launch directly attached to the user's tap and makes its progress visible after selection.
 
 ## V-0.33.00: themed narration and portable library transfer
 
@@ -433,4 +442,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.33.00`.
+The service-worker cache key is `Nth-Reader-V-0.34.00`.

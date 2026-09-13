@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.33.00" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.34.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.33.00";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.34.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -122,7 +122,22 @@
 <input type="file" id="decor-photo-input" accept="image/*" hidden />
 <input type="file" id="spine-photo-input" accept="image/*" hidden />
 <input type="file" id="cover-photo-input" accept="image/*" hidden />
-<input type="file" id="backup-file-input" accept=".nthbackup,.zip,application/zip" hidden />
+<input type="file" id="backup-file-input" accept="*/*" hidden />
+
+<div id="transfer-overlay" class="transfer-overlay" hidden></div>
+<section id="transfer-dialog" class="transfer-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="transfer-title">
+  <div class="transfer-emblem" aria-hidden="true">⇩</div>
+  <h2 id="transfer-title">Preparing transfer</h2>
+  <p id="transfer-message">Getting everything ready…</p>
+  <div class="transfer-progress-track" role="progressbar" aria-label="Transfer progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span id="transfer-progress-bar"></span>
+  </div>
+  <div class="transfer-progress-row">
+    <span id="transfer-detail">Please keep Nth Reader open.</span>
+    <strong id="transfer-percent">0%</strong>
+  </div>
+  <button id="transfer-action" class="transfer-action" type="button">Cancel</button>
+</section>
 
 <!-- ===================== PHYSICAL SPINE SCANNER ===================== -->
 <div id="spine-scanner-overlay" class="scanner-overlay" hidden></div>
