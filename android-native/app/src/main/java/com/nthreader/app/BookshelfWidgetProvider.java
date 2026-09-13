@@ -188,10 +188,7 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             canvas.drawRoundRect(rect, Math.min(4f, w * .14f), Math.min(4f, w * .14f), paint);
             Bitmap art = decodeArt(book.optString("art", ""));
             if (art != null) {
-                canvas.save();
-                canvas.clipRoundRect(rect, Math.min(4f, w * .14f), Math.min(4f, w * .14f));
                 canvas.drawBitmap(art, null, rect, paint);
-                canvas.restore();
                 art.recycle();
             }
             paint.setStyle(Paint.Style.STROKE);
@@ -203,7 +200,7 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             if (progress > 0) {
                 paint.setColor(Color.rgb(244, 189, 70));
                 canvas.drawRect(rect.left, rect.bottom - Math.max(1.5f, rowHeight * .014f),
-                        rect.left + rect.width() * Math.min(1d, progress), rect.bottom, paint);
+                        rect.left + (float) (rect.width() * Math.min(1d, progress)), rect.bottom, paint);
             }
             x += w + Math.max(1.5f, rowHeight * .018f);
         }
