@@ -1,13 +1,13 @@
-// NTH READER — V-0.35.00
+// NTH READER — V-0.36.00
 
-const SW_VERSION = "Nth-Reader-V-0.35.00";
+const SW_VERSION = "Nth-Reader-V-0.36.00";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./manifest.webmanifest?v=0.35.00",
+  "./manifest.webmanifest?v=0.36.00",
   "./css/style.css",
   "./assets/icons/favicon-32.png",
   "./assets/icons/apple-touch-icon.png",
@@ -128,6 +128,7 @@ const SHELL_FILES = [
   "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
 ];
 
 const ALLOWED_CDN_HOSTS = ["code.jquery.com", "cdnjs.cloudflare.com"];

@@ -1,4 +1,12 @@
-# Nth Reader V-0.35.00
+# Nth Reader V-0.36.00
+
+## V-0.36.00: photoreal Android bookshelf widget
+
+- Replaces the widget's simplified shelf diagram with snapshots produced by Nth Reader's real bookcase renderer.
+- Carries over photoreal decor, photo frames, cover art, scanned spines, stacks, leaning, spacing, shadows, backdrops, and shelf-wood themes.
+- Generates narrow, medium, and wide shelf variants so Android can choose the least-distorted composition while resizing.
+- Keeps a lightweight native fallback visible while a fresh photoreal snapshot is being prepared.
+- Keeps the widget header compact at every height while vertical resizing reveals from one to five shelves.
 
 ## V-0.35.00: resizable Android bookshelf widget
 
@@ -450,4 +458,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.35.00`.
+The service-worker cache key is `Nth-Reader-V-0.36.00`.

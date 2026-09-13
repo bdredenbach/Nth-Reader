@@ -12,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.os.Bundle;
@@ -91,14 +92,14 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         canvas.drawColor(Color.TRANSPARENT);
 
-        float radius = Math.max(12f, width * .045f);
+        float radius = Math.max(9f, width * .025f);
         paint.setShader(new LinearGradient(0, 0, width, height, palette.frameLight, palette.frameDark,
                 Shader.TileMode.CLAMP));
         canvas.drawRoundRect(new RectF(0, 0, width, height), radius, radius, paint);
         paint.setShader(null);
 
-        float frame = Math.max(9f, width * .045f);
-        float header = Math.max(30f, height * .13f);
+        float frame = Math.max(4f, width * .012f);
+        float header = Math.max(25f, Math.min(54f, width * .105f));
         RectF inside = new RectF(frame, header, width - frame, height - frame);
         paint.setColor(palette.back);
         canvas.drawRect(inside, paint);
@@ -117,20 +118,23 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         JSONArray allBooks = snapshot.optJSONArray("books");
         JSONArray allDecor = snapshot.optJSONArray("decor");
         boolean hasContent = allBooks != null && allBooks.length() > 0;
+        boolean photoreal = drawPhotorealShelf(canvas, paint, inside, shelfCount, snapshot);
 
-        for (int row = 0; row < shelfCount; row++) {
-            float top = inside.top + row * rowHeight;
-            float bottom = inside.top + (row + 1) * rowHeight;
-            paint.setShader(new LinearGradient(0, top, 0, bottom, palette.backTop, palette.back,
-                    Shader.TileMode.CLAMP));
-            canvas.drawRect(inside.left, top, inside.right, bottom, paint);
-            paint.setShader(null);
-            drawBooks(canvas, paint, inside.left + 3, inside.right - 3, top, bottom, row, allBooks);
-            drawDecor(canvas, paint, inside.left + 3, inside.right - 3, top, bottom, row, allDecor);
-            drawShelfLedge(canvas, paint, inside.left - 2, inside.right + 2, bottom, rowHeight, palette);
+        if (!photoreal) {
+            for (int row = 0; row < shelfCount; row++) {
+                float top = inside.top + row * rowHeight;
+                float bottom = inside.top + (row + 1) * rowHeight;
+                paint.setShader(new LinearGradient(0, top, 0, bottom, palette.backTop, palette.back,
+                        Shader.TileMode.CLAMP));
+                canvas.drawRect(inside.left, top, inside.right, bottom, paint);
+                paint.setShader(null);
+                drawBooks(canvas, paint, inside.left + 3, inside.right - 3, top, bottom, row, allBooks);
+                drawDecor(canvas, paint, inside.left + 3, inside.right - 3, top, bottom, row, allDecor);
+                drawShelfLedge(canvas, paint, inside.left - 2, inside.right + 2, bottom, rowHeight, palette);
+            }
         }
 
-        if (!hasContent) {
+        if (!hasContent && !photoreal) {
             paint.setColor(Color.rgb(244, 218, 172));
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTextSize(Math.max(12f, Math.min(22f, width * .065f)));
@@ -141,6 +145,40 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             paint.setColor(Color.rgb(190, 158, 114));
             canvas.drawText("to fill your bookshelf", width / 2f, inside.centerY() + 18, paint);
         }
+    }
+
+    private static boolean drawPhotorealShelf(Canvas canvas, Paint paint, RectF target,
+                                              int shelfCount, JSONObject snapshot) {
+        JSONArray variants = snapshot.optJSONArray("variants");
+        if (variants == null || variants.length() == 0) return false;
+        JSONObject best = null;
+        int bestBottom = 0;
+        double bestDifference = Double.MAX_VALUE;
+        double targetAspect = target.width() / Math.max(1d, target.height());
+        for (int i = 0; i < variants.length(); i++) {
+            JSONObject variant = variants.optJSONObject(i);
+            if (variant == null) continue;
+            JSONArray bottoms = variant.optJSONArray("rowBottoms");
+            int sourceBottom = bottoms == null || bottoms.length() == 0 ? 0
+                    : bottoms.optInt(Math.min(shelfCount, bottoms.length()) - 1, 0);
+            int sourceWidth = variant.optInt("width", 0);
+            if (sourceWidth <= 0 || sourceBottom <= 0) continue;
+            double difference = Math.abs(Math.log((sourceWidth / (double) sourceBottom) / targetAspect));
+            if (difference < bestDifference) {
+                best = variant;
+                bestBottom = sourceBottom;
+                bestDifference = difference;
+            }
+        }
+        if (best == null) return false;
+        Bitmap bitmap = decodeArt(best.optString("art", ""));
+        if (bitmap == null) return false;
+        int metadataHeight = Math.max(1, best.optInt("height", bitmap.getHeight()));
+        int sourceBottom = Math.min(bitmap.getHeight(), Math.max(1,
+                Math.round(bestBottom * bitmap.getHeight() / (float) metadataHeight)));
+        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), sourceBottom), target, paint);
+        bitmap.recycle();
+        return true;
     }
 
     private static void drawHeader(Context context, Canvas canvas, Paint paint, int width, float header,
