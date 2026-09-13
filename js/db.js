@@ -310,7 +310,41 @@ window.NthDB = (function () {
       await transact(SETTINGS, "readwrite", (store) => store.put({ key, value }));
       return value;
     },
+    async all() {
+      return (await transact(SETTINGS, "readonly", (store) => store.getAll())) || [];
+    },
   };
+
+  async function exportSnapshot() {
+    await flush();
+    const [bookRecords, decorRecords, stackRecords, bookmarkRecords, settingRecords] = await Promise.all([
+      bookMetaCrud.all(), decor.all(), stacks.all(), bookmarks.all(), settings.all(),
+    ]);
+    return {
+      schema: 1,
+      books: bookRecords,
+      decor: decorRecords,
+      stacks: stackRecords,
+      bookmarks: bookmarkRecords,
+      settings: settingRecords,
+    };
+  }
+
+  async function importSnapshot(snapshot, sourceFiles = new Map()) {
+    const data = snapshot && typeof snapshot === "object" ? snapshot : {};
+    const lists = ["books", "decor", "stacks", "bookmarks", "settings"];
+    if (!lists.every((name) => Array.isArray(data[name]))) throw new Error("This is not a complete Nth Reader backup.");
+    for (const record of data.books) {
+      if (!record?.id) continue;
+      const source = sourceFiles.get(String(record.id));
+      await books.put(source ? { ...record, file: source } : record);
+    }
+    for (const record of data.decor) if (record?.id) await decor.put(record);
+    for (const record of data.stacks) if (record?.id) await stacks.put(record);
+    for (const record of data.bookmarks) if (record?.id) await bookmarks.put(record);
+    for (const record of data.settings) if (record && "key" in record) await settings.set(record.key, record.value);
+    await flush();
+  }
 
   async function requestPersistence() {
     try {
@@ -319,5 +353,8 @@ window.NthDB = (function () {
     return false;
   }
 
-  return { ...books, books, decor, stacks, bookmarks, settings, saveArrangement, flush, ready: open, requestPersistence };
+  return {
+    ...books, books, decor, stacks, bookmarks, settings,
+    saveArrangement, exportSnapshot, importSnapshot, flush, ready: open, requestPersistence,
+  };
 })();

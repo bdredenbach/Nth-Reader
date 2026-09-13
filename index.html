@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.32.02" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.33.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.32.02";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.33.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -122,6 +122,7 @@
 <input type="file" id="decor-photo-input" accept="image/*" hidden />
 <input type="file" id="spine-photo-input" accept="image/*" hidden />
 <input type="file" id="cover-photo-input" accept="image/*" hidden />
+<input type="file" id="backup-file-input" accept=".nthbackup,.zip,application/zip" hidden />
 
 <!-- ===================== PHYSICAL SPINE SCANNER ===================== -->
 <div id="spine-scanner-overlay" class="scanner-overlay" hidden></div>
@@ -226,6 +227,11 @@
   <button id="menu-add-btn" class="menu-action-btn" type="button">+ Add Books</button>
   <button id="menu-scan-btn" class="menu-action-btn menu-action-btn-secondary" type="button">📷 Scan Physical Book</button>
   <button id="menu-customize-btn" class="menu-action-btn menu-action-btn-secondary" type="button">🎨 Customize Shelf</button>
+  <div class="menu-section-label backup-section-label">Library Transfer</div>
+  <div class="menu-backup-actions">
+    <button id="menu-backup-btn" class="menu-action-btn menu-action-btn-secondary" type="button">↧ Back Up Library</button>
+    <button id="menu-restore-btn" class="menu-action-btn menu-action-btn-secondary" type="button">↥ Restore Library</button>
+  </div>
   <div class="menu-section-label reading-section-label">Currently Reading</div>
   <div id="currently-reading" class="currently-reading"></div>
   <button id="menu-bookmarks-btn" class="menu-action-btn menu-action-btn-secondary bookmarks-panel-btn" type="button">
@@ -349,6 +355,7 @@
 </section>
 
 <script src="js/db.js"></script>
+<script src="js/backup.js"></script>
 <script src="js/formats.js"></script>
 <script src="js/page-turn.js"></script>
 <script src="js/page-mode.js"></script>

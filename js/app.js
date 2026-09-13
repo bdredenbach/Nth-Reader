@@ -34,10 +34,17 @@
     onLink: (bookId, payload) => applyScannedSpine(bookId, payload),
   });
 
+  const backup = new NthBackupManager({
+    input: document.getElementById("backup-file-input"),
+    onStatus: showStatus,
+  });
+
   const menu = new Menu({
     onAdd: () => fileInput.click(),
     onScan: () => spineScanner.choosePhoto(),
     onCustomize: () => customize.enter(),
+    onBackup: () => backup.create(),
+    onRestore: () => backup.chooseRestore(),
     onOpenBook: (id, bookmark) => openBook(id, bookmark),
   });
 

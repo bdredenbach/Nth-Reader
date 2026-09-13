@@ -1,4 +1,11 @@
-# Nth Reader V-0.32.02
+# Nth Reader V-0.33.00
+
+## V-0.33.00: themed narration and portable library transfer
+
+- Narration highlights now follow the active page in the Android app and use a theme-matched tan, warm gold, or blue treatment for Paper, Sepia, and Night.
+- **Back Up Library** creates one portable `.nthbackup` containing source books, physical books, covers, scanned spines, custom frame photos, decor, shelf layouts, progress, bookmarks, and preferences.
+- **Restore Library** imports that backup into either the PWA or Android app. Matching records are updated while unrelated destination books remain in place.
+- Android backup export uses the native Save picker, avoiding WebView's unreliable handling of downloaded `blob:` URLs.
 
 ## V-0.32.02: continuous narration, voices, and page chooser
 
@@ -426,4 +433,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.32.02`.
+The service-worker cache key is `Nth-Reader-V-0.33.00`.

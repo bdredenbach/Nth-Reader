@@ -16,12 +16,17 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import org.json.JSONObject;
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public final class MainActivity extends Activity implements NarrationEvents.Sink {
     private static final String APP_URL = "https://bdredenbach.github.io/Nth-Reader/";
     private static final int FILE_CHOOSER = 42;
+    private static final int BACKUP_SAVE = 43;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
+    private File pendingBackupFile;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -38,6 +43,7 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         webView.addJavascriptInterface(new NarrationBridge(this), "NthNativeSpeech");
+        webView.addJavascriptInterface(new BackupBridge(this), "NthNativeBackup");
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -95,6 +101,24 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == BACKUP_SAVE) {
+            boolean saved = false;
+            String message = "Backup save was cancelled.";
+            if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingBackupFile != null) {
+                try (InputStream input = new java.io.FileInputStream(pendingBackupFile);
+                     OutputStream output = getContentResolver().openOutputStream(data.getData(), "w")) {
+                    if (output == null) throw new IllegalStateException("No destination was available.");
+                    byte[] buffer = new byte[128 * 1024];
+                    int count;
+                    while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                    output.flush(); saved = true; message = "Backup saved to your chosen location.";
+                } catch (Exception error) { message = "Android could not save the backup."; }
+            }
+            if (pendingBackupFile != null) pendingBackupFile.delete();
+            pendingBackupFile = null;
+            reportBackupResult(saved, message);
+            return;
+        }
         if (requestCode != FILE_CHOOSER || fileCallback == null) return;
         Uri[] result = null;
         if (resultCode == RESULT_OK && data != null) {
@@ -107,6 +131,31 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
         fileCallback = null;
     }
 
+    void chooseBackupDestination(File file, String filename, String mime) {
+        runOnUiThread(() -> {
+            pendingBackupFile = file;
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType(mime == null || mime.isEmpty() ? "application/zip" : mime)
+                    .putExtra(Intent.EXTRA_TITLE, filename == null ? "nth-reader-backup.nthbackup" : filename);
+            try { startActivityForResult(intent, BACKUP_SAVE); }
+            catch (ActivityNotFoundException error) {
+                if (pendingBackupFile != null) pendingBackupFile.delete();
+                pendingBackupFile = null;
+                reportBackupResult(false, "No Android file saver is available.");
+            }
+        });
+    }
+
+    void reportBackupResult(boolean success, String message) {
+        runOnUiThread(() -> {
+            if (webView == null) return;
+            String script = "window.dispatchEvent(new CustomEvent('nth-native-backup-result',{detail:{success:"
+                    + success + ",message:" + JSONObject.quote(message) + "}}))";
+            webView.evaluateJavascript(script, null);
+        });
+    }
+
     @Override public void onBackPressed() {
         if (webView != null && webView.canGoBack()) webView.goBack();
         else super.onBackPressed();
@@ -114,7 +163,12 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
 
     @Override protected void onDestroy() {
         NarrationEvents.setSink(null);
-        if (webView != null) { webView.removeJavascriptInterface("NthNativeSpeech"); webView.destroy(); }
+        if (pendingBackupFile != null) pendingBackupFile.delete();
+        if (webView != null) {
+            webView.removeJavascriptInterface("NthNativeSpeech");
+            webView.removeJavascriptInterface("NthNativeBackup");
+            webView.destroy();
+        }
         super.onDestroy();
     }
 }

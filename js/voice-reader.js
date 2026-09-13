@@ -248,7 +248,10 @@ window.VoiceReader = class {
     if (!this.book || this.els.bar.hidden) return;
     if (this.nativeAvailable && this.nativeActive) {
       await this.refreshPage(false);
-      if (this.nativePageSync) this.nativePageSync = false;
+      if (this.nativePageSync) {
+        this.nativePageSync = false;
+        this.native.getState();
+      }
       else this.native.seekProgress(this.readerProgress());
       return;
     }
@@ -522,13 +525,50 @@ window.VoiceReader = class {
 
   highlight(sentence) {
     this.clearHighlight();
-    if (!sentence?.ranges?.length || !window.CSS?.highlights || !window.Highlight) return;
-    try { CSS.highlights.set("nth-narration", new Highlight(...sentence.ranges)); }
-    catch (_) { /* the spoken-text status remains as a fallback */ }
+    if (!sentence?.ranges?.length) return;
+    if (window.CSS?.highlights && window.Highlight) {
+      try { CSS.highlights.set("nth-narration", new Highlight(...sentence.ranges)); return; }
+      catch (_) { /* use the geometry overlay below */ }
+    }
+    const pageNode = this.currentPageNode();
+    const windowEl = pageNode?.querySelector(".epub-page-window");
+    if (!windowEl) return;
+    const clip = windowEl.getBoundingClientRect();
+    const overlay = document.createElement("div");
+    overlay.className = "nth-narration-overlay";
+    for (const range of sentence.ranges) {
+      for (const rect of range.getClientRects()) {
+        if (rect.right <= clip.left || rect.left >= clip.right || rect.bottom <= clip.top || rect.top >= clip.bottom) continue;
+        const mark = document.createElement("span");
+        mark.style.left = `${Math.max(0, rect.left - clip.left)}px`;
+        mark.style.top = `${Math.max(0, rect.top - clip.top)}px`;
+        mark.style.width = `${Math.min(clip.right, rect.right) - Math.max(clip.left, rect.left)}px`;
+        mark.style.height = `${Math.min(clip.bottom, rect.bottom) - Math.max(clip.top, rect.top)}px`;
+        overlay.appendChild(mark);
+      }
+    }
+    if (overlay.childElementCount) windowEl.appendChild(overlay);
   }
 
   clearHighlight() {
     try { window.CSS?.highlights?.delete("nth-narration"); } catch (_) { /* unsupported */ }
+    document.querySelectorAll(".nth-narration-overlay").forEach((overlay) => overlay.remove());
+  }
+
+  highlightNativeText(text) {
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim().toLocaleLowerCase();
+    const wanted = normalize(text);
+    if (!wanted || !this.sentences.length) { this.clearHighlight(); return; }
+    let index = this.sentences.findIndex((sentence) => normalize(sentence.text) === wanted);
+    if (index < 0) {
+      index = this.sentences.findIndex((sentence) => {
+        const local = normalize(sentence.text);
+        return local && (local.includes(wanted) || wanted.includes(local));
+      });
+    }
+    if (index < 0) { this.clearHighlight(); return; }
+    this.sentenceIndex = index;
+    this.highlight(this.sentences[index]);
   }
 
   readerProgress() {
@@ -606,7 +646,6 @@ window.VoiceReader = class {
     this.nativeActive = Boolean(state.active);
     this.playing = Boolean(state.playing);
     this.paused = Boolean(state.paused);
-    if (Number.isFinite(Number(state.index))) this.sentenceIndex = Number(state.index);
     this.available = this.available || this.nativeActive;
     if (state.error) this.setStatus(state.error);
     else if (state.playing && state.text) this.setStatus(state.text.length > 115 ? `${state.text.slice(0, 112)}…` : state.text);
@@ -614,6 +653,11 @@ window.VoiceReader = class {
     else if (state.finished) this.setStatus("End of book");
     else if (this.nativeActive) this.setStatus("Android background narration ready");
     this.updateControls();
-    if (this.nativeActive && document.visibilityState === "visible") this.reader.syncNativeNarration(state);
+    if (this.nativeActive && document.visibilityState === "visible") {
+      this.reader.syncNativeNarration(state);
+      const targetPage = Number(state.pageIndex);
+      if ((!Number.isFinite(targetPage) || targetPage === this.reader.index) && state.text) this.highlightNativeText(state.text);
+    }
+    if (!this.nativeActive || state.finished) this.clearHighlight();
   }
 };

@@ -339,6 +339,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   --reader-sheet-one:#e9dec9; --reader-sheet-two:#ded1bb; --reader-sheet-three:#cdbfaa;
   --reader-page-ink:#241c13; --reader-page-muted:#796a55; --reader-page-border:rgba(93,63,33,.28);
   --reader-gutter-core:rgba(70,42,21,.34); --reader-gutter-mid:rgba(116,75,38,.16);
+  --reader-narration-highlight:rgba(190,151,101,.52); --reader-narration-ink:#24170e;
 }
 #reader-view[data-reading-theme="sepia"] {
   --reader-book-image:url("../assets/reader/physical-book-sepia.webp");
@@ -346,6 +347,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   --reader-sheet-one:#ddc48e; --reader-sheet-two:#cdb078; --reader-sheet-three:#b8935b;
   --reader-page-ink:#3b2715; --reader-page-muted:#82613d; --reader-page-border:rgba(86,52,21,.38);
   --reader-gutter-core:rgba(77,40,13,.42); --reader-gutter-mid:rgba(132,76,25,.2);
+  --reader-narration-highlight:rgba(242,185,66,.55); --reader-narration-ink:#35200d;
 }
 #reader-view[data-reading-theme="night"] {
   --reader-book-image:url("../assets/reader/physical-book-night.webp");
@@ -353,6 +355,7 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
   --reader-sheet-one:#202732; --reader-sheet-two:#19202a; --reader-sheet-three:#111720;
   --reader-page-ink:#e5e9ef; --reader-page-muted:#98a4b4; --reader-page-border:rgba(170,190,214,.2);
   --reader-gutter-core:rgba(0,4,10,.62); --reader-gutter-mid:rgba(9,17,29,.32);
+  --reader-narration-highlight:rgba(67,135,204,.58); --reader-narration-ink:#f4f8ff;
 }
 .reader-topbar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 12;
@@ -395,7 +398,16 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 .voice-reader-settings input[type="range"] { width:100%; margin-top:6px; accent-color:var(--accent); }
 .voice-auto-turn { display:flex; align-items:center; gap:7px; }
 .voice-auto-turn input { accent-color:#eab447; }
-::highlight(nth-narration) { color:#190f08; background:#f3c968; }
+.epub-page-columns::highlight(nth-narration) {
+  color:var(--reader-narration-ink); background:var(--reader-narration-highlight);
+  text-decoration:underline; text-decoration-color:color-mix(in srgb,var(--reader-narration-highlight),currentColor 38%);
+  text-decoration-thickness:1px; text-underline-offset:2px;
+}
+.nth-narration-overlay { position:absolute; inset:0; z-index:4; overflow:hidden; pointer-events:none; }
+.nth-narration-overlay span {
+  position:absolute; border-radius:2px; background:var(--reader-narration-highlight);
+  box-shadow:inset 0 -1px color-mix(in srgb,var(--reader-narration-highlight),currentColor 25%);
+}
 .reading-style-bar {
   position:absolute; z-index:13; left:50%; bottom:calc(62px + env(safe-area-inset-bottom, 0px));
   width:min(430px,calc(100% - 24px)); padding:7px 9px;
@@ -560,6 +572,9 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 .menu-error { color: #ffb1a4; opacity: 1; }
 
 .reading-section-label { margin-top: 2px; }
+.backup-section-label { margin-top:12px; }
+.menu-backup-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.menu-backup-actions .menu-action-btn { min-width:0; padding-inline:8px; font-size:14px; }
 .currently-reading { margin-bottom: 14px; }
 .current-book-card {
   width: 100%; padding: 12px; text-align: left; color: #f4ead9; cursor: pointer;

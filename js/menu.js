@@ -1,9 +1,11 @@
 /* Right drawer: imports, customization, current book and bookmarks. */
 window.Menu = class {
-  constructor({ onAdd, onScan, onCustomize, onOpenBook }) {
+  constructor({ onAdd, onScan, onCustomize, onBackup, onRestore, onOpenBook }) {
     this.onAdd = onAdd;
     this.onScan = onScan;
     this.onCustomize = onCustomize;
+    this.onBackup = onBackup;
+    this.onRestore = onRestore;
     this.onOpenBook = onOpenBook;
     this.els = {
       openBtn: document.getElementById("menu-open-btn"),
@@ -13,6 +15,8 @@ window.Menu = class {
       addBtn: document.getElementById("menu-add-btn"),
       scanBtn: document.getElementById("menu-scan-btn"),
       customizeBtn: document.getElementById("menu-customize-btn"),
+      backupBtn: document.getElementById("menu-backup-btn"),
+      restoreBtn: document.getElementById("menu-restore-btn"),
       current: document.getElementById("currently-reading"),
       bookmarksBtn: document.getElementById("menu-bookmarks-btn"),
       bookmarkCount: document.getElementById("menu-bookmark-count"),
@@ -25,6 +29,8 @@ window.Menu = class {
     this.els.addBtn.addEventListener("click", () => { this.close(); this.onAdd(); });
     this.els.scanBtn.addEventListener("click", () => { this.close(); this.onScan(); });
     this.els.customizeBtn.addEventListener("click", () => { this.close(); this.onCustomize(); });
+    this.els.backupBtn.addEventListener("click", () => { this.close(); this.onBackup(); });
+    this.els.restoreBtn.addEventListener("click", () => { this.close(); this.onRestore(); });
     this.els.bookmarksBtn.addEventListener("click", () => {
       this.els.bookmarkList.hidden = !this.els.bookmarkList.hidden;
       this.els.bookmarksBtn.classList.toggle("expanded", !this.els.bookmarkList.hidden);
