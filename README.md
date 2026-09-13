@@ -1,4 +1,12 @@
-# Nth Reader V-0.32.00
+# Nth Reader V-0.32.01
+
+## V-0.32.01: exact narrated-page tracking
+
+- Captures readable text from each real rendered EPUB column during pagination instead of estimating pages from whole-book character percentages.
+- Starts native narration at the first sentence of the page currently on screen and turns to the exact next page as Android advances.
+- Measures the customization tab bar at runtime and keeps the active Arrange, Decorate, Backdrop, or Shelf controls fully above it, including the Android/iPhone safe-area inset.
+
+## V-0.32.00: Android background narration
 
 ## V-0.32.00: Android background narration
 
@@ -408,4 +416,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.32.00`.
+The service-worker cache key is `Nth-Reader-V-0.32.01`.

@@ -227,6 +227,7 @@ window.Customize = class {
     this.els.tabbar.hidden = true;
         this.els.panel.hidden = true;
     document.documentElement.style.removeProperty("--customize-panel-height");
+    document.documentElement.style.removeProperty("--customize-tabbar-height");
     this.closeDecorPicker();
     this.onExit?.();
   }
@@ -264,7 +265,9 @@ window.Customize = class {
   updateShelfPanelSpace() {
     if (!this.active || this.els.panel.hidden) return;
     const height = Math.ceil(this.els.panel.getBoundingClientRect().height || 0);
+    const tabbarHeight = Math.ceil(this.els.tabbar.getBoundingClientRect().height || 68);
     document.documentElement.style.setProperty("--customize-panel-height", `${height}px`);
+    document.documentElement.style.setProperty("--customize-tabbar-height", `${tabbarHeight}px`);
   }
 
   workingShelfIndex() {

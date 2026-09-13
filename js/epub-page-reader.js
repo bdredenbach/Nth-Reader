@@ -58,13 +58,40 @@ window.EpubPageReader = class {
       measure.innerHTML = part.outerHTML || part.innerHTML;
       await this.waitForImages(measure);
       const count = Math.max(1, Math.ceil((measure.scrollWidth - 1) / contentW));
+      const pageTexts = this.extractColumnTexts(measure, count, contentW, contentH);
       const markup = part.outerHTML || `<section class="chapter">${part.innerHTML}</section>`;
       for (let column = 0; column < count; column++) {
-        this.pages.push({ markup, column, count });
+        this.pages.push({ markup, column, count, text: pageTexts[column] || "" });
       }
     }
     measure.remove();
     if (!this.pages.length) this.pages.push({ markup: this.sourceHtml, column: 0, count: 1 });
+  }
+
+  extractColumnTexts(root, count, contentW, contentH) {
+    const columns = Array.from({ length: count }, () => []);
+    const rootRect = root.getBoundingClientRect();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.nodeValue?.trim() || node.parentElement?.closest("script,style,noscript,[aria-hidden='true']")) continue;
+      const expression = /\S+(?:\s+|$)/g;
+      let match;
+      while ((match = expression.exec(node.nodeValue))) {
+        const range = document.createRange();
+        range.setStart(node, match.index);
+        range.setEnd(node, Math.min(node.nodeValue.length, match.index + match[0].length));
+        const rect = Array.from(range.getClientRects()).find((candidate) =>
+          candidate.width > 0 && candidate.height > 0 &&
+          candidate.top < rootRect.top + contentH && candidate.bottom > rootRect.top
+        );
+        if (!rect) continue;
+        const column = Math.max(0, Math.min(count - 1,
+          Math.floor((rect.left - rootRect.left + 1) / contentW)));
+        columns[column].push(match[0].trim());
+      }
+    }
+    return columns.map((words) => words.join(" ").replace(/\s+/g, " ").trim());
   }
 
   makeTurnSource(index) {

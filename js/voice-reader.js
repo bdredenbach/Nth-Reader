@@ -502,7 +502,9 @@ window.VoiceReader = class {
       const units = await this.buildNativeUnits();
       if (!units.length) throw new Error("No readable text was found in this book.");
       const progress = this.readerProgress();
-      let startIndex = units.findIndex((unit) => unit.progress >= progress);
+      let startIndex = units.findIndex((unit) =>
+        unit.pageIndex >= 0 ? unit.pageIndex >= this.reader.index : unit.progress >= progress
+      );
       if (startIndex < 0) startIndex = units.length - 1;
       this.nativeActive = true;
       await this.native.begin({
@@ -526,15 +528,15 @@ window.VoiceReader = class {
   async buildNativeUnits() {
     const units = [];
     if (this.content?.kind === "flow") {
-      const source = document.createElement("div");
-      source.innerHTML = this.content.html || "";
-      source.querySelectorAll("script,style,noscript,[aria-hidden='true']").forEach((node) => node.remove());
-      const sentences = this.sentencesFromText(source.textContent || "");
-      const total = Math.max(1, sentences.reduce((sum, sentence) => sum + sentence.text.length, 0));
-      let offset = 0;
-      for (const sentence of sentences) {
-        units.push({ text: sentence.text, progress: offset / total, pageIndex: -1 });
-        offset += sentence.text.length;
+      const pages = this.reader.epubPages?.pages || [];
+      for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+        for (const sentence of this.sentencesFromText(pages[pageIndex].text || "")) {
+          units.push({
+            text: sentence.text,
+            progress: pages.length > 1 ? pageIndex / (pages.length - 1) : 0,
+            pageIndex,
+          });
+        }
       }
     } else if (typeof this.content?.getPageText === "function") {
       const count = this.content.pageCount || this.reader.comic?.pageCount || 0;

@@ -119,7 +119,7 @@ html, body {
 .shelf-root[data-backdrop="forest"] { background-color: #141f18; }
 
 body.customizing .shelf-root {
-  padding-bottom: calc(var(--customize-panel-height, 360px) + 92px);
+  padding-bottom: calc(var(--customize-panel-height, 360px) + var(--customize-tabbar-height, 68px) + 24px);
   top: var(--app-header-total);
   overscroll-behavior-y: contain;
 }
@@ -752,7 +752,9 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
 .customize-tab.active { color: var(--accent); }
 
 .customize-panel {
-  position: absolute; left: 0; right: 0; bottom: 68px; z-index: 20;
+  position: absolute; left: 0; right: 0;
+  bottom: var(--customize-tabbar-height, calc(68px + env(safe-area-inset-bottom, 0px)));
+  z-index: 22;
   background: #1c1108ee;
   border-top: 1px solid rgba(255,255,255,.08);
   padding: 14px 16px;
