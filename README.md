@@ -1,4 +1,12 @@
-# Nth Reader V-0.36.00
+# Nth Reader V-0.36.01
+
+## V-0.36.01: bookshelf widget finish pass
+
+- Captures the real shelf at higher density and quality so books, decor, rails, and labels stay clearer at larger widget sizes.
+- Adds extra responsive source widths to reduce squashing and stretching while the launcher resizes the widget.
+- Lets the app's own wooden side rails define the widget edges instead of surrounding them with a second heavy frame.
+- Refines the compact header with a larger emblem, smaller bookcase label, and a subtle wooden separator.
+- Uses a little more of Android's safe `RemoteViews` bitmap budget for improved large-widget detail.
 
 ## V-0.36.00: photoreal Android bookshelf widget
 
@@ -458,4 +466,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.36.00`.
+The service-worker cache key is `Nth-Reader-V-0.36.01`.

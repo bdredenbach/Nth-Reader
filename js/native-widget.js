@@ -6,7 +6,10 @@ window.NthNativeWidget = new (class {
   constructor() {
     this.captureTimer = 0;
     this.captureGeneration = 0;
-    this.captureWidths = [320, 480, 720];
+    // More source shapes keep the native widget from stretching books when
+    // the launcher moves between narrow, medium, and wide grid spans.
+    this.captureWidths = [280, 360, 460, 580, 760];
+    this.captureScale = 1.5;
   }
 
   available() {
@@ -53,7 +56,7 @@ window.NthNativeWidget = new (class {
       position: Number(item.position) || 50,
     }));
     return {
-      version: 2, activeBookcase: shelf.activeBookcase, bookcaseCount: shelf.bookcaseCount,
+      version: 3, activeBookcase: shelf.activeBookcase, bookcaseCount: shelf.bookcaseCount,
       shelfTheme: shelf.root?.dataset?.shelfTheme || "walnut",
       backdrop: shelf.root?.dataset?.backdrop || "walnut", books, decor,
     };
@@ -105,7 +108,7 @@ window.NthNativeWidget = new (class {
       const canvas = await window.html2canvas(stage, {
         backgroundColor: null,
         logging: false,
-        scale: 1,
+        scale: this.captureScale,
         useCORS: true,
         width,
         height,
@@ -114,11 +117,12 @@ window.NthNativeWidget = new (class {
         scrollX: 0,
         scrollY: 0,
       });
+      const renderedScale = canvas.width / Math.max(1, width);
       return {
         width: canvas.width,
         height: canvas.height,
-        rowBottoms,
-        art: canvas.toDataURL("image/webp", .80),
+        rowBottoms: rowBottoms.map((bottom) => Math.round(bottom * renderedScale)),
+        art: canvas.toDataURL("image/webp", .90),
       };
     } finally {
       stage.remove();

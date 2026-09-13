@@ -32,7 +32,9 @@ import java.util.List;
 
 /** A responsive, launcher-safe rendering of the currently selected bookcase. */
 public final class BookshelfWidgetProvider extends AppWidgetProvider {
-    private static final int MAX_BITMAP_BYTES = 760_000;
+    // Leave room below Android's RemoteViews transaction ceiling while using
+    // more of the available budget for sharper large-widget rendering.
+    private static final int MAX_BITMAP_BYTES = 860_000;
 
     static File snapshotFile(Context context) {
         return new File(context.getFilesDir(), "widget-shelf.json");
@@ -90,26 +92,22 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
                                      int heightDp, JSONObject snapshot) {
         Palette palette = Palette.forName(snapshot.optString("shelfTheme", "walnut"));
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        paint.setDither(true);
         canvas.drawColor(Color.TRANSPARENT);
 
-        float radius = Math.max(9f, width * .025f);
+        float radius = Math.max(7f, width * .018f);
         paint.setShader(new LinearGradient(0, 0, width, height, palette.frameLight, palette.frameDark,
                 Shader.TileMode.CLAMP));
         canvas.drawRoundRect(new RectF(0, 0, width, height), radius, radius, paint);
         paint.setShader(null);
 
-        float frame = Math.max(4f, width * .012f);
-        float header = Math.max(25f, Math.min(54f, width * .105f));
+        // The captured shelf already contains the app's carved side rails.
+        // Keep only a hairline native edge so those real rails define the case.
+        float frame = Math.max(1f, width * .0035f);
+        float header = Math.max(24f, Math.min(48f, width * .092f));
         RectF inside = new RectF(frame, header, width - frame, height - frame);
         paint.setColor(palette.back);
         canvas.drawRect(inside, paint);
-
-        paint.setColor(Color.argb(100, 255, 210, 135));
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(Math.max(1f, width * .005f));
-        canvas.drawRoundRect(new RectF(frame * .55f, frame * .45f, width - frame * .55f,
-                height - frame * .45f), radius * .72f, radius * .72f, paint);
-        paint.setStyle(Paint.Style.FILL);
 
         drawHeader(context, canvas, paint, width, header, snapshot, palette);
 
@@ -187,18 +185,25 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
                 Shader.TileMode.MIRROR));
         canvas.drawRect(0, 0, width, header, paint);
         paint.setShader(null);
+        paint.setColor(Color.argb(115, 255, 218, 153));
+        canvas.drawRect(0, header - Math.max(1f, header * .025f), width, header, paint);
         Bitmap icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.nth_reader_icon);
         if (icon != null) {
-            float iconSize = Math.min(header * .75f, width * .16f);
+            float iconSize = Math.min(header * .86f, width * .17f);
             RectF target = new RectF((width - iconSize) / 2f, (header - iconSize) / 2f,
                     (width + iconSize) / 2f, (header + iconSize) / 2f);
             canvas.drawBitmap(icon, null, target, paint);
+            icon.recycle();
         }
         int bookcase = snapshot.optInt("activeBookcase", 0) + 1;
         paint.setTextAlign(Paint.Align.RIGHT);
-        paint.setTextSize(Math.max(8f, width * .031f));
+        paint.setTextSize(Math.max(7f, Math.min(14f, width * .024f)));
+        paint.setFakeBoldText(true);
+        paint.setShadowLayer(Math.max(1f, width * .003f), 0, 1f, Color.argb(210, 20, 8, 2));
         paint.setColor(Color.rgb(231, 198, 140));
-        canvas.drawText("Bookcase " + bookcase, width - Math.max(8f, width * .035f), header * .63f, paint);
+        canvas.drawText("Bookcase " + bookcase, width - Math.max(7f, width * .025f), header * .62f, paint);
+        paint.clearShadowLayer();
+        paint.setFakeBoldText(false);
     }
 
     private static void drawBooks(Canvas canvas, Paint paint, float left, float right, float top,

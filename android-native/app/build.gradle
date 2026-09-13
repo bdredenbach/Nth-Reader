@@ -8,8 +8,8 @@ android {
         applicationId "com.nthreader.app"
         minSdk 26
         targetSdk 35
-        versionCode 3600
-        versionName "0.36.00"
+        versionCode 3601
+        versionName "0.36.01"
     }
 
     buildTypes {
