@@ -9,7 +9,9 @@ window.NthNativeWidget = new (class {
     // More source shapes keep the native widget from stretching books when
     // the launcher moves between narrow, medium, and wide grid spans.
     this.captureWidths = [280, 360, 460, 580, 760];
-    this.captureScale = 1.5;
+    // V0.36.02 quality experiment: render each source snapshot at twice its
+    // CSS size, then let Android perform the single final downsample.
+    this.captureScale = 2;
   }
 
   available() {

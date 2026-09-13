@@ -1,4 +1,9 @@
-# Nth Reader V-0.36.01
+# Nth Reader V-0.36.02
+
+## V-0.36.02: 2× widget capture experiment
+
+- Tests twice-resolution photoreal shelf captures while retaining V-0.36.01's safe native widget bitmap ceiling and responsive layouts.
+- Keeps V-0.36.01 intact as the known-good fallback if the additional source resolution does not produce a worthwhile visible improvement.
 
 ## V-0.36.01: bookshelf widget finish pass
 
@@ -466,4 +471,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.36.01`.
+The service-worker cache key is `Nth-Reader-V-0.36.02`.
