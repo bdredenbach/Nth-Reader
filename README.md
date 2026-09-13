@@ -1,4 +1,22 @@
-# Nth Reader V-0.31.03
+# Nth Reader V-0.32.00
+
+## V-0.32.00: Android background narration
+
+- Adds an optional native Android wrapper that uses the phone's installed Text-to-Speech engine rather than a browser tab for narration.
+- Keeps reading while the app is backgrounded or the screen is locked through an Android media-playback foreground service.
+- Adds notification and lock-screen play, pause, previous-sentence, and next-sentence controls through a native MediaSession.
+- Prepares the complete readable book before playback, automatically tracks the book's approximate page while visible, and retains the narration queue across Android process recreation.
+- Keeps the hosted PWA and its existing browser voice reader unchanged as the fallback on iPhone, desktop, and browsers.
+- Adds a GitHub Actions build that publishes an installable debug APK artifact on Android-branch changes or manual runs.
+
+### Trying the Android build
+
+1. Open the repository's **Actions** tab and select **Android native reader**.
+2. Run the workflow on the `Android` branch, then download the **Nth-Reader-Android-debug** artifact from the completed run.
+3. Extract and install `app-debug.apk` on Android. The native app loads the hosted Nth Reader and stores its WebView library separately from Chrome's PWA storage.
+4. Open a readable book and tap **Read**. Android may request notification permission so playback controls remain visible while narration continues in the background.
+
+The Android app uses the device's current system voice and language. Those can be changed in Android's Text-to-speech output settings.
 
 ## V-0.31.03: seamless photographic reading page
 
@@ -390,4 +408,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.31.03`.
+The service-worker cache key is `Nth-Reader-V-0.32.00`.

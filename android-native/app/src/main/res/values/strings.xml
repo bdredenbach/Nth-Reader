@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Nth Reader</string>
+    <string name="narration_channel">Book narration</string>
+    <string name="narration_channel_description">Background read-aloud playback and controls</string>
+</resources>

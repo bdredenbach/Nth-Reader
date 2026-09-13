@@ -304,6 +304,30 @@ window.Reader = class {
     return true;
   }
 
+  syncNativeNarration(state) {
+    if (!this.book || !this.content || !state) return;
+    const count = this.comic?.pageCount || this.epubPages?.pages?.length || 0;
+    if (!count) return;
+    let target = Number(state.pageIndex);
+    if (!Number.isInteger(target) || target < 0) {
+      target = Math.round(Math.max(0, Math.min(1, Number(state.progress) || 0)) * (count - 1));
+    }
+    target = Math.max(0, Math.min(count - 1, target));
+    if (target === this.index) return;
+    this.voiceReader.nativePageSync = true;
+    if (!this._usingFallback && this.turnPageMode?.book) {
+      try { this.turnPageMode.book.turn("page", target + 1); }
+      catch (_) { this.voiceReader.nativePageSync = false; }
+    } else if (this.content.kind === "flow") {
+      this.epubPages.index = target;
+      this.index = target;
+      this.epubPages.render();
+      this.saveProgress();
+    } else {
+      this.goToFallback(target);
+    }
+  }
+
   async applyReadingStyle() {
     if (this.content?.kind !== "flow" || !this.book) return;
     if (this._styleReflowing) {

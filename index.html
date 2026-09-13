@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.31.03" />
+<link rel="manifest" href="./manifest.webmanifest?v=0.32.00" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.31.03";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=0.32.00";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -336,6 +336,7 @@
 <script src="js/page-mode.js"></script>
 <script src="js/reading-style.js"></script>
 <script src="js/epub-page-reader.js"></script>
+<script src="js/native-narrator.js"></script>
 <script src="js/voice-reader.js"></script>
 <script src="js/reader.js"></script>
 <script src="js/decor-art.js"></script>

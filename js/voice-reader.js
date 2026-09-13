@@ -7,7 +7,12 @@ window.VoiceReader = class {
   constructor(reader) {
     this.reader = reader;
     this.synth = window.speechSynthesis || null;
-    this.supported = Boolean(this.synth && window.SpeechSynthesisUtterance);
+    this.native = window.NthNativeNarrator || null;
+    this.nativeAvailable = Boolean(this.native?.available());
+    this.nativeActive = false;
+    this.nativePreparing = false;
+    this.nativePageSync = false;
+    this.supported = this.nativeAvailable || Boolean(this.synth && window.SpeechSynthesisUtterance);
     this.els = {
       bar: document.getElementById("voice-reader-bar"),
       play: document.getElementById("voice-play-btn"),
@@ -47,7 +52,18 @@ window.VoiceReader = class {
     });
     this.els.autoTurn.addEventListener("change", () => this.saveSettings());
 
-    if (this.supported) {
+    window.addEventListener("nth-native-narration", (event) => this.onNativeState(event.detail));
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && this.nativeAvailable) this.native.getState();
+    });
+
+    if (this.nativeAvailable) {
+      const option = document.createElement("option");
+      option.value = "android-system";
+      option.textContent = "Android system voice · device";
+      this.els.voice.replaceChildren(option);
+      this.els.voice.disabled = true;
+    } else if (this.supported) {
       this.populateVoices();
       this.synth.addEventListener?.("voiceschanged", () => this.populateVoices());
     }
@@ -62,8 +78,12 @@ window.VoiceReader = class {
     this.els.bar.hidden = !this.supported || !potentiallyReadable;
     this.available = false;
     if (this.els.bar.hidden) return;
-    this.setStatus("Checking this page for readable text…");
+    this.setStatus(this.nativeAvailable ? "Android background narration ready" : "Checking this page for readable text…");
     await this.refreshPage(false);
+    if (this.nativeAvailable) {
+      const state = this.native.getState();
+      if (state?.active && state.bookId && String(state.bookId) !== String(book.id)) this.native.stop();
+    }
     this.setVisible(true);
   }
 
@@ -106,7 +126,7 @@ window.VoiceReader = class {
   }
 
   populateVoices() {
-    if (!this.supported) return;
+    if (!this.supported || this.nativeAvailable || !this.synth) return;
     const voices = this.synth.getVoices() || [];
     if (!voices.length) return;
     const localVoices = voices.filter((voice) => voice.localService);
@@ -156,9 +176,9 @@ window.VoiceReader = class {
   updateControls() {
     this.els.play.innerHTML = this.playing ? "Ⅱ <span>Pause</span>" : "▶ <span>Read</span>";
     this.els.play.setAttribute("aria-label", this.playing ? "Pause read aloud" : "Read this page aloud");
-    this.els.play.disabled = !this.available;
-    this.els.prev.disabled = !this.available || this.sentenceIndex <= 0;
-    this.els.next.disabled = !this.available || (!this.sentences[this.sentenceIndex + 1] && !this.hasNextPage());
+    this.els.play.disabled = !this.available || this.nativePreparing;
+    this.els.prev.disabled = !this.available || (!this.nativeActive && this.sentenceIndex <= 0);
+    this.els.next.disabled = !this.available || (!this.nativeActive && !this.sentences[this.sentenceIndex + 1] && !this.hasNextPage());
     this.els.rate.textContent = `${this.rateValue.toFixed(1)}×`;
   }
 
@@ -196,6 +216,12 @@ window.VoiceReader = class {
 
   async onPageChanged() {
     if (!this.book || this.els.bar.hidden) return;
+    if (this.nativeAvailable && this.nativeActive) {
+      await this.refreshPage(false);
+      if (this.nativePageSync) this.nativePageSync = false;
+      else this.native.seekProgress(this.readerProgress());
+      return;
+    }
     clearTimeout(this.turnTimer);
     this.turnTimer = null;
     const continueReading = this.playing || this.waitingForPage;
@@ -273,9 +299,15 @@ window.VoiceReader = class {
     return this.groupTokens(words.map((word) => ({ text: word, range: null, block: null })));
   }
 
-  toggle() {
+  async toggle() {
     this.reader.showChrome();
     if (!this.available) return;
+    if (this.nativeAvailable) {
+      if (this.playing) this.native.pause();
+      else if (this.paused && this.nativeActive) this.native.resume();
+      else await this.startNative();
+      return;
+    }
     if (this.playing) {
       // Mobile WebViews disagree about pause/resume state. Canceling the
       // short utterance and restarting that sentence is much more reliable.
@@ -365,6 +397,11 @@ window.VoiceReader = class {
 
   moveSentence(delta) {
     if (!this.available) return;
+    if (this.nativeAvailable && this.nativeActive) {
+      this.native.skip(delta);
+      this.reader.showChrome();
+      return;
+    }
     const target = this.sentenceIndex + delta;
     if (target < 0) return;
     if (target >= this.sentences.length) {
@@ -394,7 +431,8 @@ window.VoiceReader = class {
     const current = rates.findIndex((rate) => Math.abs(rate - this.rateValue) < .01);
     this.rateValue = rates[(current + 1) % rates.length];
     this.saveSettings();
-    if (this.playing || this.paused) this.restartSentence();
+    if (this.nativeAvailable && this.nativeActive) this.native.setRate(this.rateValue);
+    else if (this.playing || this.paused) this.restartSentence();
     else this.updateControls();
     this.reader.showChrome();
   }
@@ -424,6 +462,8 @@ window.VoiceReader = class {
   }
 
   stop(update = true) {
+    if (this.nativeAvailable && this.nativeActive) this.native.stop();
+    this.nativeActive = false;
     this.cancelSpeech(true);
     this.clearHighlight();
     if (update) {
@@ -446,5 +486,87 @@ window.VoiceReader = class {
 
   clearHighlight() {
     try { window.CSS?.highlights?.delete("nth-narration"); } catch (_) { /* unsupported */ }
+  }
+
+  readerProgress() {
+    const count = this.reader.comic?.pageCount || this.reader.epubPages?.pages?.length || 1;
+    return count > 1 ? this.reader.index / (count - 1) : 0;
+  }
+
+  async startNative() {
+    if (this.nativePreparing) return;
+    this.nativePreparing = true;
+    this.setStatus("Preparing this book for background narration…");
+    this.els.play.disabled = true;
+    try {
+      const units = await this.buildNativeUnits();
+      if (!units.length) throw new Error("No readable text was found in this book.");
+      const progress = this.readerProgress();
+      let startIndex = units.findIndex((unit) => unit.progress >= progress);
+      if (startIndex < 0) startIndex = units.length - 1;
+      this.nativeActive = true;
+      await this.native.begin({
+        bookId: String(this.book?.id || ""),
+        title: this.book?.title || "Nth Reader",
+        author: this.book?.author || "",
+        rate: this.rateValue,
+      }, units, startIndex);
+      this.nativePreparing = false;
+      this.updateControls();
+    } catch (error) {
+      this.nativePreparing = false;
+      this.nativeActive = false;
+      this.playing = false;
+      this.paused = false;
+      this.setStatus(error?.message || "Background narration could not start.");
+      this.updateControls();
+    }
+  }
+
+  async buildNativeUnits() {
+    const units = [];
+    if (this.content?.kind === "flow") {
+      const source = document.createElement("div");
+      source.innerHTML = this.content.html || "";
+      source.querySelectorAll("script,style,noscript,[aria-hidden='true']").forEach((node) => node.remove());
+      const sentences = this.sentencesFromText(source.textContent || "");
+      const total = Math.max(1, sentences.reduce((sum, sentence) => sum + sentence.text.length, 0));
+      let offset = 0;
+      for (const sentence of sentences) {
+        units.push({ text: sentence.text, progress: offset / total, pageIndex: -1 });
+        offset += sentence.text.length;
+      }
+    } else if (typeof this.content?.getPageText === "function") {
+      const count = this.content.pageCount || this.reader.comic?.pageCount || 0;
+      for (let pageIndex = 0; pageIndex < count; pageIndex++) {
+        const text = await this.content.getPageText(pageIndex).catch(() => "");
+        for (const sentence of this.sentencesFromText(text)) {
+          units.push({
+            text: sentence.text,
+            progress: count > 1 ? pageIndex / (count - 1) : 0,
+            pageIndex,
+          });
+        }
+        if (pageIndex % 4 === 3) await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+    return units;
+  }
+
+  onNativeState(state) {
+    if (!this.nativeAvailable || !state || !this.book) return;
+    if (state.bookId && String(state.bookId) !== String(this.book.id)) return;
+    this.nativeActive = Boolean(state.active);
+    this.playing = Boolean(state.playing);
+    this.paused = Boolean(state.paused);
+    if (Number.isFinite(Number(state.index))) this.sentenceIndex = Number(state.index);
+    this.available = this.available || this.nativeActive;
+    if (state.error) this.setStatus(state.error);
+    else if (state.playing && state.text) this.setStatus(state.text.length > 115 ? `${state.text.slice(0, 112)}…` : state.text);
+    else if (state.paused) this.setStatus("Background narration paused");
+    else if (state.finished) this.setStatus("End of book");
+    else if (this.nativeActive) this.setStatus("Android background narration ready");
+    this.updateControls();
+    if (this.nativeActive && document.visibilityState === "visible") this.reader.syncNativeNarration(state);
   }
 };
