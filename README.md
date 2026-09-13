@@ -1,4 +1,11 @@
-# Nth Reader V-0.36.02
+# Nth Reader V-0.36.03
+
+## V-0.36.03: stable 4× widget capture experiment
+
+- Prevents the app's quick native fallback from replacing an existing photoreal widget while a new capture is still rendering.
+- Commits a new widget photograph only after every responsive variant has completed, so interrupted captures leave the last good shelf untouched.
+- Streams 4× variants into native files one at a time instead of passing one oversized JSON payload through the WebView bridge.
+- Keeps old wrappers compatible with the original all-at-once snapshot path.
 
 ## V-0.36.02: 2× widget capture experiment
 
@@ -471,4 +478,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.36.02`.
+The service-worker cache key is `Nth-Reader-V-0.36.03`.

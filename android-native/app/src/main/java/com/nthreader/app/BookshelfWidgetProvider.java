@@ -116,7 +116,7 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         JSONArray allBooks = snapshot.optJSONArray("books");
         JSONArray allDecor = snapshot.optJSONArray("decor");
         boolean hasContent = allBooks != null && allBooks.length() > 0;
-        boolean photoreal = drawPhotorealShelf(canvas, paint, inside, shelfCount, snapshot);
+        boolean photoreal = drawPhotorealShelf(context, canvas, paint, inside, shelfCount, snapshot);
 
         if (!photoreal) {
             for (int row = 0; row < shelfCount; row++) {
@@ -145,7 +145,7 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static boolean drawPhotorealShelf(Canvas canvas, Paint paint, RectF target,
+    private static boolean drawPhotorealShelf(Context context, Canvas canvas, Paint paint, RectF target,
                                               int shelfCount, JSONObject snapshot) {
         JSONArray variants = snapshot.optJSONArray("variants");
         if (variants == null || variants.length() == 0) return false;
@@ -169,7 +169,7 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             }
         }
         if (best == null) return false;
-        Bitmap bitmap = decodeArt(best.optString("art", ""));
+        Bitmap bitmap = decodeVariantArt(context, best);
         if (bitmap == null) return false;
         int metadataHeight = Math.max(1, best.optInt("height", bitmap.getHeight()));
         int sourceBottom = Math.min(bitmap.getHeight(), Math.max(1,
@@ -177,6 +177,17 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), sourceBottom), target, paint);
         bitmap.recycle();
         return true;
+    }
+
+    private static Bitmap decodeVariantArt(Context context, JSONObject variant) {
+        try {
+            String filename = variant.optString("artFile", "");
+            if (!filename.isEmpty() && !filename.contains("/") && !filename.contains("\\")) {
+                File file = new File(context.getFilesDir(), filename);
+                if (file.isFile()) return BitmapFactory.decodeFile(file.getAbsolutePath());
+            }
+        } catch (Exception ignored) {}
+        return decodeArt(variant.optString("art", ""));
     }
 
     private static void drawHeader(Context context, Canvas canvas, Paint paint, int width, float header,

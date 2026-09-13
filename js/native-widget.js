@@ -9,9 +9,10 @@ window.NthNativeWidget = new (class {
     // More source shapes keep the native widget from stretching books when
     // the launcher moves between narrow, medium, and wide grid spans.
     this.captureWidths = [280, 360, 460, 580, 760];
-    // V0.36.02 quality experiment: render each source snapshot at twice its
-    // CSS size, then let Android perform the single final downsample.
-    this.captureScale = 2;
+    // V0.36.03 quality experiment: render each source snapshot at four times
+    // its CSS size. Variants are streamed to native storage one at a time so
+    // this does not create one enormous bridge message.
+    this.captureScale = 4;
   }
 
   available() {
@@ -73,18 +74,42 @@ window.NthNativeWidget = new (class {
     if (generation !== this.captureGeneration || !window.html2canvas) return;
     try {
       const variants = [];
-      for (const width of this.captureWidths) {
+      const captureId = `${Date.now()}-${generation}`;
+      let streaming = false;
+      try {
+        streaming = typeof window.NthWidgetBridge?.beginShelfCapture === "function"
+          && typeof window.NthWidgetBridge?.addShelfCaptureVariant === "function";
+        if (streaming) {
+          streaming = window.NthWidgetBridge.beginShelfCapture(
+            JSON.stringify(payload), captureId, this.captureWidths.length
+          ) === true;
+        }
+      } catch (_) { streaming = false; }
+      const captureScale = streaming ? this.captureScale : 2;
+
+      for (let index = 0; index < this.captureWidths.length; index += 1) {
         if (generation !== this.captureGeneration) return;
-        variants.push(await this.captureVariant(shelf, width));
+        const variant = await this.captureVariant(shelf, this.captureWidths[index], captureScale);
+        variants.push(variant);
+        if (streaming) {
+          try {
+            const accepted = window.NthWidgetBridge.addShelfCaptureVariant(
+              captureId, index, this.captureWidths.length, JSON.stringify(variant)
+            );
+            if (accepted !== true) throw new Error("Native widget rejected a capture variant.");
+          } catch (_) { return; }
+        }
       }
       if (generation !== this.captureGeneration) return;
-      this.send({ ...payload, variants });
+      // Older Android wrappers do not expose streaming. Keep their original
+      // all-at-once path functional at the lower resolutions they support.
+      if (!streaming && captureScale <= 2) this.send({ ...payload, variants });
     } catch (_) {
       // The native renderer has already received a complete fallback model.
     }
   }
 
-  async captureVariant(shelf, width) {
+  async captureVariant(shelf, width, scale = this.captureScale) {
     const stage = document.createElement("div");
     stage.className = "shelf-root widget-capture-stage";
     stage.dataset.backdrop = shelf.root?.dataset?.backdrop || "walnut";
@@ -110,7 +135,7 @@ window.NthNativeWidget = new (class {
       const canvas = await window.html2canvas(stage, {
         backgroundColor: null,
         logging: false,
-        scale: this.captureScale,
+        scale,
         useCORS: true,
         width,
         height,
