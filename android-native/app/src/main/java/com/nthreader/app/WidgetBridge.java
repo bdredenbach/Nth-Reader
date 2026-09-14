@@ -1,5 +1,8 @@
 package com.nthreader.app;
 
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
+import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.util.Base64;
 
@@ -11,6 +14,7 @@ import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /** Persists web-rendered shelf snapshots for the native launcher widget. */
@@ -22,6 +26,31 @@ public final class WidgetBridge {
     WidgetBridge(MainActivity activity) { this.activity = activity; }
 
     @JavascriptInterface public boolean isAvailable() { return true; }
+
+    /**
+     * Returns the launcher widths that the browser renderer should capture.
+     * Both bounds are included because Android may use a different width after
+     * a rotation without reopening the app.
+     */
+    @JavascriptInterface public synchronized String getWidgetCaptureWidths() {
+        LinkedHashSet<Integer> widths = new LinkedHashSet<>();
+        try {
+            AppWidgetManager manager = AppWidgetManager.getInstance(activity);
+            int[] ids = manager.getAppWidgetIds(
+                    new ComponentName(activity, BookshelfWidgetProvider.class));
+            for (int id : ids) {
+                Bundle options = manager.getAppWidgetOptions(id);
+                addCaptureWidth(widths,
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0));
+                addCaptureWidth(widths,
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0));
+                if (widths.size() >= 8) break;
+            }
+        } catch (Exception ignored) {}
+        JSONArray result = new JSONArray();
+        for (int width : widths) result.put(width);
+        return result.toString();
+    }
 
     @JavascriptInterface public synchronized void updateShelf(String json) {
         if (json == null || json.length() > MAX_MODEL_CHARS) return;
@@ -116,6 +145,10 @@ public final class WidgetBridge {
 
     private static boolean validCaptureId(String id) {
         return id != null && id.matches("[A-Za-z0-9_-]{1,80}");
+    }
+
+    private static void addCaptureWidth(Set<Integer> widths, int width) {
+        if (width > 0 && widths.size() < 8) widths.add(Math.max(180, Math.min(900, width)));
     }
 
     private static boolean hasVariants(JSONObject value) {

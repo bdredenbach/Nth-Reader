@@ -247,9 +247,27 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
                 Math.max(1, Math.round(target.height())), bestBottom);
         if (bitmap == null) return false;
         int metadataHeight = Math.max(1, best.optInt("height", bitmap.getHeight()));
-        int sourceBottom = Math.min(bitmap.getHeight(), Math.max(1,
-                Math.round(bestBottom * bitmap.getHeight() / (float) metadataHeight)));
-        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), sourceBottom), target, paint);
+        JSONArray rowBottoms = best.optJSONArray("rowBottoms");
+        if (rowBottoms == null || rowBottoms.length() < shelfCount) {
+            int sourceBottom = Math.min(bitmap.getHeight(), Math.max(1,
+                    Math.round(bestBottom * bitmap.getHeight() / (float) metadataHeight)));
+            canvas.drawBitmap(bitmap,
+                    new Rect(0, 0, bitmap.getWidth(), sourceBottom), target, paint);
+            bitmap.recycle();
+            return true;
+        }
+        int sourceTop = 0;
+        for (int row = 0; row < shelfCount; row++) {
+            int metadataRowBottom = rowBottoms == null ? 0 : rowBottoms.optInt(row, 0);
+            int sourceBottom = Math.min(bitmap.getHeight(), Math.max(sourceTop + 1,
+                    Math.round(metadataRowBottom * bitmap.getHeight() / (float) metadataHeight)));
+            float targetTop = target.top + target.height() * row / shelfCount;
+            float targetBottom = target.top + target.height() * (row + 1) / shelfCount;
+            canvas.drawBitmap(bitmap,
+                    new Rect(0, sourceTop, bitmap.getWidth(), sourceBottom),
+                    new RectF(target.left, targetTop, target.right, targetBottom), paint);
+            sourceTop = sourceBottom;
+        }
         bitmap.recycle();
         return true;
     }

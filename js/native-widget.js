@@ -6,12 +6,11 @@ window.NthNativeWidget = new (class {
   constructor() {
     this.captureTimer = 0;
     this.captureGeneration = 0;
-    // More source shapes keep the native widget from stretching books when
-    // the launcher moves between narrow, medium, and wide grid spans.
+    // Used when no native widget has been placed yet. Once installed, V0.38.00
+    // asks Android for the widget's real launcher width instead.
     this.captureWidths = [280, 360, 460, 580, 760];
-    // Render each source snapshot at four times its CSS size. V0.37.00 treats
-    // these captures as supersampling sources for an exact-size URI-backed
-    // native widget image instead of decoding the entire 4× image at once.
+    // Render each exact-width source at four times its CSS size, then let the
+    // row-aware native compositor perform the one final downsample.
     this.captureScale = 4;
   }
 
@@ -75,26 +74,27 @@ window.NthNativeWidget = new (class {
     try {
       const variants = [];
       const captureId = `${Date.now()}-${generation}`;
+      const captureWidths = this.captureWidthsForRun();
       let streaming = false;
       try {
         streaming = typeof window.NthWidgetBridge?.beginShelfCapture === "function"
           && typeof window.NthWidgetBridge?.addShelfCaptureVariant === "function";
         if (streaming) {
           streaming = window.NthWidgetBridge.beginShelfCapture(
-            JSON.stringify(payload), captureId, this.captureWidths.length
+            JSON.stringify(payload), captureId, captureWidths.length
           ) === true;
         }
       } catch (_) { streaming = false; }
       const captureScale = streaming ? this.captureScale : 2;
 
-      for (let index = 0; index < this.captureWidths.length; index += 1) {
+      for (let index = 0; index < captureWidths.length; index += 1) {
         if (generation !== this.captureGeneration) return;
-        const variant = await this.captureVariant(shelf, this.captureWidths[index], captureScale);
+        const variant = await this.captureVariant(shelf, captureWidths[index], captureScale);
         variants.push(variant);
         if (streaming) {
           try {
             const accepted = window.NthWidgetBridge.addShelfCaptureVariant(
-              captureId, index, this.captureWidths.length, JSON.stringify(variant)
+              captureId, index, captureWidths.length, JSON.stringify(variant)
             );
             if (accepted !== true) throw new Error("Native widget rejected a capture variant.");
           } catch (_) { return; }
@@ -107,6 +107,18 @@ window.NthNativeWidget = new (class {
     } catch (_) {
       // The native renderer has already received a complete fallback model.
     }
+  }
+
+  captureWidthsForRun() {
+    try {
+      const raw = window.NthWidgetBridge?.getWidgetCaptureWidths?.();
+      const requested = JSON.parse(raw || "[]")
+        .map((width) => Math.round(Number(width)))
+        .filter((width) => Number.isFinite(width) && width >= 180 && width <= 900);
+      const unique = Array.from(new Set(requested));
+      if (unique.length) return unique.slice(0, 8);
+    } catch (_) { /* older Android wrappers keep the responsive defaults */ }
+    return this.captureWidths;
   }
 
   async captureVariant(shelf, width, scale = this.captureScale) {

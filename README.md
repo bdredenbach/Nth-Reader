@@ -1,4 +1,12 @@
-# Nth Reader V-0.37.00
+# Nth Reader V-0.38.00
+
+## V-0.38.00: adaptive exact-width bookshelf widget
+
+- Compares fixed-width monolithic scaling, separate shelf tiles, and dynamic exact-width rendering across compact, wide, medium, and tall widget shapes.
+- Uses the winning hybrid: Android reports each installed widget's real launcher width, and the app creates matching 4× bookcase captures with its original DOM/CSS renderer.
+- Composites shelf rows independently into one seamless, exact-size URI image, retaining sharper book titles and decor edges without exposing tiled seams to the launcher.
+- Captures both Android width bounds so the widget has a precise source after device rotation as well as after manual resizing.
+- Keeps V-0.37.00's sampled decoding, URI delivery, cache-safe filenames, and V-0.36.03 bitmap fallback.
 
 ## V-0.37.00: exact-size URI widget renderer experiment
 
@@ -487,4 +495,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.37.00`.
+The service-worker cache key is `Nth-Reader-V-0.38.00`.
