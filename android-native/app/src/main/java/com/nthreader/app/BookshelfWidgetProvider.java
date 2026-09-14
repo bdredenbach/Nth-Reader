@@ -39,6 +39,8 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
     // the proven V0.36.03 bitmap path here prevents an update failure from
     // leaving the user with a blank widget.
     private static final int MAX_BITMAP_BYTES = 860_000;
+    private static final int BUNDLED_SHELF_HEIGHT = 1990;
+    private static final int[] BUNDLED_ROW_BOTTOMS = {440, 833, 1245, 1639, 1990};
 
     static File snapshotFile(Context context) {
         return new File(context.getFilesDir(), "widget-shelf.json");
@@ -221,7 +223,9 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
     private static boolean drawPhotorealShelf(Context context, Canvas canvas, Paint paint, RectF target,
                                               int shelfCount, JSONObject snapshot) {
         JSONArray variants = snapshot.optJSONArray("variants");
-        if (variants == null || variants.length() == 0) return false;
+        if (variants == null || variants.length() == 0) {
+            return drawBundledPhotorealShelf(context, canvas, paint, target, shelfCount);
+        }
         JSONObject best = null;
         int bestBottom = 0;
         double bestDifference = Double.MAX_VALUE;
@@ -241,11 +245,15 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
                 bestDifference = difference;
             }
         }
-        if (best == null) return false;
+        if (best == null) {
+            return drawBundledPhotorealShelf(context, canvas, paint, target, shelfCount);
+        }
         Bitmap bitmap = decodeVariantArt(context, best,
                 Math.max(1, Math.round(target.width())),
                 Math.max(1, Math.round(target.height())), bestBottom);
-        if (bitmap == null) return false;
+        if (bitmap == null) {
+            return drawBundledPhotorealShelf(context, canvas, paint, target, shelfCount);
+        }
         int metadataHeight = Math.max(1, best.optInt("height", bitmap.getHeight()));
         JSONArray rowBottoms = best.optJSONArray("rowBottoms");
         if (rowBottoms == null || rowBottoms.length() < shelfCount) {
@@ -270,6 +278,62 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         }
         bitmap.recycle();
         return true;
+    }
+
+    /**
+     * Draws a polished five-row shelf bundled with the APK until the app has
+     * produced the owner's live bookcase capture. Rendering one source row at
+     * a time keeps the shelf ledges aligned at every launcher height.
+     */
+    private static boolean drawBundledPhotorealShelf(Context context, Canvas canvas, Paint paint,
+                                                     RectF target, int shelfCount) {
+        try {
+            int visibleRows = Math.max(1, Math.min(5, shelfCount));
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            bounds.inScaled = false;
+            BitmapFactory.decodeResource(context.getResources(),
+                    R.drawable.widget_bookcase_fallback, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false;
+
+            int croppedHeight = Math.max(1, Math.round(bounds.outHeight
+                    * BUNDLED_ROW_BOTTOMS[visibleRows - 1] / (float) BUNDLED_SHELF_HEIGHT));
+            int targetWidth = Math.max(1, Math.round(target.width()));
+            int targetHeight = Math.max(1, Math.round(target.height()));
+            int sample = 1;
+            while (bounds.outWidth / (sample * 2) >= targetWidth
+                    && croppedHeight / (sample * 2) >= targetHeight) {
+                sample *= 2;
+            }
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = Math.max(1, sample);
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            options.inDither = true;
+            options.inScaled = false;
+            Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(),
+                    R.drawable.widget_bookcase_fallback, options);
+            if (bitmap == null) return false;
+
+            int metadataTop = 0;
+            for (int row = 0; row < visibleRows; row++) {
+                int sourceTop = Math.round(bitmap.getHeight()
+                        * metadataTop / (float) BUNDLED_SHELF_HEIGHT);
+                int sourceBottom = Math.max(sourceTop + 1,
+                        Math.round(bitmap.getHeight() * BUNDLED_ROW_BOTTOMS[row]
+                                / (float) BUNDLED_SHELF_HEIGHT));
+                float targetTop = target.top + target.height() * row / visibleRows;
+                float targetBottom = target.top + target.height() * (row + 1) / visibleRows;
+                canvas.drawBitmap(bitmap,
+                        new Rect(0, sourceTop, bitmap.getWidth(), sourceBottom),
+                        new RectF(target.left, targetTop, target.right, targetBottom), paint);
+                metadataTop = BUNDLED_ROW_BOTTOMS[row];
+            }
+            bitmap.recycle();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static Bitmap decodeVariantArt(Context context, JSONObject variant, int targetWidth,

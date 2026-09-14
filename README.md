@@ -1,4 +1,12 @@
-# Nth Reader V-0.38.00
+# Nth Reader V-0.38.01
+
+## V-0.38.01: photoreal default widget shelf
+
+- Bundles a high-quality 1080-pixel-wide snapshot of the real Nth Reader bookcase as the widget's initial and emergency image.
+- Shows the polished five-row shelf immediately when no personal capture exists, instead of exposing the simplified native fallback renderer.
+- Crops and composites the bundled image shelf-by-shelf so compact, wide, and tall widget sizes keep their ledges aligned.
+- Continues to prioritize the owner's exact-width live capture as soon as the app finishes generating it.
+- Uses the same bundled snapshot in the memory-capped bitmap delivery fallback if a launcher rejects the URI-backed image.
 
 ## V-0.38.00: adaptive exact-width bookshelf widget
 
@@ -495,4 +503,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.38.00`.
+The service-worker cache key is `Nth-Reader-V-0.38.01`.
