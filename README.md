@@ -1,4 +1,13 @@
-# Nth Reader V-0.38.01
+# Nth Reader V-0.38.02
+
+## V-0.38.02: automatic personal widget snapshots
+
+- Replaces the personal comic-filled fallback asset with an original, copyright-safe five-row starter bookcase for every new installation.
+- Watches all completed shelf redraws so adding, moving, resizing, restyling, stacking, leaning, facing out, photographing, or removing books and decor automatically schedules a fresh widget snapshot.
+- Uses a visual-state fingerprint to ignore selection-only redraws and unchanged refreshes, preventing redundant 4× captures and unnecessary device heat.
+- Debounces rapid edits for 1.4 seconds, producing one capture after slider movement or a group of related changes settles.
+- Promotes a new personal snapshot only after every exact-width image variant has been written successfully and keeps the previous validated snapshot visible throughout the update.
+- Retains one current personal snapshot before a widget is placed, then automatically regenerates exact launcher-width variants after placement or resizing.
 
 ## V-0.38.01: photoreal default widget shelf
 
@@ -503,4 +512,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.38.01`.
+The service-worker cache key is `Nth-Reader-V-0.38.02`.

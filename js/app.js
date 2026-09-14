@@ -11,6 +11,10 @@
   const shelf = new Shelf(shelfRoot, {
     onOpen: (id) => openBook(id),
   });
+  // Shelf edits often render in place without running the full database
+  // refresh. The widget fingerprints these redraws and captures only when the
+  // visible bookcase actually changed.
+  shelf.onVisualChanged = () => window.NthNativeWidget?.update(shelf);
   const carousel = new BookcaseCarousel(shelf);
   shelf.onBookcaseChanged = (index, scrollPositions) => {
     NthDB.settings.set("activeBookcase", index);

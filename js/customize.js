@@ -1032,6 +1032,7 @@ window.Customize = class {
     document.getElementById("shelf-root").dataset.shelfTheme = shelfTheme;
     document.documentElement.dataset.backdrop = backdrop;
     document.documentElement.dataset.shelfTheme = shelfTheme;
+    window.NthNativeWidget?.update(this.shelf);
   }
 
   showMoveToast(book, previous) {

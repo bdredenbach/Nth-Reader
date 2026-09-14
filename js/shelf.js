@@ -46,6 +46,7 @@ window.Shelf = class {
     this.onBookcaseChanged = null;
     this.onBookcaseScrollChanged = null;
     this.onViewportChanged = null;
+    this.onVisualChanged = null;
     this._lastTap = { id: null, time: 0 };
     this._drag = null; // { kind: 'book'|'faceout'|'decor'|'stack', ... }
 
@@ -152,6 +153,7 @@ window.Shelf = class {
       requestAnimationFrame(() => {
         this._restoringBookcaseScroll = false;
         this.onViewportChanged?.();
+        this.onVisualChanged?.();
       });
     });
   }

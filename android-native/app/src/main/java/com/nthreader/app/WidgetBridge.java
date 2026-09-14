@@ -52,18 +52,35 @@ public final class WidgetBridge {
         return result.toString();
     }
 
+    /** Returns only a fingerprint backed by a complete, readable capture. */
+    @JavascriptInterface public synchronized String getCommittedCaptureFingerprint() {
+        JSONObject snapshot = readJson(BookshelfWidgetProvider.snapshotFile(activity));
+        JSONArray variants = snapshot.optJSONArray("variants");
+        if (variants == null || variants.length() == 0) return "";
+        for (int index = 0; index < variants.length(); index++) {
+            JSONObject variant = variants.optJSONObject(index);
+            if (variant == null) return "";
+            String filename = variant.optString("artFile", "");
+            File artFile = new File(activity.getFilesDir(), filename);
+            boolean fileReady = !filename.isEmpty()
+                    && !filename.contains("/") && !filename.contains("\\")
+                    && artFile.isFile() && artFile.length() > 0;
+            boolean embeddedReady = !variant.optString("art", "").isEmpty();
+            if (!fileReady && !embeddedReady) return "";
+        }
+        return snapshot.optString("captureFingerprint", "");
+    }
+
     @JavascriptInterface public synchronized void updateShelf(String json) {
         if (json == null || json.length() > MAX_MODEL_CHARS) return;
         File target = BookshelfWidgetProvider.snapshotFile(activity);
         try {
             JSONObject incoming = new JSONObject(json);
             JSONObject existing = readJson(target);
-            // Opening the app sends its fast native fallback first. Never let
-            // that replace a good photograph of the same bookcase while the
-            // next high-resolution capture is still being prepared.
-            if (!hasVariants(incoming) && hasVariants(existing)
-                    && incoming.optInt("activeBookcase", -1)
-                    == existing.optInt("activeBookcase", -2)) {
+            // Never replace a complete personal photograph with its metadata
+            // preview. This also preserves the previous bookcase while a new
+            // one is being captured after a carousel change.
+            if (!hasVariants(incoming) && hasVariants(existing)) {
                 return;
             }
             writeAtomically(target, incoming.toString());

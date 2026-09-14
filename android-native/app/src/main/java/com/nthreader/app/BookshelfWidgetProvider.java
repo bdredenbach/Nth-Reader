@@ -39,8 +39,8 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
     // the proven V0.36.03 bitmap path here prevents an update failure from
     // leaving the user with a blank widget.
     private static final int MAX_BITMAP_BYTES = 860_000;
-    private static final int BUNDLED_SHELF_HEIGHT = 1990;
-    private static final int[] BUNDLED_ROW_BOTTOMS = {440, 833, 1245, 1639, 1990};
+    private static final int BUNDLED_SHELF_HEIGHT = 1466;
+    private static final int[] BUNDLED_ROW_BOTTOMS = {323, 615, 903, 1177, 1466};
 
     static File snapshotFile(Context context) {
         return new File(context.getFilesDir(), "widget-shelf.json");
