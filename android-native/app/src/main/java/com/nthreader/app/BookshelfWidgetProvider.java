@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -16,6 +17,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.os.Bundle;
+import android.net.Uri;
 import android.util.Base64;
 import android.widget.RemoteViews;
 
@@ -23,6 +25,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -32,8 +35,9 @@ import java.util.List;
 
 /** A responsive, launcher-safe rendering of the currently selected bookcase. */
 public final class BookshelfWidgetProvider extends AppWidgetProvider {
-    // Leave room below Android's RemoteViews transaction ceiling while using
-    // more of the available budget for sharper large-widget rendering.
+    // Used only if the URI-backed experiment cannot prepare an image. Keeping
+    // the proven V0.36.03 bitmap path here prevents an update failure from
+    // leaving the user with a blank widget.
     private static final int MAX_BITMAP_BYTES = 860_000;
 
     static File snapshotFile(Context context) {
@@ -55,29 +59,98 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         updateWidget(context, manager, appWidgetId);
     }
 
+    @Override public void onDeleted(Context context, int[] appWidgetIds) {
+        for (int id : appWidgetIds) WidgetImageProvider.deleteWidgetImages(context, id);
+    }
+
     private static void updateWidget(Context context, AppWidgetManager manager, int id) {
         Bundle options = manager.getAppWidgetOptions(id);
         int widthDp = Math.max(130, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250));
         int heightDp = Math.max(70, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 220));
         float density = context.getResources().getDisplayMetrics().density;
-        int rawWidth = Math.max(180, Math.round(widthDp * density));
-        int rawHeight = Math.max(110, Math.round(heightDp * density));
-        double scale = Math.min(1d, Math.sqrt(MAX_BITMAP_BYTES / (rawWidth * (double) rawHeight * 2d)));
-        int width = Math.max(180, (int) Math.round(rawWidth * scale));
-        int height = Math.max(110, (int) Math.round(rawHeight * scale));
-
+        int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+        int rawWidth = Math.min(screenWidth, Math.max(180, Math.round(widthDp * density)));
+        int rawHeight = Math.min(screenHeight, Math.max(110, Math.round(heightDp * density)));
         JSONObject snapshot = readSnapshot(context);
-        Bitmap image = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-        drawBookcase(context, new Canvas(image), width, height, heightDp, snapshot);
+        Bitmap image = null;
+        try {
+            image = Bitmap.createBitmap(rawWidth, rawHeight, Bitmap.Config.ARGB_8888);
+            drawBookcase(context, new Canvas(image), rawWidth, rawHeight, heightDp, snapshot);
+            File rendered = writeWidgetImage(context, id, rawWidth, rawHeight, image);
+            image.recycle();
+            image = null;
 
+            Uri imageUri = WidgetImageProvider.uriFor(context, rendered);
+            grantLauncherReadAccess(context, imageUri);
+            RemoteViews views = makeViews(context, id);
+            views.setImageViewUri(R.id.widget_bookshelf_image, imageUri);
+            manager.updateAppWidget(id, views);
+            WidgetImageProvider.trimWidgetImages(context, id, rendered);
+        } catch (Throwable ignored) {
+            if (image != null && !image.isRecycled()) image.recycle();
+            updateWidgetWithBitmap(context, manager, id, rawWidth, rawHeight, heightDp, snapshot);
+        }
+    }
+
+    private static RemoteViews makeViews(Context context, int id) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_bookshelf);
-        views.setImageViewBitmap(R.id.widget_bookshelf_image, image);
         Intent launch = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent open = PendingIntent.getActivity(context, 1000 + id, launch,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_bookshelf_image, open);
+        return views;
+    }
+
+    private static File writeWidgetImage(Context context, int id, int width, int height,
+                                         Bitmap image) throws Exception {
+        File directory = WidgetImageProvider.imageDirectory(context);
+        if (!directory.isDirectory() && !directory.mkdirs()) {
+            throw new IllegalStateException("Widget image directory could not be created.");
+        }
+        String revision = Long.toUnsignedString(System.nanoTime());
+        File target = new File(directory,
+                "widget-" + id + "-" + width + "x" + height + "-" + revision + ".png");
+        File temporary = new File(directory, target.getName() + ".tmp");
+        try (FileOutputStream output = new FileOutputStream(temporary, false)) {
+            if (!image.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                throw new IllegalStateException("Widget image could not be encoded.");
+            }
+            output.flush();
+            output.getFD().sync();
+        }
+        if (!temporary.renameTo(target)) {
+            temporary.delete();
+            throw new IllegalStateException("Widget image could not be committed.");
+        }
+        return target;
+    }
+
+    private static void grantLauncherReadAccess(Context context, Uri uri) {
+        Intent homeIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        List<ResolveInfo> launchers = context.getPackageManager().queryIntentActivities(homeIntent, 0);
+        if (launchers.isEmpty()) throw new IllegalStateException("No home-screen launcher was found.");
+        for (ResolveInfo launcher : launchers) {
+            if (launcher.activityInfo == null || launcher.activityInfo.packageName == null) continue;
+            context.grantUriPermission(launcher.activityInfo.packageName, uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+    }
+
+    private static void updateWidgetWithBitmap(Context context, AppWidgetManager manager, int id,
+                                               int rawWidth, int rawHeight, int heightDp,
+                                               JSONObject snapshot) {
+        double scale = Math.min(1d,
+                Math.sqrt(MAX_BITMAP_BYTES / (rawWidth * (double) rawHeight * 2d)));
+        int width = Math.max(180, (int) Math.round(rawWidth * scale));
+        int height = Math.max(110, (int) Math.round(rawHeight * scale));
+        Bitmap image = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        drawBookcase(context, new Canvas(image), width, height, heightDp, snapshot);
+        RemoteViews views = makeViews(context, id);
+        views.setImageViewBitmap(R.id.widget_bookshelf_image, image);
         manager.updateAppWidget(id, views);
+        image.recycle();
     }
 
     private static JSONObject readSnapshot(Context context) {
@@ -169,7 +242,9 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             }
         }
         if (best == null) return false;
-        Bitmap bitmap = decodeVariantArt(context, best);
+        Bitmap bitmap = decodeVariantArt(context, best,
+                Math.max(1, Math.round(target.width())),
+                Math.max(1, Math.round(target.height())), bestBottom);
         if (bitmap == null) return false;
         int metadataHeight = Math.max(1, best.optInt("height", bitmap.getHeight()));
         int sourceBottom = Math.min(bitmap.getHeight(), Math.max(1,
@@ -179,15 +254,42 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
         return true;
     }
 
-    private static Bitmap decodeVariantArt(Context context, JSONObject variant) {
+    private static Bitmap decodeVariantArt(Context context, JSONObject variant, int targetWidth,
+                                           int targetHeight, int metadataBottom) {
         try {
             String filename = variant.optString("artFile", "");
             if (!filename.isEmpty() && !filename.contains("/") && !filename.contains("\\")) {
                 File file = new File(context.getFilesDir(), filename);
-                if (file.isFile()) return BitmapFactory.decodeFile(file.getAbsolutePath());
+                if (file.isFile()) {
+                    BitmapFactory.Options bounds = new BitmapFactory.Options();
+                    bounds.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+                    BitmapFactory.Options options = sampledOptions(bounds.outWidth, bounds.outHeight,
+                            variant, targetWidth, targetHeight, metadataBottom);
+                    return BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+                }
             }
         } catch (Exception ignored) {}
-        return decodeArt(variant.optString("art", ""));
+        return decodeArt(variant.optString("art", ""), variant,
+                targetWidth, targetHeight, metadataBottom);
+    }
+
+    private static BitmapFactory.Options sampledOptions(int sourceWidth, int sourceHeight,
+                                                         JSONObject variant, int targetWidth,
+                                                         int targetHeight, int metadataBottom) {
+        int metadataHeight = Math.max(1, variant.optInt("height", sourceHeight));
+        int croppedSourceHeight = Math.max(1,
+                Math.round(metadataBottom * sourceHeight / (float) metadataHeight));
+        int sample = 1;
+        while (sourceWidth / (sample * 2) >= targetWidth
+                && croppedSourceHeight / (sample * 2) >= targetHeight) {
+            sample *= 2;
+        }
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = Math.max(1, sample);
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        options.inDither = true;
+        return options;
     }
 
     private static void drawHeader(Context context, Canvas canvas, Paint paint, int width, float header,
@@ -266,6 +368,21 @@ public final class BookshelfWidgetProvider extends AppWidgetProvider {
             if (comma < 0 || !dataUrl.substring(0, comma).contains("base64")) return null;
             byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (Exception ignored) { return null; }
+    }
+
+    private static Bitmap decodeArt(String dataUrl, JSONObject variant, int targetWidth,
+                                    int targetHeight, int metadataBottom) {
+        try {
+            int comma = dataUrl.indexOf(',');
+            if (comma < 0 || !dataUrl.substring(0, comma).contains("base64")) return null;
+            byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            BitmapFactory.Options options = sampledOptions(bounds.outWidth, bounds.outHeight,
+                    variant, targetWidth, targetHeight, metadataBottom);
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
         } catch (Exception ignored) { return null; }
     }
 

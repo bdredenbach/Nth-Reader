@@ -8,6 +8,10 @@
 
     <queries>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
     </queries>
 
     <application
@@ -29,6 +33,11 @@
             android:name=".NarrationService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+        <provider
+            android:name=".WidgetImageProvider"
+            android:authorities="${applicationId}.widgetimages"
+            android:exported="false"
+            android:grantUriPermissions="true" />
         <receiver
             android:name=".BookshelfWidgetProvider"
             android:exported="false">

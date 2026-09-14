@@ -9,9 +9,9 @@ window.NthNativeWidget = new (class {
     // More source shapes keep the native widget from stretching books when
     // the launcher moves between narrow, medium, and wide grid spans.
     this.captureWidths = [280, 360, 460, 580, 760];
-    // V0.36.03 quality experiment: render each source snapshot at four times
-    // its CSS size. Variants are streamed to native storage one at a time so
-    // this does not create one enormous bridge message.
+    // Render each source snapshot at four times its CSS size. V0.37.00 treats
+    // these captures as supersampling sources for an exact-size URI-backed
+    // native widget image instead of decoding the entire 4× image at once.
     this.captureScale = 4;
   }
 

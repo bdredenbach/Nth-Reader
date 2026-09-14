@@ -1,4 +1,13 @@
-# Nth Reader V-0.36.03
+# Nth Reader V-0.37.00
+
+## V-0.37.00: exact-size URI widget renderer experiment
+
+- Preserves the crisp 4× bookcase captures as supersampling sources while decoding only the pixels required for the widget's current dimensions.
+- Renders a unique full-resolution PNG for each widget size and supplies it to the launcher through a secure, read-only `content://` URI.
+- Avoids embedding the full-quality artwork inside Android's constrained `RemoteViews` bitmap transaction.
+- Regenerates the image when the widget is resized, keeps recent images available for launcher caching, and removes a widget's images when it is deleted.
+- Retains the proven V-0.36.03 memory-capped bitmap renderer as an automatic fallback if URI preparation or delivery fails.
+- Keeps the transfer warning “(Device may get warm during transfer).” visible during library backup, restore, and original-book downloads.
 
 ## V-0.36.03: stable 4× widget capture experiment
 
@@ -478,4 +487,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.36.03`.
+The service-worker cache key is `Nth-Reader-V-0.37.00`.
