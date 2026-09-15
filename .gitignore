@@ -1,0 +1,15 @@
+# Android Studio and local Gradle state
+.idea/
+*.iml
+android-native/.gradle/
+android-native/local.properties
+android-native/**/build/
+
+# Signing material must never be committed
+*.jks
+*.keystore
+keystore.properties
+
+# Operating-system files
+.DS_Store
+Thumbs.db

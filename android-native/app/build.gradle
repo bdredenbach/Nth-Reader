@@ -1,21 +1,64 @@
 plugins { id "com.android.application" }
 
+def releaseSigning = [
+    storeFile: System.getenv("ANDROID_KEYSTORE_FILE"),
+    storePassword: System.getenv("ANDROID_KEYSTORE_PASSWORD"),
+    keyAlias: System.getenv("ANDROID_KEY_ALIAS"),
+    keyPassword: System.getenv("ANDROID_KEY_PASSWORD")
+]
+def releaseSigningConfigured = releaseSigning.values().every { value ->
+    value != null && !value.trim().isEmpty()
+}
+def androidStudioSigningConfigured = [
+    "android.injected.signing.store.file",
+    "android.injected.signing.store.password",
+    "android.injected.signing.key.alias",
+    "android.injected.signing.key.password"
+].every { propertyName -> project.hasProperty(propertyName) }
+
 android {
     namespace "com.nthreader.app"
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.nthreader.app"
         minSdk 26
-        targetSdk 35
+        targetSdk 36
         versionCode 3802
         versionName "0.38.02"
     }
 
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.getByName("release")
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name == "bundleRelease" || task.name == "assembleRelease"
+}.configureEach {
+    doFirst {
+        if (!releaseSigningConfigured && !androidStudioSigningConfigured) {
+            throw new GradleException(
+                "Release signing is not configured. Use Android Studio's signed bundle wizard " +
+                "or provide the ANDROID_KEYSTORE_* environment variables."
+            )
         }
     }
 }

@@ -1,0 +1,82 @@
+name: Android Play release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-aab:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36"
+
+      - name: Validate release secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} )); then
+            printf 'Missing required repository secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Restore upload key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keystore_file="$RUNNER_TEMP/nth-reader-upload.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$keystore_file"
+          test -s "$keystore_file"
+          chmod 600 "$keystore_file"
+          printf 'ANDROID_KEYSTORE_FILE=%s\n' "$keystore_file" >> "$GITHUB_ENV"
+
+      - name: Build signed Play bundle
+        run: gradle -p android-native --no-daemon bundleRelease
+
+      - name: Verify signature and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="android-native/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$bundle"
+          verification="$(jarsigner -verify -verbose "$bundle")"
+          grep -q "jar verified" <<< "$verification"
+          sha256sum "$bundle" > "$bundle.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nth-Reader-Play-release
+          path: |
+            android-native/app/build/outputs/bundle/release/app-release.aab
+            android-native/app/build/outputs/bundle/release/app-release.aab.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary upload key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/nth-reader-upload.jks"

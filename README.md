@@ -1,5 +1,13 @@
 # Nth Reader V-0.38.02
 
+## Android Play release preparation
+
+- Targets Android 16 (API 36) with Android Gradle Plugin 8.12.2, Gradle 8.13, and JDK 17.
+- Keeps the automatic debug APK build for device testing.
+- Adds a manual, secret-backed workflow that produces a signed Play-ready Android App Bundle and checksum without committing the upload key.
+- Documents the one-time GitHub secret setup and bundle download process in [`android-native/PLAY_RELEASE.md`](android-native/PLAY_RELEASE.md).
+- Ignores Android Studio state, local build output, and all common Android keystore file types.
+
 ## V-0.38.02: automatic personal widget snapshots
 
 - Replaces the personal comic-filled fallback asset with an original, copyright-safe five-row starter bookcase for every new installation.
