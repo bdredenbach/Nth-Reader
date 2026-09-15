@@ -5,6 +5,8 @@ on:
   push:
     branches: [Android]
     paths:
+      - ".github/workflows/android-native.yml"
+      - ".github/workflows/android-play-release.yml"
       - "android-native/**"
       - "js/native-narrator.js"
       - "js/native-widget.js"
