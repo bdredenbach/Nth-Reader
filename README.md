@@ -1,4 +1,4 @@
-# Nth Reader V-0.38.02
+# Nth Reader V-0.38.03
 
 ## Android Play release preparation
 
@@ -7,6 +7,13 @@
 - Adds a manual, secret-backed workflow that produces a signed Play-ready Android App Bundle and checksum without committing the upload key.
 - Documents the one-time GitHub secret setup and bundle download process in [`android-native/PLAY_RELEASE.md`](android-native/PLAY_RELEASE.md).
 - Ignores Android Studio state, local build output, and all common Android keystore file types.
+
+## V-0.38.03: Android system Back navigation
+
+- Routes Android's Back button and back gesture through Nth Reader's in-page interface instead of relying only on WebView browser history.
+- Closes the topmost page chooser, voice or reading settings, transfer dialog, scanner, carousel, drawer, or customization panel first.
+- Returns from an open book to its shelf and exits the app only when the user is already at the shelf root.
+- Uses Android's predictive-back callback on Android 13 and newer while retaining Back-button support on older supported devices.
 
 ## V-0.38.02: automatic personal widget snapshots
 
@@ -520,4 +527,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.38.02`.
+The service-worker cache key is `Nth-Reader-V-0.38.03`.

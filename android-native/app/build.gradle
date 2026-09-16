@@ -24,8 +24,8 @@ android {
         applicationId "com.nthreader.app"
         minSdk 26
         targetSdk 36
-        versionCode 3802
-        versionName "0.38.02"
+        versionCode 3803
+        versionName "0.38.03"
     }
 
     signingConfigs {

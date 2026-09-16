@@ -15,6 +15,8 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import org.json.JSONObject;
 import java.io.File;
 import java.io.InputStream;
@@ -27,6 +29,8 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private File pendingBackupFile;
+    private OnBackInvokedCallback backInvokedCallback;
+    private boolean backNavigationPending;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -75,6 +79,12 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
             }
         });
         webView.loadUrl(APP_URL);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            backInvokedCallback = this::handleBackNavigation;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, backInvokedCallback);
+        }
 
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -157,13 +167,37 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
         });
     }
 
+    @SuppressWarnings("deprecation")
     @Override public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
+        handleBackNavigation();
+    }
+
+    private void handleBackNavigation() {
+        WebView current = webView;
+        if (current == null) {
+            finish();
+            return;
+        }
+        if (backNavigationPending) return;
+        backNavigationPending = true;
+        current.evaluateJavascript(
+                "(function(){try{return Boolean(window.NthAndroidBack&&window.NthAndroidBack.handle());}" +
+                "catch(error){console.error('Android back navigation failed',error);return false;}})()",
+                handled -> runOnUiThread(() -> {
+                    backNavigationPending = false;
+                    if (webView == null || isFinishing()) return;
+                    if ("true".equalsIgnoreCase(String.valueOf(handled))) return;
+                    if (webView.canGoBack()) webView.goBack();
+                    else finish();
+                }));
     }
 
     @Override protected void onDestroy() {
         NarrationEvents.setSink(null);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && backInvokedCallback != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backInvokedCallback);
+            backInvokedCallback = null;
+        }
         if (pendingBackupFile != null) pendingBackupFile.delete();
         if (webView != null) {
             webView.removeJavascriptInterface("NthNativeSpeech");

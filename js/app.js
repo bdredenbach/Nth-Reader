@@ -58,6 +58,67 @@
     onDownload: (book) => backup.downloadBook(book),
   });
 
+  // Android's system Back button cannot see the app's in-page navigation,
+  // because the shelf, reader, drawers, and dialogs all live at one URL.
+  // Give the native WebView a synchronous answer while each controller does
+  // its normal close animation or asynchronous cleanup in the background.
+  let readerBackClosing = false;
+  const visiblyOpen = (element) => Boolean(element && !element.hidden && element.classList.contains("visible"));
+  window.NthAndroidBack = Object.freeze({
+    handle() {
+      if (!backup.els.dialog.hidden) {
+        backup.els.action.click();
+        return true;
+      }
+      if (visiblyOpen(spineScanner.infoPanel)) {
+        spineScanner.closeBook();
+        return true;
+      }
+      if (visiblyOpen(spineScanner.panel)) {
+        if (!spineScanner.detailsStep.hidden) {
+          spineScanner.adjustCrop(spineScanner.scanKind === "cover" ? "cover" : "spine");
+        } else {
+          spineScanner.close();
+        }
+        return true;
+      }
+      if (!customize.els.pickerSheet.hidden && customize.els.pickerSheet.classList.contains("visible")) {
+        customize.closeDecorPicker();
+        return true;
+      }
+      if (!reader.els.root.hidden) {
+        if (!reader.els.pageJump.hidden) {
+          reader.closePageJump();
+        } else if (reader.voiceReader.settingsOpen()) {
+          reader.voiceReader.toggleSettings();
+        } else if (reader.readingStyle.panelOpen()) {
+          reader.readingStyle.togglePanel();
+        } else if (!readerBackClosing) {
+          readerBackClosing = true;
+          Promise.resolve(reader.close()).finally(() => { readerBackClosing = false; });
+        }
+        return true;
+      }
+      if (visiblyOpen(carousel.overlay)) {
+        carousel.close();
+        return true;
+      }
+      if (visiblyOpen(menu.els.panel)) {
+        menu.close();
+        return true;
+      }
+      if (visiblyOpen(removePanel.els.panel)) {
+        removePanel.close();
+        return true;
+      }
+      if (customize.active) {
+        customize.exit();
+        return true;
+      }
+      return false;
+    },
+  });
+
   window.addEventListener("nth:reader-closed", refresh);
 
   fileInput.addEventListener("change", async () => {
