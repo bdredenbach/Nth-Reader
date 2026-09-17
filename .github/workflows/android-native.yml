@@ -3,11 +3,15 @@ name: Android native reader
 on:
   workflow_dispatch:
   push:
-    branches: [Android]
+    branches: [Android, codex/nth-reader-3804]
     paths:
       - ".github/workflows/android-native.yml"
       - ".github/workflows/android-play-release.yml"
       - "android-native/**"
+      - "css/**"
+      - "assets/**"
+      - "js/**"
+      - "THIRD_PARTY_NOTICES.txt"
       - "js/native-narrator.js"
       - "js/native-widget.js"
       - "js/voice-reader.js"

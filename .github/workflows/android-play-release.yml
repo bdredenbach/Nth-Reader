@@ -2,6 +2,8 @@ name: Android Play release
 
 on:
   workflow_dispatch:
+  push:
+    branches: [codex/nth-reader-3804]
 
 permissions:
   contents: read
@@ -55,7 +57,7 @@ jobs:
           printf 'ANDROID_KEYSTORE_FILE=%s\n' "$keystore_file" >> "$GITHUB_ENV"
 
       - name: Build signed Play bundle
-        run: gradle -p android-native --no-daemon bundleRelease
+        run: gradle -p android-native --no-daemon bundleRelease assembleRelease
 
       - name: Verify signature and checksum
         shell: bash
@@ -73,6 +75,7 @@ jobs:
           path: |
             android-native/app/build/outputs/bundle/release/app-release.aab
             android-native/app/build/outputs/bundle/release/app-release.aab.sha256
+            android-native/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
 

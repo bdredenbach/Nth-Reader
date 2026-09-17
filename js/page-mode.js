@@ -1,4 +1,4 @@
-/* Longbox Page Mode — Turn.js with recovered triple-tap and virtual pages.
+/* Longbox Page Mode — Nth Page Deck with recovered triple-tap and virtual pages.
  * The first image initializes the reader; remaining pages are lightweight
  * placeholders hydrated within a small window around the current page.
  */
@@ -55,7 +55,7 @@ window.LongboxPageMode = (() => {
       if (this.host) {
         this.host.innerHTML = "";
 
-        // Turn.js needs a heavily styled absolute host. Restore every inline
+        // Nth Page Deck needs a heavily styled absolute host. Restore every inline
         // property it borrowed, not just display, before another mode renders.
         if (this._hostStyle === null) {
           this.host.removeAttribute("style");
@@ -155,6 +155,10 @@ window.LongboxPageMode = (() => {
 
     _hydrateAround(index) {
       for (let i = index - 2; i <= index + 2; i++) this._hydrate(i);
+      const deck = this.book;
+      Promise.all([this._hydrate(index), this._hydrate(index + 1)]).then(() => {
+        if (this.book === deck && !this._destroyed) deck?.warmSnapshots(index + 1);
+      });
       for (const pageIndex of [...this._hydrated]) {
         if (Math.abs(pageIndex - index) > 3) {
           const page = this.book?.data()?.pageObjs?.[pageIndex + 1]?.[0];
@@ -175,14 +179,14 @@ window.LongboxPageMode = (() => {
     async render(host) {
       this._destroyed = false;
       this.host = host;
-      // Remember the reader viewport's pre-Turn.js inline state so every
+      // Remember the reader viewport's pre-Nth Page Deck inline state so every
       // other reading mode gets the exact same container back on destroy.
       if (this._hostStyle === null) {
         this._hostStyle = host.getAttribute("style");
       }
       const issue = this.getIssue();
-      if (!issue || !window.jQuery || !jQuery.fn.turn) {
-        this.onState("Turn.js unavailable");
+      if (!issue || !window.NthPageDeck) {
+        this.onState("Nth Page Deck unavailable");
         return false;
       }
 
@@ -209,11 +213,11 @@ window.LongboxPageMode = (() => {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
       const rect = host.getBoundingClientRect();
-      const width = Math.max(240, Math.round(rect.width || window.innerWidth));
-      const height = Math.max(360, Math.round(rect.height || window.innerHeight));
+      const width = Math.max(1, Math.round(rect.width || window.innerWidth));
+      const height = Math.max(1, Math.round(rect.height || window.innerHeight));
       const pageCount = Math.max(1, Number(issue.pageCount) || 1);
 
-      // Critical test: only the first page exists when Turn.js initializes.
+      // Critical test: only the first page exists when Nth Page Deck initializes.
       const firstUrl = await this.getPageUrl(0);
       if (!firstUrl) {
         this.onState("first-page-missing");
@@ -232,42 +236,29 @@ window.LongboxPageMode = (() => {
       await this.waitForImage(first.img);
       if (this._destroyed) return false;
 
-      const $book = jQuery(book);
+      let deck;
       this.pageCount = pageCount;
       this.onState("initializing=1");
 
       try {
-        $book.turn({
-          width,
-          height,
-          display: "single",
-          autoCenter: true,
-          gradients: true,
-          acceleration: true,
-          elevation: 0.05,
-          duration: 600,
-          direction: "ltr",
-          cornerSize: 0,
-          pages: pageCount,
-          page: 1
-        });
+        deck = new NthPageDeck(book, { width, height, duration: 600, pages: pageCount, page: 1 });
       } catch (err) {
         this.onState("init-error=" + (err?.message || err));
         return false;
       }
 
-      this.book = $book;
+      this.book = deck;
       this.issueKey = issueKey;
       this._installGestureGrab(book);
       this.onState("ready=1");
 
-      $book.bind("turned", (_event, page) => {
+      deck.bind("turned", (_event, page) => {
         const index = Math.max(0, Number(page) - 1);
         this._hydrateAround(index);
         this.setIndex(index);
         this.onPageChanged(index);
       });
-      $book.bind("turning", (_event, page) => {
+      deck.bind("turning", (_event, page) => {
         this._hydrateAround(Math.max(0, Number(page) - 1));
         this.onState(`turning=${page}`);
       });
@@ -276,12 +267,11 @@ window.LongboxPageMode = (() => {
 
       // Register lightweight placeholders. The old loop decompressed and
       // decoded every page before render() returned, which made a 700-page
-      // comic appear frozen. Turn.js already keeps a small page range in the
+      // comic appear frozen. Nth Page Deck already keeps a small page range in the
       // DOM, so images now load only as that range approaches them.
-      const turnData = $book.data();
       for (let i = 1; i < pageCount; i++) {
         const page = this.makeDeferredPage(i);
-        turnData.pageObjs[i + 1] = jQuery(page).addClass(`turn-page p${i + 1}`);
+        deck.registerPage(i + 1, page);
         if (i % 160 === 0) await new Promise((resolve) => requestAnimationFrame(resolve));
       }
 
@@ -298,8 +288,8 @@ window.LongboxPageMode = (() => {
     _installGestureGrab(book) {
       this._removeGestureGrab();
 
-      // Capture corner touches before Turn.js sees them. This is the
-      // recovered triple-tap test: corner taps are owned here so Turn.js
+      // Capture corner touches before Nth Page Deck sees them. This is the
+      // recovered triple-tap test: corner taps are owned here so Nth Page Deck
       // cannot begin a native page turn on tap #1.
       book.addEventListener("touchstart", this._boundCornerTouchStart, {
         capture: true, passive: false
@@ -349,6 +339,8 @@ window.LongboxPageMode = (() => {
       book.removeEventListener("pointercancel", this._boundGestureEnd);
       this._gestureBook = null;
       this._gesture = null;
+      this._cornerGesture = null;
+      this._cornerTapCount = 0;
     }
 
     _cornerInfo(e) {
@@ -360,28 +352,20 @@ window.LongboxPageMode = (() => {
       const x = p.clientX - rect.left;
       const y = p.clientY - rect.top;
 
+      const bounds = this.book.pageBounds();
       const corner = 100;
       const nearLeft = x <= corner;
       const nearRight = x >= rect.width - corner;
-      const nearTop = y <= corner;
-      const nearBottom = y >= rect.height - corner;
+      const nearTop = y <= bounds.y + corner;
+      const nearBottom = y >= bounds.y + bounds.height - corner;
 
       if (!(nearLeft || nearRight) || !(nearTop || nearBottom)) return null;
 
       const side = nearLeft ? "left" : "right";
-      return { p, rect, x, y, side };
+      return { p, rect, x, y, side, topCorner: y < bounds.y + bounds.height / 2 };
     }
 
     _cornerTouchStart(e) {
-      if (e.target?.closest?.(".epub-page-number")) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        this._cornerGesture = null;
-        this._cornerTapCount = 0;
-        this.onPageNumber();
-        return;
-      }
       const info = this._cornerInfo(e);
       if (!info) return;
 
@@ -396,6 +380,7 @@ window.LongboxPageMode = (() => {
         lastY: info.p.clientY,
         rect: info.rect,
         side: info.side,
+        topCorner: info.topCorner,
         moved: false,
         triggered: false
       };
@@ -432,7 +417,7 @@ window.LongboxPageMode = (() => {
         );
 
         try {
-          if (!this.book.turn("grabStart", x, y, g.direction)) {
+          if (!this.book.turn("grabStart", x, y, g.direction, { flat: false, topCorner: g.topCorner })) {
             g.triggered = false;
           }
         } catch (_) {
@@ -459,13 +444,18 @@ window.LongboxPageMode = (() => {
 
       if (g.triggered) {
         const dx = g.lastX - g.x0;
-        const commit = Math.abs(dx) > Math.max(90, g.rect.width * 0.30);
+        const commit = e.type !== "touchcancel" && Math.abs(dx) > Math.max(90, g.rect.width * 0.30);
         try { this.book.turn("grabEnd", commit); } catch (_) {}
         this._cornerTapCount = 0;
         this._cornerGesture = null;
         return;
       }
 
+      if (e.type === "touchcancel" || g.moved) {
+        this._cornerTapCount = 0;
+        this._cornerGesture = null;
+        return;
+      }
       const now = performance.now();
       const sameCorner =
         this._cornerTapSide === g.side &&
@@ -501,23 +491,27 @@ window.LongboxPageMode = (() => {
 
     _gestureStart(e) {
       if (!this.book || !this._gestureBook) return;
+      // Touch events own touch input; pointer events here are mouse/pen only.
+      if (e.pointerType === "touch" || (e.button != null && e.button !== 0)) return;
       const p = e.touches?.[0] || e;
       if (!p || typeof p.clientX !== "number") return;
 
       const rect = this._gestureBook.getBoundingClientRect();
       const x = p.clientX - rect.left;
       const y = p.clientY - rect.top;
+      const bounds = this.book.pageBounds();
       const corner = 110;
       const nearCorner =
         (x < corner || x > rect.width - corner) &&
-        (y < corner || y > rect.height - corner);
+        (y < bounds.y + corner || y > bounds.y + bounds.height - corner);
 
-      // Don't compete with Turn.js's native corner-grab gesture.
-      if (nearCorner) {
+      // Don't compete with Nth Page Deck's native corner-grab gesture.
+      if (nearCorner && e.touches) {
         this._gesture = null;
         return;
       }
 
+      if (e.pointerId != null) this._gestureBook.setPointerCapture?.(e.pointerId);
       this._gesture = {
         x0: p.clientX,
         y0: p.clientY,
@@ -525,12 +519,14 @@ window.LongboxPageMode = (() => {
         lastY: p.clientY,
         active: true,
         triggered: false,
-        middle: true,
+        middle: !nearCorner,
+        topCorner: y < bounds.y + bounds.height / 2,
         intentStarted: performance.now()
       };
     }
 
     _gestureMove(e) {
+      if (e.pointerType === "touch") return;
       const g = this._gesture;
       if (!g || !g.active || !this.book) return;
       const p = e.touches?.[0] || e;
@@ -564,7 +560,7 @@ window.LongboxPageMode = (() => {
         g.triggered = true;
         g.direction = dx < 0 ? "next" : "prev";
 
-        const started = this.book.turn("grabStart", x, y, g.direction);
+        const started = this.book.turn("grabStart", x, y, g.direction, { flat: g.middle, topCorner: g.topCorner });
         if (!started) {
           g.triggered = false;
           return;
@@ -576,15 +572,16 @@ window.LongboxPageMode = (() => {
       e.preventDefault();
     }
 
-    _gestureEnd() {
+    _gestureEnd(e) {
+      if (e?.pointerType === "touch") return;
       const g = this._gesture;
       if (g && g.triggered && this.book) {
         const rect = this._gestureBook?.getBoundingClientRect();
         const dx = g.lastX - g.x0;
         const width = rect?.width || window.innerWidth;
         // Commit after pulling roughly a quarter of the sheet; otherwise
-        // let Turn.js spring the page back.
-        const commit = Math.abs(dx) > Math.max(90, width * 0.30);
+        // let Nth Page Deck spring the page back.
+        const commit = !e?.type?.endsWith("cancel") && Math.abs(dx) > Math.max(90, width * 0.30);
         try {
           this.book.turn("grabEnd", commit);
         } catch (_) {}
@@ -596,26 +593,26 @@ window.LongboxPageMode = (() => {
     resize() {
       if (!this.book || !this.host) return;
       const rect = this.host.getBoundingClientRect();
-      const width = Math.max(240, Math.round(rect.width || window.innerWidth));
-      const height = Math.max(360, Math.round(rect.height || window.innerHeight));
+      const width = Math.max(1, Math.round(rect.width || window.innerWidth));
+      const height = Math.max(1, Math.round(rect.height || window.innerHeight));
       try { this.book.turn("size", width, height); } catch (_) {}
     }
 
     async next() {
       if (!this.book) return;
       await this._hydrate(Math.min(this.pageCount - 1, this.getIndex() + 1));
-      this.book.turn("next");
+      this.book?.turn("next");
     }
     async prev() {
       if (!this.book) return;
       await this._hydrate(Math.max(0, this.getIndex() - 1));
-      this.book.turn("previous");
+      this.book?.turn("previous");
     }
     async goTo(index) {
       if (!this.book) return;
       const page = Math.max(1, Math.min(index + 1, this.pageCount));
       await this._hydrate(page - 1);
-      this.book.turn("page", page);
+      this.book?.turn("page", page);
     }
   }
   return PageMode;

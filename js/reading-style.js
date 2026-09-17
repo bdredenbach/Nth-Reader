@@ -20,11 +20,7 @@ window.ReadingStyleController = class {
       cormorant: '"Nth Cormorant",Georgia,serif',
       "crimson-pro": '"Nth Crimson Pro",Georgia,serif',
       "eb-garamond": '"Nth EB Garamond",Georgia,serif',
-      lexend: '"Nth Lexend",Verdana,sans-serif',
-      "libre-baskerville": '"Nth Libre Baskerville",Georgia,serif',
       literata: '"Nth Literata",Georgia,serif',
-      lora: '"Nth Lora",Georgia,serif',
-      merriweather: '"Nth Merriweather",Georgia,serif',
       "noto-sans": '"Nth Noto Sans",Arial,sans-serif',
       "nunito-sans": '"Nth Nunito Sans",Arial,sans-serif',
       "roboto-slab": '"Nth Roboto Slab",Georgia,serif',
@@ -34,16 +30,17 @@ window.ReadingStyleController = class {
     this.fontNames = {
       book:"Book", classic:"Classic", modern:"Modern", clear:"Clear",
       alegreya:"Alegreya", atkinson:"Atkinson", cormorant:"Cormorant", "crimson-pro":"Crimson Pro",
-      "eb-garamond":"EB Garamond", lexend:"Lexend", "libre-baskerville":"Libre Baskerville",
-      literata:"Literata", lora:"Lora", merriweather:"Merriweather", "noto-sans":"Noto Sans",
+      "eb-garamond":"EB Garamond", literata:"Literata", "noto-sans":"Noto Sans",
       "nunito-sans":"Nunito Sans", "roboto-slab":"Roboto Slab", "source-serif":"Source Serif", vollkorn:"Vollkorn",
     };
     this.webFontNames = {
       alegreya:"Nth Alegreya", atkinson:"Nth Atkinson", cormorant:"Nth Cormorant", "crimson-pro":"Nth Crimson Pro",
-      "eb-garamond":"Nth EB Garamond", lexend:"Nth Lexend", "libre-baskerville":"Nth Libre Baskerville",
-      literata:"Nth Literata", lora:"Nth Lora", merriweather:"Nth Merriweather", "noto-sans":"Nth Noto Sans",
+      "eb-garamond":"Nth EB Garamond", literata:"Nth Literata", "noto-sans":"Nth Noto Sans",
       "nunito-sans":"Nth Nunito Sans", "roboto-slab":"Nth Roboto Slab", "source-serif":"Nth Source Serif", vollkorn:"Nth Vollkorn",
     };
+    Object.assign(this.fonts, {"bodoni-moda": "\"Nth Bodoni Moda\",Georgia,serif", "newsreader": "\"Nth Newsreader\",Georgia,serif", "fraunces": "\"Nth Fraunces\",Georgia,serif", "petrona": "\"Nth Petrona\",Georgia,serif", "gloock": "\"Nth Gloock\",Georgia,serif", "instrument-serif": "\"Nth Instrument Serif\",Georgia,serif"});
+    Object.assign(this.fontNames, {"bodoni-moda": "Bodoni Moda", "newsreader": "Newsreader", "fraunces": "Fraunces", "petrona": "Petrona", "gloock": "Gloock", "instrument-serif": "Instrument Serif"});
+    Object.assign(this.webFontNames, {"bodoni-moda": "Nth Bodoni Moda", "newsreader": "Nth Newsreader", "fraunces": "Nth Fraunces", "petrona": "Nth Petrona", "gloock": "Nth Gloock", "instrument-serif": "Nth Instrument Serif"});
     this.themeNames = { paper: "Paper", sepia: "Sepia", night: "Night" };
     this.settings = { ...this.defaults };
     this.loaded = false;
@@ -121,6 +118,8 @@ window.ReadingStyleController = class {
   }
 
   validate(value) {
+    const replacements={"libre-baskerville":"newsreader",lora:"petrona",merriweather:"fraunces",lexend:"atkinson"};
+    value={...value,font:replacements[value.font]||value.font};
     return {
       font: this.fonts[value.font] ? value.font : this.defaults.font,
       size: Math.max(14, Math.min(26, Number(value.size) || this.defaults.size)),

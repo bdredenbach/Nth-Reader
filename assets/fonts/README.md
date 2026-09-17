@@ -1,23 +1,7 @@
-# Nth Reader bundled fonts
+# Bundled fonts
 
-These files are static, broad-Latin WOFF subsets made from the regular faces distributed by the Google Fonts repository. They include Latin Extended characters, general punctuation, currency symbols, letterlike symbols, arrows, and common ligatures.
+17 regular faces are bundled offline. Six additions in 0.38.12 are Bodoni Moda, Newsreader, Fraunces, Petrona, Gloock, and Instrument Serif. Their full upstream glyph coverage is retained; variable sources were instantiated at regular weight and optical size 18 where available, then converted to WOFF. Existing faces retain their prior subsets.
 
-All fonts except Roboto Slab are distributed under the SIL Open Font License. Roboto Slab is distributed under the Apache License 2.0. The unmodified license text for every family is preserved in `licenses/`.
+Lora, Libre Baskerville, Merriweather, and Lexend were removed at the user's request because their licenses declare reserved names. Saved selections migrate to Petrona, Newsreader, Fraunces, and Atkinson Hyperlegible respectively.
 
-| App name | Family |
-|---|---|
-| Alegreya | Alegreya |
-| Atkinson Hyperlegible | Atkinson Hyperlegible |
-| Cormorant Garamond | Cormorant Garamond |
-| Crimson Pro | Crimson Pro |
-| EB Garamond | EB Garamond |
-| Lexend | Lexend |
-| Libre Baskerville | Libre Baskerville |
-| Literata | Literata |
-| Lora | Lora |
-| Merriweather | Merriweather |
-| Noto Sans | Noto Sans |
-| Nunito Sans | Nunito Sans |
-| Roboto Slab | Roboto Slab |
-| Source Serif | Source Serif 4 |
-| Vollkorn | Vollkorn |
+Upstream sources: https://github.com/google/fonts/tree/main/ofl . Each family's license is retained under licenses/. Roboto Slab uses Apache 2.0; the other bundled families use SIL OFL. No retained license preamble declares a reserved font name.

@@ -13,3 +13,6 @@ keystore.properties
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Local validation dependencies
+node_modules/

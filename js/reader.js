@@ -1,13 +1,8 @@
 /* Nth Reader — reader.js
  *
- * Paged books (CBZ/PDF) use the SAME engine Nth Shelf actually uses day to
- * day: Turn.js (js/turn.js) driven through js/page-mode.js, which is the
- * realistic drag-a-corner flipbook. That file is reused byte-for-byte from
- * the Nth Shelf project — it only needs getPageUrl/getIndex/setIndex hooks,
- * which this class supplies.
- *
- * The custom canvas "corner-turn" (page-turn.js) is kept only as the
- * fallback Nth Shelf itself falls back to if Turn.js can't initialize.
+ * Paged and reflowable books use Nth Reader's dependency-free page deck in
+ * js/nth-page-deck.js, driven through js/page-mode.js. The custom canvas
+ * corner turn remains the low-memory fallback for image pages.
  *
  * Reflowable books use EpubPageReader: a right-hand paper page with a
  * draggable turn, measured chapter-by-chapter so long books never hit the
@@ -39,7 +34,7 @@ window.Reader = class {
 
     this.mode = "single";
     this.scale = 1;
-    this.useTurnJSPageMode = true; // same default as Nth Shelf
+    this.usePageDeck = true;
     this.book = null;      // db record
     this.content = null;   // normalized {kind, ...}
     this.comic = null;     // {pageCount, id, title} — what page-turn engines read
@@ -72,7 +67,7 @@ window.Reader = class {
         this.voiceReader.onPageChanged(i);
       },
       onPageNumber: () => this.openPageJump(),
-      onState: () => { /* console.debug("turnjs:", s) if you need to trace init */ },
+      onState: () => { /* console.debug("nth-deck:", s) if you need to trace init */ },
     });
 
     this.els.backBtn.addEventListener("click", () => this.close());
@@ -101,7 +96,7 @@ window.Reader = class {
       if (event.key === "Enter") this.confirmPageJump();
     });
     // A plain tap anywhere on the page toggles the nav bar. This has to be
-    // bound unconditionally (not just for the fallback engine) — Turn.js's
+    // bound unconditionally (not just for the fallback engine) — Nth Page Deck's
     // own gestures handle page-turning via drag, so nothing else was ever
     // wired to bring the auto-hidden chrome back once it hid itself.
     this.els.viewport.addEventListener("click", (e) => this.onViewportTap(e));
@@ -136,7 +131,7 @@ window.Reader = class {
       this.els.viewport.hidden = false;
       this.els.flow.hidden = true;
 
-      const ok = this.useTurnJSPageMode && await this.turnPageMode.render(this.els.viewport);
+      const ok = this.usePageDeck && await this.turnPageMode.render(this.els.viewport);
       this._usingFallback = !ok;
       if (!ok) await this.renderFallback();
       this.updateSliderLabel();
@@ -150,7 +145,7 @@ window.Reader = class {
 
   async openFlowWithTurn(progress) {
     // The flow host is briefly visible while chapters are measured at the
-    // actual device size, then the resulting live-HTML pages move to Turn.js.
+    // actual device size, then the resulting live-HTML pages move to Nth Page Deck.
     this.hideBookUnderlay();
     this.els.viewport.hidden = true;
     this.els.flow.hidden = false;
@@ -163,7 +158,7 @@ window.Reader = class {
     this.index = this.epubPages.index;
     this.els.flow.hidden = true;
     this.els.viewport.hidden = false;
-    const ok = this.useTurnJSPageMode && await this.turnPageMode.render(this.els.viewport);
+    const ok = this.usePageDeck && await this.turnPageMode.render(this.els.viewport);
     this._flowUsingTurn = !!ok;
     this._usingFallback = !ok;
     if (!ok) {
@@ -246,12 +241,6 @@ window.Reader = class {
   }
 
   onViewportTap(e) {
-    if (e.target.closest(".epub-page-number")) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.openPageJump();
-      return;
-    }
     if (this._usingFallback) {
       const rect = this.els.viewport.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -287,7 +276,7 @@ window.Reader = class {
     this.goToFallback(this.index - 1);
   }
 
-  // ---------- fallback paged (plain image swap, only if Turn.js fails) ----------
+  // ---------- fallback paged (plain image swap, only if Nth Page Deck fails) ----------
   async renderFallback() {
     const url = await this.getPageUrl(this.index);
     this.els.viewport.innerHTML = "";
@@ -375,7 +364,7 @@ window.Reader = class {
   jumpToPage(target) {
     if (target === this.index) { this.showChrome(); return; }
     if (!this._usingFallback && this.turnPageMode?.book) {
-      try { this.turnPageMode.book.turn("page", target + 1); }
+      try { this.turnPageMode.goTo(target); }
       catch (_) { /* fall through to the active fallback below */ }
       return;
     }
@@ -402,7 +391,7 @@ window.Reader = class {
     if (target === this.index) return;
     this.voiceReader.nativePageSync = true;
     if (!this._usingFallback && this.turnPageMode?.book) {
-      try { this.turnPageMode.book.turn("page", target + 1); }
+      try { this.turnPageMode.goTo(target); }
       catch (_) { this.voiceReader.nativePageSync = false; }
     } else if (this.content.kind === "flow") {
       this.epubPages.index = target;

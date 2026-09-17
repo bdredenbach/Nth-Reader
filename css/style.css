@@ -1,13 +1,15 @@
+@font-face {font-family:"Nth Bodoni Moda";src:url("../assets/fonts/bodoni-moda.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:"Nth Newsreader";src:url("../assets/fonts/newsreader.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:"Nth Fraunces";src:url("../assets/fonts/fraunces.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:"Nth Petrona";src:url("../assets/fonts/petrona.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:"Nth Gloock";src:url("../assets/fonts/gloock.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:"Nth Instrument Serif";src:url("../assets/fonts/instrument-serif.woff") format("woff");font-weight:400;font-style:normal;font-display:swap;}
 @font-face { font-family:"Nth Alegreya"; src:url("../assets/fonts/alegreya.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Atkinson"; src:url("../assets/fonts/atkinson.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Cormorant"; src:url("../assets/fonts/cormorant.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Crimson Pro"; src:url("../assets/fonts/crimson-pro.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth EB Garamond"; src:url("../assets/fonts/eb-garamond.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
-@font-face { font-family:"Nth Lexend"; src:url("../assets/fonts/lexend.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
-@font-face { font-family:"Nth Libre Baskerville"; src:url("../assets/fonts/libre-baskerville.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Literata"; src:url("../assets/fonts/literata.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
-@font-face { font-family:"Nth Lora"; src:url("../assets/fonts/lora.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
-@font-face { font-family:"Nth Merriweather"; src:url("../assets/fonts/merriweather.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Noto Sans"; src:url("../assets/fonts/noto-sans.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Nunito Sans"; src:url("../assets/fonts/nunito-sans.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
 @font-face { font-family:"Nth Roboto Slab"; src:url("../assets/fonts/roboto-slab.woff") format("woff"); font-style:normal; font-weight:400; font-display:swap; }
@@ -944,16 +946,6 @@ body.customizing .decor-item { pointer-events: auto; cursor: pointer; }
     linear-gradient(180deg, #4d2b16, #211108 78%);
   box-shadow: inset 0 22px 32px rgba(0,0,0,.45);
 }
-.shelf-root::before, .shelf-root::after {
-  content: ""; position: fixed; top: 66px; bottom: 0; width: 23px; z-index: 8; pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,.12), transparent 16%, transparent 72%, rgba(0,0,0,.5)),
-    repeating-linear-gradient(178deg, transparent 0 37px, rgba(0,0,0,.09) 39px, transparent 42px),
-    linear-gradient(90deg, var(--case-hi), var(--case-mid) 52%, var(--case-low));
-  box-shadow: 0 0 14px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,220,166,.1);
-}
-.shelf-root::before { left: 0; border-radius: 0 5px 5px 0; }
-.shelf-root::after { right: 0; transform: scaleX(-1); border-radius: 5px 0 0 5px; }
 .shelf-root[data-backdrop="espresso"] { background: radial-gradient(ellipse at 50% 10%,#3b2d27 0,#15100e 62%), repeating-linear-gradient(90deg,transparent 0 48px,#211713 50px); }
 .shelf-root[data-backdrop="midnight"] { background: radial-gradient(ellipse at 50% 8%,#293248 0,#0d111d 65%), repeating-linear-gradient(90deg,transparent 0 48px,#151a28 50px); }
 .shelf-root[data-backdrop="rose"] { background: radial-gradient(ellipse at 50% 8%,#573143 0,#21101a 66%), repeating-linear-gradient(90deg,transparent 0 48px,#321725 50px); }
@@ -1041,8 +1033,8 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 }
 .carousel-card {
   position:relative; width:100%; height:min(72dvh,650px); min-height:430px; overflow:hidden;
-  padding:0; border:5px solid #5e351b; border-radius:10px; color:inherit;
-  background:#211108; box-shadow:0 28px 55px rgba(0,0,0,.7),inset 0 0 0 2px rgba(255,218,158,.18);
+  padding:0; border:0; border-radius:0; color:inherit;
+  background:#211108; box-shadow:0 28px 55px rgba(0,0,0,.7);
   transform-style:preserve-3d; cursor:grab; touch-action:none; will-change:transform,opacity;
   contain:layout paint;
 }
@@ -1214,6 +1206,16 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 .epub-page-paper.turn-away { transform:perspective(1500px) rotateY(-179deg); filter:brightness(.72); }
 .epub-page-paper.turn-back { transform-origin:right center; transform:perspective(1500px) rotateY(179deg); filter:brightness(.76); }
 .longbox-turn-page { background:#0b0b0d; display:flex; align-items:center; justify-content:center; }
+.longbox-turn-book.nth-page-deck {
+  position:relative; margin:auto; overflow:hidden; isolation:isolate;
+  touch-action:none; contain:paint;
+}
+.nth-page-deck .nth-deck-page {
+  position:absolute; inset:0; width:100%; height:100%; overflow:hidden;
+  backface-visibility:visible; transform-style:flat;
+}
+/* One canvas is repainted atomically during forward turns. */
+.nth-turn-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:3; pointer-events:none; }
 .longbox-turn-page.longbox-reflow-page { background:transparent; }
 .longbox-turn-page.longbox-lazy-page:empty { background:linear-gradient(90deg,#e5d8c2,#faf5e9 12%,#eee2cf); }
 .epub-turn-paper {
@@ -1244,11 +1246,9 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 .epub-page-columns p, .epub-measure p { margin:.2em 0 var(--reader-paragraph-gap,.85em); orphans:3; widows:3; }
 .epub-page-columns img, .epub-measure img { max-width:100%; max-height:70%; object-fit:contain; break-inside:avoid; }
 .epub-page-number {
-  position:absolute; bottom:2px; right:10px; z-index:8; min-width:42px; min-height:42px;
-  padding:10px; border:0; border-radius:21px; background:transparent; color:var(--reader-page-muted);
-  font:12px Georgia,serif; cursor:pointer; touch-action:manipulation;
+  position:absolute; bottom:12px; right:20px; z-index:8;
+  color:var(--reader-page-muted); font:12px Georgia,serif; pointer-events:none;
 }
-.epub-page-number:focus-visible,.epub-page-number:active { outline:1px solid currentColor; background:rgba(127,96,56,.12); }
 .reader-page-jump {
   position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
   padding:calc(var(--app-header-total) + 18px) 20px 90px; background:rgba(5,3,2,.68); backdrop-filter:blur(5px);
@@ -1280,3 +1280,33 @@ body.customizing .carousel-open-btn, body.carousel-active .carousel-open-btn { d
 @media (max-width: 420px) {
   .epub-page-paper { padding:26px 20px 34px; }
 }
+
+/* 3812: split the shelf texture so tall books stay on the ledge. */
+.shelf-row::before {inset:0 -5px 28px;border-radius:0;box-shadow:none;background:url("../assets/shelf/carved-walnut-row.png") center top / 100% 125% no-repeat;}
+.shelf-ledge,.shelf-root[data-shelf-theme] .shelf-ledge {height:28px;background:url("../assets/shelf/carved-walnut-row.png") center bottom / 100% 500% no-repeat;border:0;box-shadow:none;border-radius:0;}
+.shelf-root[data-shelf-theme="oak"] .shelf-row::before,.shelf-root[data-shelf-theme="oak"] .shelf-ledge {filter:brightness(1.5) saturate(.7);}
+.shelf-root[data-shelf-theme="espresso"] .shelf-row::before,.shelf-root[data-shelf-theme="espresso"] .shelf-ledge {filter:brightness(.7) saturate(.7);}
+.shelf-root[data-shelf-theme="lacquer"] .shelf-row::before,.shelf-root[data-shelf-theme="lacquer"] .shelf-ledge {filter:grayscale(1) brightness(.65);}
+.shelf-root[data-shelf-theme="cherry"] .shelf-row::before,.shelf-root[data-shelf-theme="cherry"] .shelf-ledge {filter:saturate(1.5) hue-rotate(345deg);}
+.shelf-row.drop-target::before {box-shadow:inset 0 0 0 2px var(--accent);}
+.launch-splash {position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#1b1008 url("../assets/splash/nth-bookcase.png") center / cover no-repeat;cursor:pointer;opacity:1;transition:opacity .45s ease;}
+.launch-splash::before {content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(12,5,0,.32),transparent 45%);}
+.launch-splash img {position:relative;width:clamp(96px,26vw,150px);height:auto;filter:drop-shadow(0 5px 18px #000);}
+.launch-splash.leaving {opacity:0;pointer-events:none;}
+.license-dialog {width:min(90vw,720px);max-height:82vh;color:#efe4d0;background:#21150e;border:1px solid #a77942;border-radius:12px;padding:18px;}
+.license-dialog::backdrop {background:rgba(0,0,0,.7);}
+.license-dialog header {display:flex;align-items:center;justify-content:space-between;gap:20px;}
+.license-dialog pre {white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 system-ui,sans-serif;}
+@media(prefers-reduced-motion:reduce){.launch-splash{transition:none;}}
+
+/* The carved shelf artwork supplies the frame; remove the legacy outer casing. */
+.shelf-root {padding:6px 5px 70px;box-shadow:none;background:#211108;}
+.shelf-root[data-backdrop] {background-image:none;}
+.shelf-root[data-backdrop="espresso"] {background-color:#1a1310;}
+.shelf-root[data-backdrop="midnight"] {background-color:#141824;}
+.shelf-root[data-backdrop="rose"] {background-color:#2a1620;}
+.shelf-root[data-backdrop="forest"] {background-color:#141f18;}
+.carousel-card::before,.carousel-card::after {content:none;display:none;}
+.carousel-bookcase-content.shelf-root {padding:6px 5px 24px;}
+.app-credits {margin:16px 0;padding:12px 16px;border:1px solid #a77942;border-radius:8px;}
+.app-credits p {font-size:14px;line-height:1.5;}

@@ -117,7 +117,7 @@ window.NthBackupManager = class {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
       zip.file("nth-reader-backup.json", JSON.stringify({
-        format: "nth-reader-backup", version: 1, createdAt: new Date().toISOString(), appVersion: "0.38.03",
+        format: "nth-reader-backup", version: 1, createdAt: new Date().toISOString(), appVersion: "1.0.0",
         data: { ...snapshot, books },
       }), { compression: "DEFLATE" });
       this.els.message.textContent = "Building the portable backup file…";

@@ -110,7 +110,7 @@ window.NthFormats = (function () {
   // ---------- PDF (rasterized per page) ----------
   async function loadPdf(file) {
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
     const urlCache = new Array(pdf.numPages).fill(null);
     const textCache = new Array(pdf.numPages).fill(undefined);
 

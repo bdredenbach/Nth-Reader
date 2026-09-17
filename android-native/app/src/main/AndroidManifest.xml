@@ -17,7 +17,7 @@
     <application
         android:allowBackup="true"
         android:icon="@drawable/nth_reader_icon"
-        android:label="Nth Reader"
+        android:label="@string/app_name"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.NthReader">
         <activity

@@ -1,0 +1,1 @@
+{"private":true,"scripts":{"test":"node node-tests.cjs"},"devDependencies":{"linkedom":"0.18.12"}}

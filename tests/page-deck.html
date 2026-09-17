@@ -1,0 +1,134 @@
+<!doctype html><meta charset="utf-8"><title>Nth Page Deck regression tests</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>body{overflow:auto;background:#eee;color:#222;font:16px system-ui;padding:20px}#fixture{position:relative;width:390px;height:700px;border:1px solid #555}#results{white-space:pre-wrap}button{padding:10px}</style>
+<h1>Nth Page Deck regression tests</h1><button id="run">Run tests</button><pre id="results">Ready</pre><div id="fixture"><div id="host"></div></div>
+<script src="../js/vendor/html2canvas.min.js"></script>
+<script src="../js/nth-page-deck.js"></script><script src="../js/page-mode.js"></script>
+<script>
+const output = document.querySelector('#results');
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const assert = (value, message) => { if(!value) throw Error(message); output.textContent += 'PASS '+message+'\n'; };
+const settled = async deck => {for(let i=0;i<100 && deck.motion;i++) await sleep(20); assert(!deck.motion,'turn settles');};
+document.querySelector('#run').onclick = async () => {
+ output.textContent=''; let mode;
+ try {
+ let index=0; const loaded=[]; let changes=0;
+ mode = new LongboxPageMode({getIssue:()=>({id:'test',pageCount:700}),getIndex:()=>index,setIndex:i=>index=i,onPageChanged:()=>changes++,getPageUrl:async i=>{loaded.push(i);return {lazy:true,render:()=>{const el=document.createElement('div');el.textContent='Test page '+(i+1);return el;}};}});
+ assert(await mode.render(document.querySelector('#host')),'700-page book initializes without jQuery');
+ assert(loaded.length<=5,'only nearby pages loaded'); const deck=mode.book; deck.duration=180;
+ assert(deck.root.children.length===1,'one page attached while idle');
+ await mode.prev(); assert(index===0&&!deck.motion,'first-page boundary');
+ await mode.next(); await settled(deck); assert(index===1,'forward turn updates progress');
+ await mode.prev();
+ assert(deck.motion.target===deck.pageNode(1),'backward turn reveals the previous page');
+ assert(deck.motion.fold===0,'backward turn starts at the left corner');
+ assert(deck.motion.renderer==='sheet'&&deck.motion.sheet===deck.motion.target&&deck.motion.sheet.style.transformOrigin==='0px 350px','backward turn restores the 3805 previous-sheet left-spine rotation');
+ await settled(deck); assert(index===0,'backward turn updates progress');
+ await mode.goTo(350); assert(index===350&&deck.root.textContent.includes('351'),'distant jump hydrated and displayed');
+ const geometry=NthPageDeck.cornerFold(390,700,{x:390,y:700},{x:180,y:610});
+ const corner=geometry.reflect({x:390,y:700});
+ assert(Math.hypot(corner.x-180,corner.y-610)<1e-8,'folded corner exactly follows both pointer coordinates');
+ const area=points=>Math.abs(points.reduce((sum,p,i)=>{const q=points[(i+1)%points.length];return sum+p.x*q.y-q.x*p.y;},0))/2;
+ assert(Math.abs(area(geometry.flat)+area(geometry.folded)-390*700)<1e-6,'flat and folded regions cover the sheet without missing paper');
+ assert(Math.abs(area(geometry.folded)-area(geometry.flap))<1e-6,'fold preserves paper area');
+ const inverse=geometry.reflect(corner);assert(Math.hypot(inverse.x-390,inverse.y-700)<1e-8,'fold reflection is reversible');
+ const mirrored=NthPageDeck.cornerFold(390,700,{x:0,y:700},{x:210,y:610});
+ assert(Math.abs(area(mirrored.flap)-area(geometry.flap))<1e-6,'left and right corner folds are symmetric');
+ const top=NthPageDeck.cornerFold(390,700,{x:390,y:0},{x:180,y:90});
+ assert(Math.abs(area(top.flap)-area(geometry.flap))<1e-6,'top and bottom corner folds are symmetric');
+ // A real EPUB has margins: the paper spine is inside the deck wrapper.
+ const originalBounds=deck.pageBounds;
+ deck.pageBounds=()=>({x:24,y:18,width:342,height:650});
+ deck.grabStart(10,650,'prev');
+ assert(deck.motion.sheet.style.transformOrigin==='24px 343px','reverse hinge uses the inset paper spine rather than the wrapper edge');
+ for(const progress of [.2,.5,.75,.95]) {
+  deck.grabMove(390*progress,680);
+  const angle=-179.6*(1-progress)*Math.PI/180;
+  const hingeX=parseFloat(deck.motion.sheet.style.transformOrigin);
+  const dx=24-hingeX,z=-dx*Math.sin(angle),scale=1800/(1800-z);
+  const projectedX=hingeX+dx*Math.cos(angle)*scale;
+  const projectedBottom=343+(668-343)*scale;
+  assert(Math.abs(projectedX-24)<1e-9&&Math.abs(projectedBottom-668)<1e-9,`lower spine stays fixed at reverse progress ${progress}`);
+ }
+ deck.finishTurn(deck.motion,false);
+ deck.pageBounds=originalBounds;
+ assert(deck.pageNode(350).style.transformOrigin==='left center','cancelled reverse resets the temporary hinge');
+ // Flatness is fixed at grab start, even when the finger crosses a corner.
+ for(const y of [30,350,670]) {
+  deck.grabStart(10,y,'prev');deck.grabMove(210,700-y);
+  assert(deck.motion.flat&&deck.motion.renderer==='sheet'&&deck.motion.sheet.style.transform.includes('rotateY('),`backward grab at y=${y} uses flat sheet rotation`);
+  deck.finishTurn(deck.motion,false);
+ }
+ deck.grabStart(350,350,'next');deck.grabMove(180,20);
+ assert(deck.motion.flat&&deck.motion.geometry.ny===0,'center forward grab stays flat after vertical movement');
+ deck.finishTurn(deck.motion,false);
+ deck.grabStart(350,670,'next',{flat:false,topCorner:false});deck.grabMove(180,600);
+ assert(!deck.motion.flat&&Math.abs(deck.motion.geometry.ny)>0,'forward corner grab retains diagonal fold');
+ await Promise.all([deck.getSnapshot(351),deck.getSnapshot(352)]);await sleep(10);
+ assert(deck.motion.curl.ready&&deck.motion.curl.layer.tagName==='CANVAS','forward turn uses one prepared canvas');
+ assert(deck.motion.current.style.clipPath==='none'&&deck.motion.current.style.visibility==='hidden','live text is hidden without animated CSS clipping');
+ assert(deck.motion.curl.layer.getAttribute('aria-hidden')==='true','animation canvas is hidden from accessibility');
+ const lower=deck.motion.geometry;
+ deck.finishTurn(deck.motion,false);
+ deck.grabStart(350,30,'next',{flat:false,topCorner:true});deck.grabMove(180,100);
+ const upper=deck.motion.geometry;
+ assert(Math.abs(upper.nx-lower.nx)<1e-8&&Math.abs(upper.ny+lower.ny)<1e-8,'top-right drag is the exact vertical mirror of bottom-right drag');
+ // Exercise out-of-paper coordinates, not just symmetric interior drags.
+ deck.grabMove(180,-90);
+ assert(deck.motion.position.y>=0&&deck.motion.geometry.ny===0,'top corner stays attached when dragged above the paper');
+ const outsideTop=deck.motion.geometry;
+ deck.finishTurn(deck.motion,false);
+ deck.grabStart(350,670,'next',{flat:false,topCorner:false});deck.grabMove(180,790);
+ assert(deck.motion.position.y<=700&&deck.motion.geometry.ny===0,'bottom corner stays attached when dragged below the paper');
+ assert(Math.abs(area(outsideTop.flat)-area(deck.motion.geometry.flat))<1e-8,'out-of-paper top and bottom drags retain mirrored paper areas');
+ const oldReplace=deck.root.replaceChildren;let replacements=0;
+ deck.root.replaceChildren=function(...args){replacements++;return oldReplace.apply(this,args);};
+ const destination=deck.motion.target;
+ deck.finishTurn(deck.motion,true);
+ deck.root.replaceChildren=oldReplace;
+ assert(replacements===0&&destination.parentElement===deck.root,'turn completion retains the attached destination without replacing the page tree');
+ await mode.goTo(350);await settled(deck);
+ const before=changes; assert(deck.grabStart(380,650,'next'),'corner drag starts');deck.grabMove(320);deck.grabEnd(false);await settled(deck);assert(index===350&&changes===before,'cancelled drag preserves progress');
+ deck.grabStart(380,650,'next');deck.grabMove(50);deck.grabEnd(true);await settled(deck);assert(index===351,'committed drag advances once');
+ deck.grabStart(10,650,'prev');
+ deck.grabMove(195);assert(deck.motion.fold===0.5&&deck.motion.sheet.style.transform.includes('rotateY(-89.8deg)'),'half backward drag matches 3805 rotation');
+ assert(deck.motion.current.style.transform==='none','backward turn keeps the current page stationary underneath');
+ assert(!deck.motion.curl.layer,'backward turn does not create a corner flap');
+ deck.grabMove(390,700);assert(deck.motion.fold===1&&deck.motion.sheet.style.transform.includes('rotateY(0deg)'),'full backward drag lays previous page flat');
+ deck.grabEnd(false);await settled(deck);assert(index===351,'cancelled backward drag preserves current page');
+ deck.grabStart(10,650,'prev');deck.grabMove(350);deck.grabEnd(true);await settled(deck);assert(index===350,'reverse drag goes back');
+ const rect=deck.root.getBoundingClientRect();
+ const evt=(type,x,y)=>({type,target:deck.root,touches:type==='touchend'||type==='touchcancel'?[]:[{clientX:rect.left+x,clientY:rect.top+y}],preventDefault(){},stopPropagation(){},stopImmediatePropagation(){}});
+ for(let n=0;n<2;n++){mode._cornerTouchStart(evt('touchstart',380,680));mode._cornerTouchEnd(evt('touchend',380,680));}
+ assert(index===350&&!deck.motion,'first two corner taps do not turn');
+ mode._cornerTouchStart(evt('touchstart',380,680));mode._cornerTouchEnd(evt('touchend',380,680)); await sleep(30);await settled(deck);assert(index===351,'third corner tap advances');
+ mode._cornerTouchStart(evt('touchstart',380,680));mode._cornerTouchMove(evt('touchmove',200,680));mode._cornerTouchMove(evt('touchmove',50,680));mode._cornerTouchEnd(evt('touchcancel',50,680));await settled(deck);assert(index===351,'touch cancellation never commits');
+ for(const [w,h] of [[800,300],[320,568],[768,1024]]) {document.querySelector('#fixture').style.width=w+'px';document.querySelector('#fixture').style.height=h+'px';mode.resize();assert(deck.root.clientWidth===w&&deck.root.clientHeight===h,`viewport ${w}x${h} fits without cropping`);}
+ await mode.goTo(699);await mode.next();assert(index===699&&!deck.motion,'last-page boundary');
+ assert(deck.root.children.length===1&&!deck.root.querySelector('.nth-turn-canvas'),'all curl copies removed after navigation');
+ deck.grabStart(10,650,'prev');deck.grabMove(200);mode.resize();
+ assert(!deck.motion&&index===699&&deck.root.children.length===1,'resize cancels curl without changing progress');
+ deck.grabStart(10,650,'prev');deck.grabMove(200);deck.grabEnd(true);
+ await mode.destroy(); assert(!document.querySelector('#host').children.length,'destroy clears deck');
+ assert(!document.querySelector('#host').hasAttribute('style'),'destroy restores viewport');
+ await sleep(250);assert(index===699,'destroy cancels pending turn callback');
+ // Delayed snapshots must not drop releases or revive a cancelled turn.
+ const root=document.createElement('div');document.querySelector('#host').appendChild(root);
+ const a=document.createElement('div'),b=document.createElement('div');
+ a.innerHTML='<p>First</p>';b.innerHTML='<p>Second</p>';root.append(a,b);
+ const cold=new NthPageDeck(root,{pages:2,width:390,height:700,duration:180});
+ let release,captures=0;
+ cold.capturePage=()=>{captures++;return new Promise(resolve=>{release=()=>{const c=document.createElement('canvas');c.width=390;c.height=700;resolve(c);};});};
+ cold.grabStart(380,650,'next');cold.grabMove(50,600);cold.grabEnd(true);
+ assert(cold.motion.pendingCommit===true&&cold.currentPage===1,'release waits for a cold snapshot without changing progress early');
+ await sleep(0);release();await sleep(0);release();await settled(cold);
+ assert(cold.currentPage===2&&captures===2,'cold capture resumes and commits exactly once');
+ await cold.getSnapshot(2);assert(captures===2,'unchanged page reuses its snapshot');
+ cold.goTo(1,false);cold.snapshots.clear();cold.grabStart(380,650,'next');await sleep(0);
+ cold.destroy();release();await sleep(20);
+ assert(cold.destroyed&&!cold.motion&&!root.querySelector('canvas'),'late capture cannot revive a destroyed deck');
+ root.remove();
+ output.textContent+='ALL TESTS PASSED\n';
+ } catch(error){output.textContent+='FAIL '+error.stack; await mode?.destroy();}
+};
+</script>

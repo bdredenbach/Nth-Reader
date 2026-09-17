@@ -66,6 +66,9 @@
   const visiblyOpen = (element) => Boolean(element && !element.hidden && element.classList.contains("visible"));
   window.NthAndroidBack = Object.freeze({
     handle() {
+      if(window.NthDismissSplash?.())return true;
+      const licenses=document.getElementById("license-dialog");
+      if(licenses?.open){licenses.close();return true;}
       if (!backup.els.dialog.hidden) {
         backup.els.action.click();
         return true;
@@ -372,5 +375,7 @@
   } catch (err) {
     shelfRoot.classList.remove("shelf-loading");
     showStatus(`Shelf storage couldn't open: ${err.message || err}`, true);
+  } finally {
+    window.dispatchEvent(new Event("nth:app-ready"));
   }
 })();

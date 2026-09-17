@@ -1,13 +1,42 @@
-// NTH READER — V-0.38.03
+// NTH READER — V-1.0.0
 
-const SW_VERSION = "Nth-Reader-V-0.38.03";
+const SW_VERSION = "Nth-Reader-V-1.0.0";
 const CACHE_NAME = `nth-reader-shell-${SW_VERSION}`;
 
 const SHELL_FILES = [
+  "./js/launch.js",
+  "./js/licenses.js",
+  "./THIRD_PARTY_NOTICES.txt",
+  "./assets/splash/nth-bookcase.png",
+  "./assets/shelf/carved-walnut-row.png",
+  "./assets/fonts/bodoni-moda.woff",
+  "./assets/fonts/newsreader.woff",
+  "./assets/fonts/fraunces.woff",
+  "./assets/fonts/petrona.woff",
+  "./assets/fonts/gloock.woff",
+  "./assets/fonts/instrument-serif.woff",
+  "./assets/fonts/licenses/bodoni-moda.txt",
+  "./assets/fonts/licenses/newsreader.txt",
+  "./assets/fonts/licenses/noto-sans.txt",
+  "./assets/fonts/licenses/eb-garamond.txt",
+  "./assets/fonts/licenses/fraunces.txt",
+  "./assets/fonts/licenses/atkinson.txt",
+  "./assets/fonts/licenses/literata.txt",
+  "./assets/fonts/licenses/vollkorn.txt",
+  "./assets/fonts/licenses/instrument-serif.txt",
+  "./assets/fonts/licenses/crimson-pro.txt",
+  "./assets/fonts/licenses/source-serif.txt",
+  "./assets/fonts/licenses/roboto-slab.txt",
+  "./assets/fonts/licenses/gloock.txt",
+  "./assets/fonts/licenses/cormorant.txt",
+  "./assets/fonts/licenses/petrona.txt",
+  "./assets/fonts/licenses/alegreya.txt",
+  "./assets/fonts/licenses/nunito-sans.txt",
+
   "./",
   "./index.html",
   "./manifest.json",
-  "./manifest.webmanifest?v=0.38.03",
+  "./manifest.webmanifest?v=1.0.0",
   "./css/style.css",
   "./assets/icons/favicon-32.png",
   "./assets/icons/apple-touch-icon.png",
@@ -22,11 +51,7 @@ const SHELL_FILES = [
   "./assets/fonts/cormorant.woff",
   "./assets/fonts/crimson-pro.woff",
   "./assets/fonts/eb-garamond.woff",
-  "./assets/fonts/lexend.woff",
-  "./assets/fonts/libre-baskerville.woff",
   "./assets/fonts/literata.woff",
-  "./assets/fonts/lora.woff",
-  "./assets/fonts/merriweather.woff",
   "./assets/fonts/noto-sans.woff",
   "./assets/fonts/nunito-sans.woff",
   "./assets/fonts/roboto-slab.woff",
@@ -51,7 +76,11 @@ const SHELL_FILES = [
   "./js/menu.js",
   "./js/remove-panel.js",
   "./js/app.js",
-  "./js/turn.js",
+  "./js/nth-page-deck.js",
+  "./js/vendor/jszip.min.js",
+  "./js/vendor/pdf.min.js",
+  "./js/vendor/pdf.worker.min.js",
+  "./js/vendor/html2canvas.min.js",
   "./assets/decor/bust.webp",
   "./assets/decor/globe.webp",
   "./assets/decor/plant.webp",
@@ -124,24 +153,14 @@ const SHELL_FILES = [
   "./assets/decor/sunrise-painting.webp",
   "./assets/decor/coast-painting.webp",
   "./assets/decor/botanical-painting.webp",
-  "https://code.jquery.com/jquery-3.6.0.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
 ];
 
-const ALLOWED_CDN_HOSTS = ["code.jquery.com", "cdnjs.cloudflare.com"];
+
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      const local = SHELL_FILES.filter((path) => !path.startsWith("http"));
-      const remote = SHELL_FILES.filter((path) => path.startsWith("http"));
-      await cache.addAll(local);
-      await Promise.all(remote.map((path) => cache.add(path).catch((err) => {
-        console.warn(`[${SW_VERSION}] Optional CDN cache failed for ${path}:`, err);
-      })));
+      await cache.addAll(SHELL_FILES);
     })
   );
   self.skipWaiting();
@@ -164,8 +183,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  const allowedCdn = ALLOWED_CDN_HOSTS.includes(url.hostname);
-  if (!sameOrigin && !allowedCdn) return;
+  if (!sameOrigin) return;
 
   // Chrome's installability evaluator must receive the current manifest
   // directly from GitHub Pages. Do not let an older cached manifest response

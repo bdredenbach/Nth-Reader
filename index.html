@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- Version the primary manifest URL so Chrome cannot retain an older,
      pre-installable manifest while the app itself has already updated. -->
-<link rel="manifest" href="./manifest.webmanifest?v=0.38.02" />
+<link rel="manifest" href="./manifest.webmanifest?v=1.0.0" />
 <script>
   // Repair the manifest relationship immediately if Chrome restored a stale
   // cached document shell without its link element.
-  window.__nthManifestUrl = "./manifest.webmanifest?v=0.38.02";
+  window.__nthManifestUrl = "./manifest.webmanifest?v=1.0.0";
   window.__nthEnsureManifestLink = function () {
     let link = document.querySelector('link[rel~="manifest"]');
     if (!link) {
@@ -34,7 +34,7 @@
 
   // Register immediately so the reader remains available offline. Native PWA
   // installation is intentionally left to the browser's own menu.
-  if ("serviceWorker" in navigator) {
+  if (!window.NthNativeSpeech && "serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js", {
       scope: "./",
       updateViaCache: "none",
@@ -47,22 +47,23 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/style.css" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="js/turn.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="js/nth-page-deck.js"></script>
+<script src="js/vendor/jszip.min.js"></script>
+<script src="js/vendor/pdf.min.js"></script>
+<script src="js/vendor/html2canvas.min.js"></script>
 <script>
-  // pdf.js needs its worker; point it at the same CDN build.
+  // pdf.js needs its worker; point it at the bundled build.
   window.addEventListener("load", () => {
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        "js/vendor/pdf.worker.min.js";
     }
   });
 </script>
 </head>
 <body>
+<div id="launch-splash" class="launch-splash" role="button" tabindex="0" aria-label="Enter Nth Reader"><img src="assets/icons/icon-512.png" alt="Nth Reader" width="150" height="150"></div>
+<script src="js/launch.js"></script>
 
 <!-- ===================== SHELF (home) ===================== -->
 <main id="shelf-view" class="view active">
@@ -249,6 +250,7 @@
     <button id="menu-backup-btn" class="menu-action-btn menu-action-btn-secondary" type="button">↧ Back Up Library</button>
     <button id="menu-restore-btn" class="menu-action-btn menu-action-btn-secondary" type="button">↥ Restore Library</button>
   </div>
+  <button id="menu-licenses-btn" class="menu-action-btn menu-action-btn-secondary" type="button">Licenses &amp; Credits</button>
   <div class="menu-section-label reading-section-label">Currently Reading</div>
   <div id="currently-reading" class="currently-reading"></div>
   <button id="menu-bookmarks-btn" class="menu-action-btn menu-action-btn-secondary bookmarks-panel-btn" type="button">
@@ -319,21 +321,24 @@
             <option value="clear">Clear</option>
           </optgroup>
           <optgroup label="Literary &amp; serif">
+<option value="bodoni-moda">Bodoni Moda</option>
+<option value="newsreader">Newsreader</option>
+<option value="fraunces">Fraunces</option>
+<option value="petrona">Petrona</option>
+<option value="gloock">Gloock</option>
+<option value="instrument-serif">Instrument Serif</option>
+
             <option value="alegreya">Alegreya</option>
             <option value="cormorant">Cormorant Garamond</option>
             <option value="crimson-pro">Crimson Pro</option>
             <option value="eb-garamond">EB Garamond</option>
-            <option value="libre-baskerville">Libre Baskerville</option>
             <option value="literata">Literata</option>
-            <option value="lora">Lora</option>
-            <option value="merriweather">Merriweather</option>
             <option value="roboto-slab">Roboto Slab</option>
             <option value="source-serif">Source Serif</option>
             <option value="vollkorn">Vollkorn</option>
           </optgroup>
           <optgroup label="Modern &amp; accessible">
             <option value="atkinson">Atkinson Hyperlegible</option>
-            <option value="lexend">Lexend</option>
             <option value="noto-sans">Noto Sans</option>
             <option value="nunito-sans">Nunito Sans</option>
           </optgroup>
@@ -390,5 +395,6 @@
 <script src="js/menu.js"></script>
 <script src="js/remove-panel.js"></script>
 <script src="js/app.js"></script>
+<dialog id="license-dialog" class="license-dialog" aria-labelledby="license-title"><header><h2 id="license-title">Licenses &amp; Credits</h2><button id="license-close" class="icon-btn" type="button" aria-label="Close licenses">×</button></header><section class="app-credits" aria-labelledby="app-credits-title"><h3 id="app-credits-title">Nth Reader</h3><p>Created by Brad Redenbach.</p><p>© 2026 Brad Redenbach. All rights reserved for original Nth Reader content.</p><p>Third-party software, fonts, and artwork remain subject to their respective rights and licenses.</p></section><h3>Third-party notices</h3><pre id="license-text">Loading…</pre></dialog><script src="js/licenses.js"></script>
 </body>
 </html>

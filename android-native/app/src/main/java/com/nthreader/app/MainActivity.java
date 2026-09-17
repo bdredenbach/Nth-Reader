@@ -12,6 +12,10 @@ import android.view.ViewGroup;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.MimeTypeMap;
+import java.io.ByteArrayInputStream;
+import java.util.Collections;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -23,7 +27,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public final class MainActivity extends Activity implements NarrationEvents.Sink {
-    private static final String APP_URL = "https://bdredenbach.github.io/Nth-Reader/";
+    // Keep the storage origin used by 3803, but leave the old PWA service-worker scope.
+    private static final String APP_PATH = "/Nth-Reader-native/";
+    private static final String APP_URL = "https://bdredenbach.github.io" + APP_PATH + "index.html";
     private static final int FILE_CHOOSER = 42;
     private static final int BACKUP_SAVE = 43;
     private WebView webView;
@@ -50,11 +56,26 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
         webView.addJavascriptInterface(new BackupBridge(this), "NthNativeBackup");
         webView.addJavascriptInterface(new WidgetBridge(this), "NthWidgetBridge");
         webView.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if (!isBundledUrl(uri)) return emptyResponse(403, "Blocked");
+                String path = uri.getPath().substring(APP_PATH.length());
+                if (path.isEmpty()) path = "index.html";
+                if (path.contains("..") || path.contains("\\")) return emptyResponse(403, "Blocked");
+                try {
+                    String extension = path.substring(path.lastIndexOf('.') + 1);
+                    String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+                    if ("js".equals(extension)) mime = "application/javascript";
+                    if ("webmanifest".equals(extension)) mime = "application/manifest+json";
+                    if (mime == null) mime = "application/octet-stream";
+                    return new WebResourceResponse(mime, "UTF-8", 200, "OK",
+                            Collections.singletonMap("Cache-Control", "no-store"),
+                            getAssets().open("web/" + path));
+                } catch (Exception error) { return emptyResponse(404, "Not Found"); }
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                boolean internal = "https".equals(uri.getScheme())
-                        && "bdredenbach.github.io".equals(uri.getHost())
-                        && uri.getPath() != null && uri.getPath().startsWith("/Nth-Reader/");
+                boolean internal = isBundledUrl(uri);
                 if (internal) return false;
                 try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
                 catch (ActivityNotFoundException ignored) {}
@@ -90,6 +111,17 @@ public final class MainActivity extends Activity implements NarrationEvents.Sink
                 != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7);
         }
+    }
+
+    private static boolean isBundledUrl(Uri uri) {
+        return "https".equals(uri.getScheme()) && "bdredenbach.github.io".equals(uri.getHost())
+                && (uri.getPort() == -1 || uri.getPort() == 443)
+                && uri.getPath() != null && uri.getPath().startsWith(APP_PATH);
+    }
+
+    private static WebResourceResponse emptyResponse(int status, String reason) {
+        return new WebResourceResponse("text/plain", "UTF-8", status, reason,
+                Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
     }
 
     @Override protected void onResume() {

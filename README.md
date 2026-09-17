@@ -1,4 +1,91 @@
-# Nth Reader V-0.38.03
+# Nth Reader 1.0.0
+
+## 1.0.0 — promoted from tested 0.38.13
+
+Brad completed the full on-device feature and stress-testing pass and approved 0.38.13 as the release candidate. This promotion changes release metadata and documentation, preserving its app behavior.
+
+- Android version name: `1.0.0`; version code: `10000`.
+- Production application ID: `com.nthreader.app`. Production upload-key configuration is retained; no signing key is committed.
+- Debug builds retain `.preview3812` to remain distinct from production. Only previews signed with the same test key can update an existing preview.
+- Original Nth page deck, offline fonts and dependencies, creator credit, third-party notices, carved walnut shelves, and splash are included.
+- Brad confirms the artwork was created during the project with the assistant.
+- The existing manual **Android Play release** workflow builds the signed AAB when the repository upload-key secrets are configured. Publishing to Play Console is a separate step.
+
+## V-0.38.13: creator credit and frame cleanup
+
+- Adds Brad Redenbach’s creator/copyright section before third-party notices.
+- Removes the legacy outer rails in the main bookcase and carousel; the carved shelf artwork supplies the visible frame.
+- Uses the same Preview 3812 package ID and signing key for an in-place update, with version code 3813 and label Preview 3813.
+- Ready for full on-device feature testing; export a backup first.
+
+## V-0.38.12: fonts, walnut shelves, and startup artwork
+
+- Six new fonts: Bodoni Moda, Newsreader, Fraunces, Petrona, Gloock, and Instrument Serif. Removed four families with reserved-name declarations; saved selections migrate to replacements.
+- Ornate walnut shelf background retains movable books and decorations. Startup artwork has a separate centered Nth logo and can be dismissed immediately.
+- Offline Licenses & Credits includes bundled font and JavaScript notices. Obsolete CDN precaching removed.
+- Installs separately as Preview 3812 because the workspace reset lost the previous temporary signing key. Keep your existing app; export/import a backup if desired.
+- Page-turn behavior is retained from 0.38.11. Phone visual testing remains required.
+
+## V-0.38.11: reverse turn meets the spine
+
+- Place the reverse turn's hinge at the visible paper's left edge, accounting for margins inside the deck wrapper. Both spine corners stay stationary through the perspective rotation.
+- Retains the flat 0.38.05 reverse motion and the successful 0.38.10 forward corner constraints.
+- Uses the Preview 3810 package ID and signing key for an in-place update.
+- Adds inset-paper hinge checks at four turn positions and checks reset after cancellation. Phone testing remains required.
+
+## V-0.38.10: keep corner folds inside the page
+
+- Clamp vertical drag coordinates to the paper before computing the crease. Moving above the top or below the bottom no longer reverses the fold into an outward strip.
+- Applies the same constraint to both right corners. Backward turns retain the 0.38.05 rotation.
+- The workspace reset removed the prior temporary signing key. This preview uses `com.nthreader.app.preview3810` and installs separately; keep Preview 3809 and import a test book into Preview 3810.
+- Controller checks include out-of-paper drags. Phone testing is still required for appearance.
+
+## V-0.38.09: hybrid page turns
+
+- Forward turns paint snapshots into a single canvas, avoiding animated clipping of live EPUB columns. Nearby snapshots are prepared in advance and capped at 1.8 million pixels each; first-turn latency and WebView flicker still need phone testing.
+- Backward turns restore the 0.38.05 flat previous-sheet rotation around the left spine.
+- Top-right and bottom-right folds mirror each other using the visible paper boundaries. Center drags remain flat.
+- The printed page number no longer opens the chooser; the lower page control remains available.
+- Preview keeps package ID `com.nthreader.app.preview3808` so it can update Preview 3808 with the same signing key.
+
+## V-0.38.08: flat center/backward turns and flash mitigation
+
+- Center drags stay flat, and every backward turn stays flat regardless of grab height or later vertical movement. Forward corner drags retain the diagonal fold.
+- Gesture classification uses the original grab location rather than the location after the drag threshold.
+- Replaces nested mirrored rendering with one composed 2D transform and clips the flap in screen coordinates. Removes obsolete 3D page-layer settings.
+- Keeps the painted destination attached when finishing a turn instead of rebuilding the page tree.
+- The build environment reset its temporary debug key. Preview 3808 therefore uses a separate package ID (`com.nthreader.app.preview3808`) to install beside the earlier Preview without replacing its data. Release identity is unchanged.
+- 54 controller/geometry checks pass; the reported WebView flash still needs on-device confirmation.
+
+## V-0.38.07: diagonal corner folds
+
+- Replaces the vertical roll with a diagonal fold anchored to the dragged top or bottom corner. Both pointer coordinates control the crease.
+- Uses one continuous printed reverse-side copy instead of repeated blank strips; the effect stays clipped to the reader bounds.
+- Left-to-right backward and right-to-left forward turns use mirrored fold geometry. Commit, snapback, resize cancellation, and triple-taps remain supported.
+- Geometry and controller checks run locally. This is a visual prototype that still needs comparison on an Android device.
+
+## V-0.38.06: original curved-paper prototype
+
+- Replaces the rigid sheet rotation with a moving cylindrical fold: flat printed page, curved printed band, paper reverse, and moving shadow.
+- Forward/backward dragging and release animations use the same geometry in reverse. No Turn.js or jQuery dependency.
+- Only the curved front band uses temporary copies, with fewer segments for complex EPUB chapters. Copies are removed on completion, cancellation, resize, or exit.
+- Honors reduced-motion preferences. Preview remains a separate app.
+- Controller and geometry tests run locally; appearance and performance still require Android device testing.
+
+## V-0.38.05: backward page-turn direction
+
+- The previous page now unfolds from the left spine, reversing the forward turn instead of pivoting around the right edge.
+- Applies to both automatic backward turns and interactive left-to-right dragging, including cancellation.
+- Preview installs separately from the production reader.
+
+## V-0.38.04: bundled Android reader and independent page deck
+
+- Replaces Turn.js and jQuery with the original Nth Page Deck: shaded 3D page turns, forward/backward dragging, short-drag snapback, and corner triple-tap navigation.
+- Keeps lazy page loading, EPUB pagination, page chooser, progress, narration, and the 3803 Android Back fix.
+- Bundles JSZip, PDF.js, html2canvas, reader code, and shelf assets inside each APK/AAB; no GitHub Pages or CDN connection is needed to start or read local books.
+- Uses the existing HTTPS storage origin with a new native-only path, outside the old PWA service worker scope, to retain installed books on an in-place update with the same signing key.
+- The turn is an independent 3D sheet animation, not an identical reproduction of the previous paper curl.
+- An APK update is now required to update the Android app; website changes alone do not change installed builds.
 
 ## Android Play release preparation
 
@@ -527,4 +614,4 @@ The previous CSS-only ebook turn remains available automatically if Turn.js cann
 8. Bookmark several pages, refresh, open Menu → Bookmarks, and jump back to each exact page.
 9. On a cold load, tap Remove Books once and confirm the drawer appears immediately.
 
-The service-worker cache key is `Nth-Reader-V-0.38.03`.
+The service-worker cache key is `Nth-Reader-V-0.38.11`.
