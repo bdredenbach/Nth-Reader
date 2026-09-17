@@ -1,4 +1,8 @@
-# Nth Reader 1.0.1
+# Nth Reader 1.0.2
+
+## 1.0.2 — offline narration
+
+Read-aloud now selects only installed voices reported as offline by Android or the browser. Network voices and implicit system-default fallback are excluded. If no offline voice is available, narration stops with installation guidance. Previously saved online voice choices migrate to an available offline voice. Version code 10002. Test narration in airplane mode, including lock-screen playback, pause/resume and page changes.
 
 ## 1.0.1 — privacy policy
 

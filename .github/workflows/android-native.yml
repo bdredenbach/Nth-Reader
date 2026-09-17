@@ -37,6 +37,8 @@ jobs:
           gradle-version: "8.13"
       - name: Install Android 16 SDK
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"'
+      - name: Verify offline voice selection
+        run: bash tests/offline-voices/run.sh
       - name: Build debug APK
         run: gradle -p android-native --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4

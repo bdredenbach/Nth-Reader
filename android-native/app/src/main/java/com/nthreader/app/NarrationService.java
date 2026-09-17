@@ -18,7 +18,6 @@ import android.os.PowerManager;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
-import java.util.Locale;
 
 public final class NarrationService extends Service implements TextToSpeech.OnInitListener {
     public static final String ACTION_PLAY = "com.nthreader.PLAY";
@@ -84,10 +83,6 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
             publish();
             return;
         }
-        if (!applySelectedVoice()) {
-            int language = tts.setLanguage(Locale.getDefault());
-            if (language == TextToSpeech.LANG_MISSING_DATA || language == TextToSpeech.LANG_NOT_SUPPORTED) tts.setLanguage(Locale.US);
-        }
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) { publish(); }
             @Override public void onDone(String id) {
@@ -119,9 +114,13 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
         NarrationStore.Unit unit = NarrationStore.current();
         if (!ready || unit == null || !NarrationStore.playing) return;
         pendingPlay = false;
+        if (!applySelectedVoice()) { narrationError(OfflineVoices.HELP); return; }
         if (!wakeLock.isHeld()) wakeLock.acquire(60 * 60 * 1000L);
         tts.setSpeechRate(NarrationStore.rate);
-        tts.speak(unit.text, TextToSpeech.QUEUE_FLUSH, new Bundle(), "nth-" + NarrationStore.index);
+        if (tts.speak(unit.text, TextToSpeech.QUEUE_FLUSH, new Bundle(), "nth-" + NarrationStore.index) == TextToSpeech.ERROR) {
+            narrationError("Offline narration could not start. Check your installed voice data.");
+            return;
+        }
         NarrationStore.saveProgress(this);
         publish();
     }
@@ -157,9 +156,11 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
     }
 
     private void narrationError(String message) {
+        pendingPlay = false;
         NarrationStore.error = message;
         NarrationStore.playing = false;
         NarrationStore.paused = false;
+        if (tts != null) tts.stop();
         releaseAudio();
         publish();
     }
@@ -250,12 +251,11 @@ public final class NarrationService extends Service implements TextToSpeech.OnIn
     }
 
     private boolean applySelectedVoice() {
-        if (!ready || tts == null || NarrationStore.voiceName == null || NarrationStore.voiceName.isEmpty()) return false;
-        if (tts.getVoices() == null) return false;
-        for (Voice voice : tts.getVoices()) {
-            if (NarrationStore.voiceName.equals(voice.getName())) return tts.setVoice(voice) == TextToSpeech.SUCCESS;
-        }
-        return false;
+        if (!ready || tts == null) return false;
+        Voice selected = OfflineVoices.select(tts, NarrationStore.voiceName);
+        if (selected == null) return false;
+        NarrationStore.voiceName = selected.getName();
+        return true;
     }
 
     @Override public void onDestroy() {

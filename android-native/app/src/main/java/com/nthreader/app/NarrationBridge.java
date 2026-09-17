@@ -7,8 +7,6 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public final class NarrationBridge {
@@ -18,11 +16,7 @@ public final class NarrationBridge {
         this.context = context.getApplicationContext();
         voiceProbe = new TextToSpeech(this.context, status -> {
             if (status != TextToSpeech.SUCCESS || voiceProbe == null) return;
-            if (voiceProbe.getVoices() == null) return;
-            List<Voice> voices = new ArrayList<>(voiceProbe.getVoices());
-            voices.sort(Comparator.comparing(Voice::isNetworkConnectionRequired)
-                    .thenComparing(voice -> voice.getLocale().getDisplayName())
-                    .thenComparing(Voice::getName));
+            List<Voice> voices = OfflineVoices.available(voiceProbe);
             JSONArray options = new JSONArray();
             for (Voice voice : voices) {
                 try {

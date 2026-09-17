@@ -6,7 +6,7 @@
 window.VoiceReader = class {
   constructor(reader) {
     this.reader = reader;
-    this.synth = window.speechSynthesis || null;
+    this.synth = window.NthNativeSpeech ? null : (window.speechSynthesis || null);
     this.native = window.NthNativeNarrator || null;
     this.nativeAvailable = Boolean(this.native?.available());
     this.nativeActive = false;
@@ -141,9 +141,8 @@ window.VoiceReader = class {
   populateVoices() {
     if (!this.supported || this.nativeAvailable || !this.synth) return;
     const voices = this.synth.getVoices() || [];
-    if (!voices.length) return;
-    const localVoices = voices.filter((voice) => voice.localService);
-    this.voices = [...(localVoices.length ? localVoices : voices)].sort((a, b) => {
+    const localVoices = voices.filter((voice) => voice.localService === true);
+    this.voices = [...localVoices].sort((a, b) => {
       if (a.localService !== b.localService) return a.localService ? -1 : 1;
       if (a.default !== b.default) return a.default ? -1 : 1;
       return a.name.localeCompare(b.name);
@@ -158,6 +157,11 @@ window.VoiceReader = class {
     const selected = this.voices.find((voice) => voice.voiceURI === previous)
       || this.voices.find((voice) => voice.default)
       || this.voices[0];
+    this.els.voice.disabled = !selected;
+    if (!selected) {
+      this.voiceUri = "";
+      this.showNoOfflineVoice();
+    }
     if (selected) {
       this.voiceUri = selected.voiceURI;
       this.els.voice.value = selected.voiceURI;
@@ -165,11 +169,12 @@ window.VoiceReader = class {
   }
 
   selectedVoice() {
-    return this.voices.find((voice) => voice.voiceURI === this.voiceUri) || null;
+    return (this.synth?.getVoices() || []).find((voice) => voice.localService === true && voice.voiceURI === this.voiceUri) || null;
   }
 
   populateNativeVoices(voices = this.native?.getVoices() || []) {
-    if (!this.nativeAvailable || !Array.isArray(voices) || !voices.length) return;
+    if (!this.nativeAvailable || !Array.isArray(voices)) return;
+    voices = voices.filter((voice) => voice.local === true);
     const previous = this.nativeVoiceName;
     this.els.voice.replaceChildren(...voices.map((voice) => {
       const option = document.createElement("option");
@@ -182,7 +187,15 @@ window.VoiceReader = class {
       || voices[0];
     this.nativeVoiceName = selected?.name || "";
     this.els.voice.value = this.nativeVoiceName;
-    this.els.voice.disabled = false;
+    this.els.voice.disabled = !selected;
+    if (!selected) this.showNoOfflineVoice();
+  }
+
+  showNoOfflineVoice() {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No offline voices installed";
+    this.els.voice.replaceChildren(option);
   }
 
   setVisible(visible) {
@@ -367,14 +380,21 @@ window.VoiceReader = class {
     if (!sentence || !this.playing) return;
     this.cancelSpeech(false);
     this.playing = true;
+    this.populateVoices();
+    const voice = this.selectedVoice();
+    if (!voice) {
+      this.playing = false;
+      this.paused = false;
+      this.clearHighlight();
+      this.setStatus("Install an offline voice in your device's text-to-speech settings, then reopen Nth Reader.");
+      this.updateControls();
+      return;
+    }
     const token = this.generation;
     const utterance = new SpeechSynthesisUtterance(sentence.text);
     utterance.rate = this.rateValue;
-    const voice = this.selectedVoice();
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-    }
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
     utterance.onend = () => {
       if (token !== this.generation || !this.playing) return;
       if (this.sentences[this.sentenceIndex + 1]) {
