@@ -39,6 +39,17 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"'
       - name: Verify offline voice selection
         run: bash tests/offline-voices/run.sh
+      - name: Test first-use feature guides
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/guide-tests" playwright@1.56.1
+          export NODE_PATH="$RUNNER_TEMP/guide-tests/node_modules"
+          node "$NODE_PATH/playwright/cli.js" install --with-deps chromium
+          python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/guide-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          node tests/feature-guide/browser.cjs
       - name: Build debug APK
         run: gradle -p android-native --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4

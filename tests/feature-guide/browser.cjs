@@ -1,0 +1,43 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try {
+  const page=await browser.newPage({viewport:{width:390,height:844}}), errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const title=async(text)=>{await page.waitForFunction(t=>document.querySelector('.feature-guide[open] #guide-title')?.textContent===t,text);};
+  const next=async()=>{await page.locator('.guide-next:enabled').click();await page.waitForTimeout(400);};
+  await page.goto('http://127.0.0.1:8765');
+  await page.locator('#launch-splash').waitFor({state:'detached'});
+  assert.equal(await page.locator('.feature-guide[open]').count(),0,'Shelf should be visible before welcome');
+  await title('Welcome to your bookshelf');
+  const button=await page.locator('.guide-next').boundingBox();
+  assert(button.x>=0 && button.y>=0 && button.x+button.width<=390 && button.y+button.height<=844);
+  await page.screenshot({path:'guide-phone.png'});
+  for(let i=0;i<5;i++)await next();
+  assert.equal(await page.locator('.feature-guide[open]').count(),0);
+  await page.reload();await page.waitForTimeout(6500);
+  assert.equal(await page.locator('.feature-guide[open]').count(),0,'Welcome must not repeat');
+  await page.locator('#file-input').setInputFiles({name:'Guide Test.txt',mimeType:'text/plain',buffer:Buffer.from('Chapter One\n\nA small test book. A sentence for the reader.\n'.repeat(30))});
+  await title('Your first book is here');
+  for(let i=0;i<6;i++)await next();
+  assert(await page.locator('#customize-panel').isHidden());
+  assert(await page.locator('#remove-panel').isHidden());
+  // Completed walkthrough also suppresses its covered menu/customization guides.
+  await page.locator('#menu-open-btn').click();await page.locator('#menu-customize-btn').click();await page.waitForTimeout(900);
+  assert.equal(await page.locator('.feature-guide[open]').count(),0);
+  await page.locator('[data-tab="decorate"]').click();await title('Decorate your shelves');
+  await page.keyboard.press('Escape');await page.waitForTimeout(400);
+  assert.equal(await page.locator('.feature-guide[open]').count(),0);
+  await page.locator('[data-tab="arrange"]').click();await page.locator('[data-tab="decorate"]').click();await page.waitForTimeout(900);
+  assert.equal(await page.locator('.feature-guide[open]').count(),0,'Dismissed guide must not repeat');
+  await page.setViewportSize({width:844,height:390});
+  await page.locator('[data-tab="backdrop"]').click();await title('Choose a finish');
+  const landscape=await page.locator('.guide-next').boundingBox();
+  assert(landscape.y+landscape.height<=390);
+  assert.equal(await page.evaluate(()=>window.NthAndroidBack.handle()),true);
+  assert.equal(await page.locator('.feature-guide[open]').count(),0);
+  assert.deepEqual(errors,[]);
+  console.log('PASS: delayed welcome, phone/landscape controls, persistence, first-book tour, screen restoration, Escape and Android Back');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1)});

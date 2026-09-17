@@ -58,6 +58,8 @@
     onDownload: (book) => backup.downloadBook(book),
   });
 
+  const guide = new FeatureGuide({shelf, menu, customize, removePanel, carousel, reader, spineScanner, backup});
+
   // Android's system Back button cannot see the app's in-page navigation,
   // because the shelf, reader, drawers, and dialogs all live at one URL.
   // Give the native WebView a synchronous answer while each controller does
@@ -66,6 +68,7 @@
   const visiblyOpen = (element) => Boolean(element && !element.hidden && element.classList.contains("visible"));
   window.NthAndroidBack = Object.freeze({
     handle() {
+      if(guide.finish()) return true;
       if(window.NthDismissSplash?.())return true;
       const licenses=document.getElementById("license-dialog");
       if(licenses?.open){licenses.close();return true;}
@@ -358,6 +361,7 @@
     if (token !== refreshToken) return;
     shelf.setAll(books, decorItems, stacks);
     carousel.updateButton();
+    guide.libraryChanged();
     window.NthNativeWidget?.update(shelf);
     shelfRoot.classList.remove("shelf-loading");
   }
@@ -377,5 +381,6 @@
     showStatus(`Shelf storage couldn't open: ${err.message || err}`, true);
   } finally {
     window.dispatchEvent(new Event("nth:app-ready"));
+    guide.init();
   }
 })();

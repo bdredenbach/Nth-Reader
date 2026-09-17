@@ -1,4 +1,8 @@
-# Nth Reader 1.0.2
+# Nth Reader 1.0.3
+
+## 1.0.3 — first-use feature guides
+
+Adds themed, once-per-feature walkthroughs for the shelf menus, first book, customization, decorations, bookcases, reader, reading settings, offline narration settings, page jumps and spine scanning. The welcome tour waits three seconds after the splash. Next advances; Finish Tutorial (or Android Back/Escape) dismisses and remembers that guide. Completion is saved in local app settings and included in library backups. Version code 10003.
 
 ## 1.0.2 — offline narration
 
