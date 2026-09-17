@@ -1,4 +1,8 @@
-# Nth Reader 1.0.3
+# Nth Reader 1.0.4
+
+## 1.0.4 — restore visible backdrops
+
+Backdrop colors now tint the visible back panels above the carved artwork and below books and decorations. Shelf finish remains independent. Selected swatches have a gold outline and accessible pressed state. Version code 10004.
 
 ## 1.0.3 — first-use feature guides
 

@@ -981,9 +981,12 @@ window.Customize = class {
       btn.type = "button";
       btn.style.background = preset.preview;
       btn.title = preset.label;
+      btn.setAttribute("aria-label", preset.label);
+      btn.setAttribute("aria-pressed", String(this.shelf.root.dataset[settingKey] === preset.id));
       btn.addEventListener("click", async () => {
         await NthDB.settings.set(settingKey, preset.id);
-        this.applyStoredStyle();
+        await this.applyStoredStyle();
+        row.querySelectorAll(".swatch-btn").forEach(swatch => swatch.setAttribute("aria-pressed", String(swatch === btn)));
       });
       row.appendChild(btn);
     });

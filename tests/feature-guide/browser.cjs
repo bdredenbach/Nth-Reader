@@ -37,6 +37,17 @@ const assert=require('node:assert/strict');
   assert(landscape.y+landscape.height<=390);
   assert.equal(await page.evaluate(()=>window.NthAndroidBack.handle()),true);
   assert.equal(await page.locator('.feature-guide[open]').count(),0);
+  await page.locator('.swatch-btn[aria-label="Midnight"]').click();
+  await page.waitForFunction(()=>document.querySelector('#shelf-root').dataset.backdrop==='midnight');
+  const tint=()=>page.locator('#shelf-root .shelf-row').first().evaluate(el=>getComputedStyle(el,'::after').backgroundColor);
+  const midnight=await tint();
+  assert.notEqual(midnight,'rgba(0, 0, 0, 0)','Backdrop must reach the visible back panel');
+  await page.locator('.swatch-btn[aria-label="Forest"]').click();
+  await page.waitForFunction(()=>document.querySelector('#shelf-root').dataset.backdrop==='forest');
+  assert.notEqual(await tint(),midnight);
+  assert.equal(await page.locator('.swatch-btn[aria-label="Forest"]').getAttribute('aria-pressed'),'true');
+  await page.reload();await page.waitForTimeout(6500);
+  assert.equal(await page.locator('#shelf-root').getAttribute('data-backdrop'),'forest');
   assert.deepEqual(errors,[]);
   console.log('PASS: delayed welcome, phone/landscape controls, persistence, first-book tour, screen restoration, Escape and Android Back');
  } finally {await browser.close();}
