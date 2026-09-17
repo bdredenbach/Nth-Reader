@@ -1,4 +1,8 @@
-# Nth Reader 1.0.0
+# Nth Reader 1.0.1
+
+## 1.0.1 — privacy policy
+
+Adds the public privacy policy and an offline copy accessible through Licenses & Credits. Includes the policy in Android assets and the web cache. Version code 10001; production identity and signing setup remain unchanged. Rebuild the signed AAB to include the policy link in the installed app.
 
 ## 1.0.0 — promoted from tested 0.38.13
 

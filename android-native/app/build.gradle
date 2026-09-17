@@ -24,8 +24,8 @@ android {
         applicationId "com.nthreader.app"
         minSdk 26
         targetSdk 36
-        versionCode 10000
-        versionName "1.0.0"
+        versionCode 10001
+        versionName "1.0.1"
     }
 
     signingConfigs {
@@ -71,7 +71,7 @@ tasks.matching { task ->
 def bundledWebDir = layout.buildDirectory.dir("generated/nthWebAssets")
 def bundleWebApp = tasks.register("bundleWebApp", Sync) {
     from(rootProject.projectDir.parentFile) {
-        include "index.html", "manifest.json", "manifest.webmanifest", "sw.js"
+        include "privacy.html", "index.html", "manifest.json", "manifest.webmanifest", "sw.js"
         include "css/**", "js/**", "assets/**", "THIRD_PARTY_NOTICES.txt"
         exclude "js/turn.js", "js/turnjs-license.txt"
     }
