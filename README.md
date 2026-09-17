@@ -1,4 +1,8 @@
-# Nth Reader 1.0.4
+# Nth Reader 1.0.5
+
+## 1.0.5 — natural wood backdrops
+
+Replaces flat rounded backdrop tints with aligned photographic wood grain, muted stain colors and feathered recess edges. Preserves the original lighting and carved frame. Cherry wood is less saturated. Version code 10005.
 
 ## 1.0.4 — restore visible backdrops
 

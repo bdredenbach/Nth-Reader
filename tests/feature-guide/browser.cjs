@@ -41,6 +41,13 @@ const assert=require('node:assert/strict');
   await page.waitForFunction(()=>document.querySelector('#shelf-root').dataset.backdrop==='midnight');
   const tint=()=>page.locator('#shelf-root .shelf-row').first().evaluate(el=>getComputedStyle(el,'::after').backgroundColor);
   const midnight=await tint();
+  const material=await page.locator('#shelf-root .shelf-row').first().evaluate(el=>{
+    const css=getComputedStyle(el,'::after');return {image:css.backgroundImage,blend:css.backgroundBlendMode,radius:css.borderRadius,mask:css.maskImage};
+  });
+  assert(material.image.includes('carved-walnut-row.png'));
+  assert.equal(material.blend,'luminosity');
+  assert.equal(material.radius,'0px');
+  assert.notEqual(material.mask,'none');
   assert.notEqual(midnight,'rgba(0, 0, 0, 0)','Backdrop must reach the visible back panel');
   await page.locator('.swatch-btn[aria-label="Forest"]').click();
   await page.waitForFunction(()=>document.querySelector('#shelf-root').dataset.backdrop==='forest');
